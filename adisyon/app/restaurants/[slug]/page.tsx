@@ -1,86 +1,55 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { formatCurrency, priceRangeLabel, priceRangeBadgeClass } from "@/lib/utils";
-import { ReceiptCard } from "@/components/ReceiptCard";
-import { Star, MapPin, Receipt, Users } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Star, Receipt } from "lucide-react";
+import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo } from "@/lib/mock";
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
+export function generateStaticParams() {
+  return RESTAURANTS.map((r) => ({ slug: r.slug }));
 }
 
-async function getRestaurant(slug: string) {
-  return prisma.restaurant.findFirst({
-    where: { OR: [{ slug }, { id: slug }] },
-    include: {
-      receipts: {
-        where: { isPublished: true },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        include: { items: true },
-      },
-      ratings: {
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        include: { user: { select: { name: true, avatarUrl: true } } },
-      },
-      _count: { select: { checkins: true } },
-    },
-  });
-}
-
-export default async function RestaurantPage({ params }: PageProps) {
+export default async function RestaurantPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const restaurant = await getRestaurant(slug);
-
+  const restaurant = RESTAURANTS.find((r) => r.slug === slug);
   if (!restaurant) notFound();
 
-  const priceMin = restaurant.avgSpendPerPerson ? restaurant.avgSpendPerPerson * 0.75 : null;
-  const priceMax = restaurant.avgSpendPerPerson ? restaurant.avgSpendPerPerson * 1.4 : null;
+  const receipts = RECEIPTS.filter((r) => r.restaurantId === restaurant.id);
+  const c = priceColors(restaurant.priceRange);
+  const min = restaurant.avgSpendPerPerson * 0.75;
+  const max = restaurant.avgSpendPerPerson * 1.4;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <div className="space-y-4 pb-6">
+      {/* Header card */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>
-            {restaurant.address && (
-              <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                <MapPin className="w-3.5 h-3.5" />
-                {restaurant.address}
-              </p>
-            )}
+            <p className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              {restaurant.address}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{restaurant.cuisine}</p>
           </div>
-          <span
-            className={`px-3 py-1.5 rounded-full text-sm font-bold shrink-0 ${priceRangeBadgeClass(restaurant.priceRange)}`}
-          >
-            {priceRangeLabel(restaurant.priceRange)}
+          <span className={`px-3 py-1.5 rounded-full text-sm font-bold shrink-0 ${c.bg} ${c.text}`}>
+            {priceLabel(restaurant.priceRange)}
           </span>
         </div>
 
-        {/* Key stats */}
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-0 border-t border-gray-100 pt-4">
           <div className="text-center">
-            <p className="text-xs text-gray-500 mb-1">Kişi başı</p>
-            <p className="font-bold text-gray-900 text-sm">
-              {restaurant.avgSpendPerPerson
-                ? `~${formatCurrency(restaurant.avgSpendPerPerson)}`
-                : "—"}
-            </p>
+            <p className="text-xs text-gray-400 mb-1">Kişi Başı</p>
+            <p className="font-bold text-gray-900 text-sm">~{formatCurrency(restaurant.avgSpendPerPerson)}</p>
           </div>
           <div className="text-center border-x border-gray-100">
-            <p className="text-xs text-gray-500 mb-1">Puan</p>
+            <p className="text-xs text-gray-400 mb-1">Puan</p>
             <p className="font-bold text-gray-900 text-sm flex items-center justify-center gap-1">
-              {restaurant.avgRating ? (
-                <>
-                  <Star className="w-3.5 h-3.5 fill-yellow-400 stroke-yellow-400" />
-                  {restaurant.avgRating.toFixed(1)}
-                </>
-              ) : "—"}
+              <Star className="w-3.5 h-3.5 fill-yellow-400 stroke-yellow-400" />
+              {restaurant.avgRating.toFixed(1)}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-gray-500 mb-1">Adisyon</p>
+            <p className="text-xs text-gray-400 mb-1">Adisyon</p>
             <p className="font-bold text-gray-900 text-sm flex items-center justify-center gap-1">
               <Receipt className="w-3.5 h-3.5 text-gray-400" />
               {restaurant.receiptCount}
@@ -88,74 +57,54 @@ export default async function RestaurantPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Typical spend estimate */}
-        {priceMin && priceMax && (
-          <div className="mt-4 bg-orange-50 rounded-xl p-3">
-            <p className="text-xs text-orange-700 font-medium">2 kişilik tipik yemek</p>
-            <p className="text-base font-bold text-orange-800 mt-0.5">
-              {formatCurrency(priceMin * 2)} – {formatCurrency(priceMax * 2)}
-            </p>
-            <p className="text-xs text-orange-600 mt-0.5">
-              {restaurant.receiptCount} adisyondan hesaplandı
-            </p>
-          </div>
-        )}
+        {/* Price estimate */}
+        <div className="mt-4 bg-orange-50 rounded-xl p-4">
+          <p className="text-xs text-orange-700 font-semibold">2 kişilik tipik yemek</p>
+          <p className="text-xl font-bold text-orange-800 mt-1">
+            {formatCurrency(min * 2)} – {formatCurrency(max * 2)}
+          </p>
+          <p className="text-xs text-orange-500 mt-1">{restaurant.receiptCount} adisyondan hesaplandı</p>
+        </div>
       </div>
 
-      {/* Ratings */}
-      {restaurant.ratings.length > 0 && (
+      {/* Receipts */}
+      {receipts.length > 0 && (
         <section>
-          <h2 className="font-semibold text-gray-900 mb-3">Yorumlar</h2>
+          <h2 className="font-bold text-gray-900 mb-3">Adisyonlar</h2>
           <div className="space-y-3">
-            {restaurant.ratings.map((rating) => (
-              <div key={rating.id} className="bg-white rounded-xl p-4 border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    {rating.user.name ?? "Anonim"}
+            {receipts.map((receipt) => (
+              <div key={receipt.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs text-gray-400">
+                    {timeAgo(receipt.createdAt)} · {receipt.estimatedPeople} kişi
                   </span>
-                  <div className="flex">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-3.5 h-3.5 ${
-                          i < rating.score
-                            ? "fill-yellow-400 stroke-yellow-400"
-                            : "fill-gray-200 stroke-gray-200"
-                        }`}
-                      />
-                    ))}
-                  </div>
+                  <span className="font-bold text-gray-900">{formatCurrency(receipt.total)}</span>
                 </div>
-                {rating.comment && (
-                  <p className="text-sm text-gray-600">{rating.comment}</p>
-                )}
+                {receipt.items.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm py-0.5">
+                    <span className="text-gray-600 flex-1 truncate mr-2">
+                      {item.quantity > 1 && <span className="text-gray-400">{item.quantity}× </span>}
+                      {item.name}
+                    </span>
+                    <span className="text-gray-400 shrink-0">{formatCurrency(item.totalPrice)}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* Receipts */}
-      {restaurant.receipts.length > 0 && (
-        <section>
-          <h2 className="font-semibold text-gray-900 mb-3">Adisyonlar</h2>
-          <div className="space-y-3">
-            {restaurant.receipts.map((receipt) => (
-              <ReceiptCard
-                key={receipt.id}
-                receipt={{ ...receipt, createdAt: receipt.createdAt.toISOString() }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {restaurant.receipts.length === 0 && (
-        <div className="text-center py-8 text-gray-400">
+      {receipts.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
           <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-200" />
           <p className="text-sm">Henüz adisyon eklenmemiş</p>
         </div>
       )}
+
+      <Link href="/discover" className="block text-center text-sm text-orange-600 font-semibold py-2">
+        ← Tüm restoranlar
+      </Link>
     </div>
   );
 }

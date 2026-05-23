@@ -1,121 +1,111 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { RestaurantCard } from "@/components/RestaurantCard";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { RESTAURANTS, formatCurrency, priceLabel, priceColors } from "@/lib/mock";
 
-interface Restaurant {
-  id: string;
-  name: string;
-  slug: string;
-  city: string | null;
-  cuisine: string | null;
-  priceRange: number | null;
-  avgSpendPerPerson: number | null;
-  avgTotalBill: number | null;
-  avgRating: number | null;
-  receiptCount: number;
-}
+const SORTS = [
+  { label: "En Popüler", value: "count" },
+  { label: "En Yüksek Puan", value: "rating" },
+  { label: "En Uygun", value: "price" },
+];
 
 export default function DiscoverPage() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [priceFilter, setPriceFilter] = useState("");
-  const [sort, setSort] = useState("receiptCount");
+  const [q, setQ] = useState("");
+  const [price, setPrice] = useState(0);
+  const [sort, setSort] = useState("count");
 
-  const fetchRestaurants = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ sort });
-    if (query) params.set("q", query);
-    if (priceFilter) params.set("priceRange", priceFilter);
-
-    const res = await fetch(`/api/restaurants?${params}`);
-    const data = await res.json();
-    setRestaurants(data.restaurants ?? []);
-    setLoading(false);
-  }, [query, priceFilter, sort]);
-
-  useEffect(() => {
-    const timer = setTimeout(fetchRestaurants, 300);
-    return () => clearTimeout(timer);
-  }, [fetchRestaurants]);
+  const results = RESTAURANTS
+    .filter((r) => {
+      const match = r.name.toLowerCase().includes(q.toLowerCase()) ||
+        r.cuisine.toLowerCase().includes(q.toLowerCase()) ||
+        r.city.toLowerCase().includes(q.toLowerCase());
+      return match && (price === 0 || r.priceRange === price);
+    })
+    .sort((a, b) => {
+      if (sort === "rating") return b.avgRating - a.avgRating;
+      if (sort === "price") return a.avgSpendPerPerson - b.avgSpendPerPerson;
+      return b.receiptCount - a.receiptCount;
+    });
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-gray-900">Restoranları Keşfet</h1>
 
-      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
-          type="text"
-          placeholder="Restoran ara..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          type="search"
+          placeholder="Restoran, mutfak veya şehir ara..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
         />
       </div>
 
-      {/* Filters */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        <div className="flex items-center gap-1 shrink-0">
-          <SlidersHorizontal className="w-4 h-4 text-gray-400" />
-        </div>
-        {[
-          { label: "En Popüler", value: "receiptCount" },
-          { label: "En Yüksek Puan", value: "rating" },
-          { label: "En Uygun", value: "price" },
-        ].map((opt) => (
+        {SORTS.map((s) => (
           <button
-            key={opt.value}
-            onClick={() => setSort(opt.value)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              sort === opt.value
+            key={s.value}
+            onClick={() => setSort(s.value)}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              sort === s.value
                 ? "bg-orange-500 text-white border-orange-500"
                 : "bg-white text-gray-600 border-gray-200"
             }`}
           >
-            {opt.label}
+            {s.label}
           </button>
         ))}
-        <div className="w-px bg-gray-200 shrink-0" />
-        {[
-          { label: "₺", value: "1" },
-          { label: "₺₺", value: "2" },
-          { label: "₺₺₺", value: "3" },
-        ].map((opt) => (
+        <div className="w-px bg-gray-200 shrink-0 mx-1" />
+        {[1, 2, 3].map((p) => (
           <button
-            key={opt.value}
-            onClick={() => setPriceFilter(priceFilter === opt.value ? "" : opt.value)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              priceFilter === opt.value
+            key={p}
+            onClick={() => setPrice(price === p ? 0 : p)}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              price === p
                 ? "bg-orange-500 text-white border-orange-500"
                 : "bg-white text-gray-600 border-gray-200"
             }`}
           >
-            {opt.label}
+            {"₺".repeat(p)}
           </button>
         ))}
       </div>
 
-      {/* Results */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
-          ))}
-        </div>
-      ) : restaurants.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+      {results.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <Search className="w-12 h-12 mx-auto mb-3 text-gray-200" />
           <p className="font-medium">Sonuç bulunamadı</p>
-          <p className="text-sm mt-1">Farklı bir arama deneyin</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {restaurants.map((r) => (
-            <RestaurantCard key={r.id} restaurant={r} />
-          ))}
+        <div className="space-y-3 pb-4">
+          {results.map((r) => {
+            const c = priceColors(r.priceRange);
+            return (
+              <Link key={r.id} href={`/restaurants/${r.slug}`} className="block">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="font-semibold text-gray-900">{r.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{r.cuisine} · {r.city}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-sm font-bold shrink-0 ${c.bg} ${c.text}`}>
+                      {priceLabel(r.priceRange)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-gray-500">
+                      Kişi başı <span className="font-semibold text-gray-800">~{formatCurrency(r.avgSpendPerPerson)}</span>
+                    </span>
+                    <span className="text-yellow-500 font-semibold">★ {r.avgRating.toFixed(1)}</span>
+                    <span className="text-gray-400 ml-auto text-xs">{r.receiptCount} adisyon</span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

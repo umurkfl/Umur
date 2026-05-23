@@ -1,330 +1,203 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Camera, Upload, Check, ChevronRight, Star, Loader2, X } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { Camera, Upload, ChevronRight, Star, Loader2, X, Check } from "lucide-react";
+import { formatCurrency } from "@/lib/mock";
 
-type Step = "capture" | "preview" | "parsing" | "review" | "rating" | "done";
+type Step = "capture" | "parsing" | "review" | "rating" | "done";
 
-interface ParsedItem {
-  name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-}
-
-interface ParsedData {
-  restaurant_name: string | null;
-  date: string | null;
-  items: ParsedItem[];
-  subtotal: number | null;
-  tax: number | null;
-  service_charge: number | null;
-  total: number | null;
-  currency: string;
-  estimated_people_count: number | null;
-}
+const DEMO_PARSED = {
+  restaurant_name: "Çiya Sofrası",
+  items: [
+    { name: "Testi Kebabı", quantity: 1, unit_price: 380, total_price: 380 },
+    { name: "Mercimek Çorbası", quantity: 2, unit_price: 75, total_price: 150 },
+    { name: "Baklava Tabağı", quantity: 1, unit_price: 220, total_price: 220 },
+    { name: "Ayran", quantity: 2, unit_price: 45, total_price: 90 },
+  ],
+  subtotal: 840, tax: 0, service_charge: 35, total: 875,
+  currency: "TRY", estimated_people_count: 2,
+};
 
 export default function UploadPage() {
-  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-
   const [step, setStep] = useState<Step>("capture");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadResult, setUploadResult] = useState<{ url: string; publicId: string; base64: string; mediaType: string } | null>(null);
-  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [restaurantName, setRestaurantName] = useState("");
   const [rating, setRating] = useState(0);
-  const [ratingComment, setRatingComment] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [comment, setComment] = useState("");
 
-  function handleFileSelect(file: File) {
-    setImageFile(file);
-    const url = URL.createObjectURL(file);
-    setImagePreview(url);
-    setStep("preview");
-  }
-
-  async function handleUploadAndParse() {
-    if (!imageFile) return;
-    setError(null);
+  function handleFile(file: File) {
+    setPreview(URL.createObjectURL(file));
     setStep("parsing");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", imageFile);
-
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!uploadRes.ok) throw new Error("Yükleme başarısız");
-      const upload = await uploadRes.json();
-      setUploadResult(upload);
-
-      const parseRes = await fetch("/api/parse-receipt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: upload.base64, mediaType: upload.mediaType }),
-      });
-      if (!parseRes.ok) throw new Error("Adisyon okunamadı");
-      const { parsed } = await parseRes.json();
-
-      setParsedData(parsed);
-      setRestaurantName(parsed.restaurant_name ?? "");
+    setTimeout(() => {
+      setRestaurantName(DEMO_PARSED.restaurant_name);
       setStep("review");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
-      setStep("preview");
-    }
+    }, 2200);
   }
 
-  async function handleSubmit() {
-    if (!uploadResult || !parsedData) return;
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clerkUserId: "demo-user",
-          email: "demo@adisyon.app",
-          userName: "Demo Kullanıcı",
-          imageUrl: uploadResult.url,
-          imagePublicId: uploadResult.publicId,
-          parsedData,
-          restaurantName: restaurantName || parsedData.restaurant_name,
-          rating: rating || undefined,
-          ratingComment: ratingComment || undefined,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Kayıt başarısız");
-      const { restaurant } = await res.json();
-      setStep("done");
-      setTimeout(() => router.push(`/restaurants/${restaurant.slug}`), 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
-    } finally {
-      setSubmitting(false);
-    }
+  function handleSubmit() {
+    setStep("done");
   }
 
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-bold text-gray-900">Adisyon Ekle</h1>
 
-      {/* Step 1: Capture */}
+      {/* Capture */}
       {step === "capture" && (
         <div className="space-y-4">
-          <p className="text-gray-500 text-sm">Restoran adisyonunun fotoğrafını çek veya galerinden seç.</p>
-
+          <p className="text-sm text-gray-500">Restoran adisyonunun fotoğrafını yükle.</p>
           <button
             onClick={() => fileRef.current?.click()}
-            className="w-full aspect-video bg-gray-100 rounded-2xl flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-orange-400 hover:bg-orange-50 transition-colors"
+            className="w-full aspect-video bg-white rounded-2xl flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 active:border-orange-400 active:bg-orange-50 transition-colors"
           >
-            <Camera className="w-12 h-12 text-gray-400" />
-            <span className="text-sm font-medium text-gray-500">Fotoğraf çek veya seç</span>
+            <Camera className="w-14 h-14 text-gray-300" />
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-500">Fotoğraf Seç</p>
+              <p className="text-xs text-gray-400 mt-0.5">JPG, PNG · max 10MB</p>
+            </div>
           </button>
-
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileSelect(file);
-            }}
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           />
-        </div>
-      )}
-
-      {/* Step 2: Preview */}
-      {step === "preview" && imagePreview && (
-        <div className="space-y-4">
-          <div className="relative rounded-2xl overflow-hidden">
-            <img src={imagePreview} alt="Adisyon" className="w-full object-contain max-h-96" />
-            <button
-              onClick={() => { setStep("capture"); setImagePreview(null); }}
-              className="absolute top-2 right-2 bg-black/50 rounded-full p-1.5"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
+          {/* Demo button */}
           <button
-            onClick={handleUploadAndParse}
-            className="w-full bg-orange-500 text-white font-semibold rounded-full py-3.5 flex items-center justify-center gap-2"
+            onClick={() => {
+              setStep("parsing");
+              setTimeout(() => { setRestaurantName(DEMO_PARSED.restaurant_name); setStep("review"); }, 2200);
+            }}
+            className="w-full border border-orange-200 text-orange-600 font-semibold rounded-full py-3 text-sm active:bg-orange-50"
           >
-            <Upload className="w-5 h-5" />
-            Adisyonu Oku
+            Demo: Örnek Adisyon Dene
           </button>
         </div>
       )}
 
-      {/* Step 3: Parsing */}
+      {/* Parsing */}
       {step === "parsing" && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4">
-          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+        <div className="flex flex-col items-center py-20 gap-5">
+          {preview && <img src={preview} className="w-32 h-32 rounded-2xl object-cover shadow-md" alt="" />}
+          <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
+            <Loader2 className="w-7 h-7 text-orange-500 animate-spin" />
           </div>
           <div className="text-center">
-            <p className="font-semibold text-gray-900">Adisyon okunuyor...</p>
-            <p className="text-sm text-gray-500 mt-1">Yapay zeka fiyatları analiz ediyor</p>
+            <p className="font-bold text-gray-900">Adisyon okunuyor...</p>
+            <p className="text-sm text-gray-400 mt-1">Yapay zeka fiyatları analiz ediyor</p>
           </div>
         </div>
       )}
 
-      {/* Step 4: Review */}
-      {step === "review" && parsedData && (
+      {/* Review */}
+      {step === "review" && (
         <div className="space-y-4">
+          {preview && (
+            <div className="relative">
+              <img src={preview} className="w-full h-44 object-cover rounded-2xl" alt="" />
+              <button onClick={() => { setStep("capture"); setPreview(null); }}
+                className="absolute top-2 right-2 bg-black/50 rounded-full p-1.5">
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Restoran Adı</label>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Restoran</p>
             <input
               type="text"
               value={restaurantName}
               onChange={(e) => setRestaurantName(e.target.value)}
-              placeholder="Restoran adını girin"
-              className="w-full mt-1 text-base font-semibold text-gray-900 border-b border-gray-200 pb-1 focus:outline-none focus:border-orange-400"
+              className="w-full text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 focus:outline-none focus:border-orange-400"
             />
           </div>
 
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-2">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Ürünler</h3>
-            {parsedData.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-gray-700 flex-1 mr-2">
-                  {item.quantity > 1 && <span className="text-gray-400">{item.quantity}× </span>}
-                  {item.name}
-                </span>
-                <span className="text-gray-600 shrink-0">
-                  {formatCurrency(item.total_price, parsedData.currency)}
-                </span>
-              </div>
-            ))}
-
-            <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
-              {parsedData.subtotal != null && parsedData.subtotal !== parsedData.total && (
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Ara toplam</span>
-                  <span>{formatCurrency(parsedData.subtotal, parsedData.currency)}</span>
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Ürünler</p>
+            <div className="space-y-1.5">
+              {DEMO_PARSED.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-gray-700 flex-1 mr-2">
+                    {item.quantity > 1 && <span className="text-gray-400">{item.quantity}× </span>}
+                    {item.name}
+                  </span>
+                  <span className="text-gray-500 shrink-0">{formatCurrency(item.total_price)}</span>
                 </div>
-              )}
-              {parsedData.tax != null && parsedData.tax > 0 && (
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>KDV</span>
-                  <span>{formatCurrency(parsedData.tax, parsedData.currency)}</span>
-                </div>
-              )}
-              {parsedData.service_charge != null && parsedData.service_charge > 0 && (
-                <div className="flex justify-between text-sm text-gray-500">
+              ))}
+            </div>
+            <div className="border-t border-gray-100 mt-3 pt-3 space-y-1">
+              {DEMO_PARSED.service_charge > 0 && (
+                <div className="flex justify-between text-sm text-gray-400">
                   <span>Servis</span>
-                  <span>{formatCurrency(parsedData.service_charge, parsedData.currency)}</span>
+                  <span>{formatCurrency(DEMO_PARSED.service_charge)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-gray-900">
                 <span>Toplam</span>
-                <span>{formatCurrency(parsedData.total ?? 0, parsedData.currency)}</span>
+                <span>{formatCurrency(DEMO_PARSED.total)}</span>
               </div>
             </div>
           </div>
 
           <button
             onClick={() => setStep("rating")}
-            className="w-full bg-orange-500 text-white font-semibold rounded-full py-3.5 flex items-center justify-center gap-2"
+            className="w-full bg-orange-500 text-white font-bold rounded-full py-3.5 flex items-center justify-center gap-2 active:bg-orange-600"
           >
-            Devam Et
-            <ChevronRight className="w-5 h-5" />
+            Devam Et <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       )}
 
-      {/* Step 5: Rating */}
+      {/* Rating */}
       {step === "rating" && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <h3 className="font-semibold text-gray-900 mb-4">
-              {restaurantName || "Restoran"} için puan ver
+            <h3 className="font-bold text-gray-900 mb-5 text-center">
+              {restaurantName} için puan ver
             </h3>
-
-            <div className="flex gap-2 justify-center mb-4">
+            <div className="flex justify-center gap-3 mb-5">
               {[1, 2, 3, 4, 5].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setRating(s)}
-                  className="p-1"
-                >
-                  <Star
-                    className={`w-10 h-10 ${
-                      s <= rating
-                        ? "fill-yellow-400 stroke-yellow-400"
-                        : "fill-gray-100 stroke-gray-300"
-                    }`}
-                  />
+                <button key={s} onClick={() => setRating(s)} className="p-1 active:scale-90 transition-transform">
+                  <Star className={`w-10 h-10 ${s <= rating ? "fill-yellow-400 stroke-yellow-400" : "fill-gray-100 stroke-gray-300"}`} />
                 </button>
               ))}
             </div>
-
             <textarea
-              value={ratingComment}
-              onChange={(e) => setRatingComment(e.target.value)}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
               placeholder="Deneyimini yaz (opsiyonel)..."
               rows={3}
               className="w-full rounded-xl border border-gray-200 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <button
             onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full bg-orange-500 text-white font-semibold rounded-full py-3.5 flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full bg-orange-500 text-white font-bold rounded-full py-3.5 flex items-center justify-center gap-2 active:bg-orange-600"
           >
-            {submitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Check className="w-5 h-5" />
-                Paylaş
-              </>
-            )}
+            <Check className="w-5 h-5" /> Paylaş
           </button>
-
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full text-gray-400 text-sm py-2"
-          >
+          <button onClick={handleSubmit} className="w-full text-gray-400 text-sm py-2">
             Puansız paylaş
           </button>
         </div>
       )}
 
-      {/* Step 6: Done */}
+      {/* Done */}
       {step === "done" && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <div className="flex flex-col items-center py-20 gap-4">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
             <Check className="w-10 h-10 text-green-600" />
           </div>
-          <div className="text-center">
-            <p className="font-bold text-xl text-gray-900">Teşekkürler!</p>
-            <p className="text-sm text-gray-500 mt-1">Adisyonun paylaşıldı. Restoran sayfasına yönlendiriliyorsun...</p>
-          </div>
+          <p className="text-2xl font-bold text-gray-900">Teşekkürler!</p>
+          <p className="text-gray-400 text-sm text-center">Adisyonun başarıyla paylaşıldı.</p>
+          <button
+            onClick={() => { setStep("capture"); setPreview(null); setRating(0); setComment(""); }}
+            className="mt-4 text-orange-600 font-semibold text-sm"
+          >
+            Yeni adisyon ekle →
+          </button>
         </div>
       )}
     </div>
