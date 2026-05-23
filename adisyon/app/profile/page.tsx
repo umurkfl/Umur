@@ -18,7 +18,7 @@ export default function ProfilePage() {
   }, [ready, user, router]);
 
   useEffect(() => {
-    if (user) setReceipts(store.getUserReceipts(user.id));
+    if (user) store.getUserReceipts(user.id).then(setReceipts);
   }, [user]);
 
   if (!ready || !user) return null;

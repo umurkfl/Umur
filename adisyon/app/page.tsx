@@ -14,7 +14,7 @@ function CommentSection({ receiptId }: { receiptId: string }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setComments(store.getComments(receiptId));
+    store.getComments(receiptId).then(setComments);
   }, [receiptId]);
 
   function send() {
@@ -121,7 +121,7 @@ export default function HomePage() {
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
 
   useEffect(() => {
-    setUserReceipts(store.getReceipts());
+    store.getReceipts().then(setUserReceipts);
   }, []);
 
   const trending = RESTAURANTS.slice()

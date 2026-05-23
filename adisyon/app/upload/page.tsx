@@ -119,11 +119,11 @@ export default function UploadPage() {
     setShowSugg(false);
   }
 
-  function submit() {
+  async function submit() {
     if (!user) return;
     const t = parseFloat(total);
     const p = parseInt(people);
-    store.addReceipt({
+    await store.addReceipt({
       id: crypto.randomUUID(),
       userId: user.id,
       userName: user.name,

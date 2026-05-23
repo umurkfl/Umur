@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.4.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@supabase/supabase-js": "^2.106.1",
     "@types/pg": "^8.20.0",
     "cloudinary": "^2.10.0",
     "date-fns": "^4.3.0",
