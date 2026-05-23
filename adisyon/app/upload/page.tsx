@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Camera, MapPin, Users, CheckCircle, X, Loader2 } from "lucide-react";
+import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2 } from "lucide-react";
 import { RESTAURANTS, formatCurrency } from "@/lib/mock";
 
 interface Suggestion {
@@ -302,34 +302,41 @@ export default function UploadPage() {
     <div className="space-y-5">
       <h1 className="text-xl font-bold text-gray-900">Adisyon Ekle</h1>
 
-      <label className="block cursor-pointer">
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handlePhoto}
-          className="hidden"
-        />
-        {photoUrl ? (
-          <div className="relative rounded-2xl overflow-hidden border-2 border-orange-400 shadow-sm">
-            <img src={photoUrl} alt="Adisyon" className="w-full max-h-72 object-cover" />
-            <div className="absolute inset-0 bg-black/0 active:bg-black/10 transition-colors" />
-            <div className="absolute bottom-3 right-3 bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
-              Değiştir
-            </div>
+      {/* Hidden inputs */}
+      <input id="input-camera" type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+      <input id="input-gallery" type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
+
+      {photoUrl ? (
+        <div className="relative rounded-2xl overflow-hidden border-2 border-orange-400 shadow-sm">
+          <img src={photoUrl} alt="Adisyon" className="w-full max-h-72 object-cover" />
+          <div className="absolute bottom-3 right-3 flex gap-2">
+            <label htmlFor="input-camera" className="cursor-pointer bg-black/50 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+              <Camera className="w-3.5 h-3.5" /> Çek
+            </label>
+            <label htmlFor="input-gallery" className="cursor-pointer bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+              <ImageIcon className="w-3.5 h-3.5" /> Değiştir
+            </label>
           </div>
-        ) : (
-          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 flex flex-col items-center gap-3 bg-gray-50 active:bg-orange-50 active:border-orange-400 transition-colors">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
-              <Camera className="w-8 h-8 text-gray-300" />
+        </div>
+      ) : (
+        <div className="border-2 border-dashed border-gray-200 rounded-2xl overflow-hidden bg-gray-50">
+          <div className="p-8 flex flex-col items-center gap-2">
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
+              <Camera className="w-7 h-7 text-gray-300" />
             </div>
-            <div className="text-center">
-              <p className="font-semibold text-gray-600">Fotoğraf Çek veya Yükle</p>
-              <p className="text-xs text-gray-400 mt-1">Adisyon fotoğrafını ekle</p>
-            </div>
+            <p className="font-semibold text-gray-600 mt-1">Adisyon Fotoğrafı Ekle</p>
+            <p className="text-xs text-gray-400">İsteğe bağlı</p>
           </div>
-        )}
-      </label>
+          <div className="grid grid-cols-2 border-t border-gray-200">
+            <label htmlFor="input-camera" className="cursor-pointer flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-gray-600 active:bg-gray-100 border-r border-gray-200 transition-colors">
+              <Camera className="w-4 h-4" /> Fotoğraf Çek
+            </label>
+            <label htmlFor="input-gallery" className="cursor-pointer flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-orange-600 active:bg-orange-50 transition-colors">
+              <ImageIcon className="w-4 h-4" /> Galeriden Seç
+            </label>
+          </div>
+        </div>
+      )}
 
       <button
         onClick={() => setStep("details")}
