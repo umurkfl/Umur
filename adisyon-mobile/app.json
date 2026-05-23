@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Adisyon",
+    "slug": "adisyon-mobile",
+    "version": "1.0.0",
+    "scheme": "adisyon",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      "expo-image-picker"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.adisyon.app"
+    },
+    "android": {
+      "package": "com.adisyon.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#f97316",
+        "foregroundImage": "./assets/icon.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
