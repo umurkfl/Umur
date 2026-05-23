@@ -1,427 +1,350 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import {
-  Camera, ChevronRight, Star, Loader2, X, Check, Key, AlertCircle,
-} from "lucide-react";
-import { formatCurrency } from "@/lib/mock";
+import { useState, useRef, useCallback } from "react";
+import { Camera, MapPin, Users, CheckCircle, X, Loader2 } from "lucide-react";
+import { RESTAURANTS, formatCurrency } from "@/lib/mock";
 
-type Step = "capture" | "parsing" | "review" | "rating" | "done";
-
-interface ParsedItem {
+interface Suggestion {
+  key: string;
   name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
+  address: string;
 }
 
-interface Parsed {
-  restaurant_name: string | null;
-  items: ParsedItem[];
-  subtotal: number | null;
-  tax: number | null;
-  service_charge: number | null;
-  total: number | null;
-  currency: string;
-  estimated_people_count: number | null;
-}
-
-const PARSE_PROMPT = `Bu bir restoran adisyonu fotoğrafı. Görüntüdeki tüm bilgileri çıkar ve SADECE aşağıdaki JSON formatında yanıt ver (başka hiçbir şey yazma, açıklama ekleme):
-
-{
-  "restaurant_name": "restoran adı veya null",
-  "items": [
-    {"name": "ürün adı", "quantity": 1, "unit_price": 0.00, "total_price": 0.00}
-  ],
-  "subtotal": 0.00,
-  "tax": 0.00,
-  "service_charge": 0.00,
-  "total": 0.00,
-  "currency": "TRY",
-  "estimated_people_count": null
-}
-
-Kurallar:
-- Tüm fiyatlar sayı olmalı (string değil)
-- Bulamazsan null yaz
-- currency: Türk Lirası için "TRY", başka para birimi varsa ISO kodu yaz
-- Her satır kalemi items dizisine ekle`;
-
-async function parseReceiptWithClaude(base64: string, mediaType: string, apiKey: string): Promise<Parsed> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: base64 },
-            },
-            { type: "text", text: PARSE_PROMPT },
-          ],
-        },
-      ],
-    }),
+async function searchNominatim(q: string): Promise<Suggestion[]> {
+  const params = new URLSearchParams({
+    q,
+    format: "json",
+    countrycodes: "tr",
+    limit: "7",
+    addressdetails: "1",
   });
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+    headers: { "Accept-Language": "tr,en;q=0.9" },
+  });
+  const data: Array<{
+    place_id: number;
+    name: string;
+    display_name: string;
+    address?: { road?: string; suburb?: string; city?: string; town?: string; village?: string };
+  }> = await res.json();
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API hatası: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const text: string = data.content?.[0]?.text ?? "";
-  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned);
+  return data
+    .filter((p) => p.name)
+    .map((p) => {
+      const a = p.address;
+      const parts = [a?.road, a?.suburb, a?.city || a?.town || a?.village].filter(Boolean);
+      return {
+        key: String(p.place_id),
+        name: p.name,
+        address: parts.length ? parts.join(", ") : p.display_name.split(",").slice(0, 2).join(","),
+      };
+    });
 }
 
-function fileToBase64(file: File): Promise<{ base64: string; mediaType: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const [prefix, base64] = dataUrl.split(",");
-      const mediaType = prefix.match(/data:(.*);base64/)?.[1] ?? "image/jpeg";
-      resolve({ base64, mediaType });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+function calcPerPerson(total: string, people: string): string | null {
+  const t = parseFloat(total);
+  const p = parseInt(people);
+  if (!t || !p || p < 1) return null;
+  return formatCurrency(t / p);
 }
 
 export default function UploadPage() {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [step, setStep] = useState<"photo" | "details" | "done">("photo");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
-  const [step, setStep] = useState<Step>("capture");
-  const [preview, setPreview] = useState<string | null>(null);
-  const [parsed, setParsed] = useState<Parsed | null>(null);
-  const [restaurantName, setRestaurantName] = useState("");
+  const [name, setName] = useState("");
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showSugg, setShowSugg] = useState(false);
+
+  const [total, setTotal] = useState("");
+  const [people, setPeople] = useState("2");
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
-  const [apiKey, setApiKey] = useState("");
-  const [showKeyInput, setShowKeyInput] = useState(false);
-  const [keyInput, setKeyInput] = useState("");
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("anthropic_api_key");
-    if (saved) setApiKey(saved);
-  }, []);
+  const perPerson = calcPerPerson(total, people);
 
-  function saveKey() {
-    const k = keyInput.trim();
-    if (!k.startsWith("sk-ant-")) {
-      setError("Geçersiz API key. 'sk-ant-' ile başlamalı.");
-      return;
-    }
-    localStorage.setItem("anthropic_api_key", k);
-    setApiKey(k);
-    setShowKeyInput(false);
-    setKeyInput("");
-    setError(null);
+  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    setPhotoUrl(URL.createObjectURL(file));
   }
 
-  async function handleFile(file: File) {
-    setError(null);
+  const fetchSuggestions = useCallback(async (q: string) => {
+    const local: Suggestion[] = RESTAURANTS.filter((r) =>
+      r.name.toLowerCase().includes(q.toLowerCase())
+    ).map((r) => ({ key: r.id, name: r.name, address: r.address }));
 
-    if (!apiKey) {
-      setShowKeyInput(true);
-      return;
-    }
-
-    setPreview(URL.createObjectURL(file));
-    setStep("parsing");
+    setSuggestions(local);
+    setShowSugg(local.length > 0);
+    setSearching(true);
 
     try {
-      const { base64, mediaType } = await fileToBase64(file);
-      const result = await parseReceiptWithClaude(base64, mediaType, apiKey);
-      setParsed(result);
-      setRestaurantName(result.restaurant_name ?? "");
-      setStep("review");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      setError(msg.includes("401") ? "API key geçersiz. Lütfen güncelleyin." : msg);
-      setStep("capture");
+      const remote = await searchNominatim(q);
+      const merged = [...local];
+      for (const r of remote) {
+        if (!merged.some((m) => m.name.toLowerCase() === r.name.toLowerCase())) {
+          merged.push(r);
+        }
+      }
+      setSuggestions(merged.slice(0, 8));
+      setShowSugg(merged.length > 0);
+    } catch {
+      // keep local results
+    } finally {
+      setSearching(false);
     }
+  }, []);
+
+  function handleNameChange(val: string) {
+    setName(val);
+    clearTimeout(timer.current);
+    if (val.length < 2) {
+      setSuggestions([]);
+      setShowSugg(false);
+      setSearching(false);
+      return;
+    }
+    timer.current = setTimeout(() => fetchSuggestions(val), 350);
+  }
+
+  function selectSuggestion(s: Suggestion) {
+    setName(s.name);
+    setSuggestions([]);
+    setShowSugg(false);
   }
 
   function reset() {
-    setStep("capture");
-    setPreview(null);
-    setParsed(null);
-    setRestaurantName("");
+    setStep("photo");
+    setPhotoUrl(null);
+    setName("");
+    setTotal("");
+    setPeople("2");
     setRating(0);
-    setComment("");
-    setError(null);
+    setSuggestions([]);
+  }
+
+  if (step === "done") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4">
+        <CheckCircle className="w-16 h-16 text-green-500" />
+        <h2 className="text-xl font-bold text-gray-900">Adisyon Paylaşıldı!</h2>
+        <p className="text-sm text-gray-500">
+          {name} · {formatCurrency(parseFloat(total))} · {people} kişi
+        </p>
+        {perPerson && (
+          <p className="text-sm font-semibold text-orange-600">Kişi başı {perPerson}</p>
+        )}
+        <button
+          onClick={reset}
+          className="mt-4 bg-orange-500 text-white font-bold rounded-full px-6 py-3 text-sm active:bg-orange-600"
+        >
+          Yeni Adisyon Ekle
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "details") {
+    return (
+      <div className="space-y-4 pb-10">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setStep("photo")} className="text-gray-400 text-sm">
+            ←
+          </button>
+          <h1 className="text-xl font-bold text-gray-900">Adisyon Bilgileri</h1>
+        </div>
+
+        {photoUrl && (
+          <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+            <img src={photoUrl} alt="Adisyon" className="w-full max-h-44 object-cover" />
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-5">
+          {/* Restaurant name */}
+          <div className="relative">
+            <label className="block text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">
+              Mekan Adı
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onFocus={() => suggestions.length > 0 && setShowSugg(true)}
+                onBlur={() => setTimeout(() => setShowSugg(false), 160)}
+                placeholder="Restoranın adını yaz..."
+                autoComplete="off"
+                className="w-full pl-9 pr-9 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              {searching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+              )}
+              {!searching && name && (
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); setName(""); setSuggestions([]); setShowSugg(false); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+
+            {showSugg && suggestions.length > 0 && (
+              <div className="absolute z-30 left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.key}
+                    onMouseDown={() => selectSuggestion(s)}
+                    className="w-full text-left px-4 py-3 hover:bg-orange-50 border-b border-gray-50 last:border-0 transition-colors"
+                  >
+                    <p className="text-sm font-semibold text-gray-900">{s.name}</p>
+                    {s.address && (
+                      <p className="text-xs text-gray-400 mt-0.5 truncate">{s.address}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Total */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1.5 font-semibold uppercase tracking-wide">
+              Toplam Tutar
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₺</span>
+              <input
+                type="number"
+                value={total}
+                onChange={(e) => setTotal(e.target.value)}
+                placeholder="0,00"
+                inputMode="decimal"
+                min="0"
+                className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </div>
+          </div>
+
+          {/* People */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">
+              Kişi Sayısı
+            </label>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setPeople((p) => String(Math.max(1, parseInt(p) - 1)))}
+                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-xl text-gray-600 active:bg-gray-100 select-none"
+              >
+                −
+              </button>
+              <div className="flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-gray-400" />
+                <span className="text-2xl font-bold text-gray-900 w-6 text-center">{people}</span>
+              </div>
+              <button
+                onClick={() => setPeople((p) => String(parseInt(p) + 1))}
+                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-xl text-gray-600 active:bg-gray-100 select-none"
+              >
+                +
+              </button>
+              <span className="text-sm text-gray-400">kişi</span>
+            </div>
+          </div>
+
+          {/* Per person result */}
+          {perPerson && (
+            <div className="bg-orange-50 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-orange-600 font-semibold">Kişi başı tutar</p>
+                <p className="text-xs text-orange-400 mt-0.5">{total && parseFloat(total) > 0 ? `${formatCurrency(parseFloat(total))} ÷ ${people}` : ""}</p>
+              </div>
+              <p className="text-2xl font-bold text-orange-700">{perPerson}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Rating */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <label className="block text-xs text-gray-400 mb-2.5 font-semibold uppercase tracking-wide">
+            Değerlendirme (isteğe bağlı)
+          </label>
+          <div className="flex gap-3">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <button
+                key={s}
+                onClick={() => setRating(rating === s ? 0 : s)}
+                className={`text-3xl transition-all active:scale-110 ${s <= rating ? "opacity-100" : "opacity-25"}`}
+              >
+                ⭐
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => setStep("done")}
+          disabled={!name.trim() || !total || parseFloat(total) <= 0}
+          className="w-full bg-orange-500 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-2xl py-4 text-sm transition-colors active:bg-orange-600"
+        >
+          Adisyonu Paylaş
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Adisyon Ekle</h1>
-        <button
-          onClick={() => setShowKeyInput(true)}
-          title="API Key Ayarla"
-          className={`p-2 rounded-full ${apiKey ? "text-green-600 bg-green-50" : "text-gray-400 bg-gray-100"}`}
-        >
-          <Key className="w-4 h-4" />
-        </button>
-      </div>
+      <h1 className="text-xl font-bold text-gray-900">Adisyon Ekle</h1>
 
-      {/* API Key Modal */}
-      {showKeyInput && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4">
-            <h3 className="font-bold text-gray-900">Anthropic API Key</h3>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Fotoğraftaki adisyonu okumak için Claude Vision API kullanılır.
-              Key'ini <span className="font-mono text-xs bg-gray-100 px-1 rounded">console.anthropic.com</span>'dan alabilirsin.
-            </p>
-            <input
-              type="password"
-              placeholder="sk-ant-api03-..."
-              value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400"
-              autoComplete="off"
-            />
-            {error && <p className="text-xs text-red-500">{error}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setShowKeyInput(false); setError(null); }}
-                className="flex-1 border border-gray-200 rounded-full py-2.5 text-sm font-semibold text-gray-600"
-              >
-                İptal
-              </button>
-              <button
-                onClick={saveKey}
-                className="flex-1 bg-orange-500 text-white rounded-full py-2.5 text-sm font-semibold"
-              >
-                Kaydet
-              </button>
+      <label className="block cursor-pointer">
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          className="hidden"
+        />
+        {photoUrl ? (
+          <div className="relative rounded-2xl overflow-hidden border-2 border-orange-400 shadow-sm">
+            <img src={photoUrl} alt="Adisyon" className="w-full max-h-72 object-cover" />
+            <div className="absolute inset-0 bg-black/0 active:bg-black/10 transition-colors" />
+            <div className="absolute bottom-3 right-3 bg-orange-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
+              Değiştir
             </div>
           </div>
-        </div>
-      )}
-
-      {/* No API key banner */}
-      {!apiKey && step === "capture" && !showKeyInput && (
-        <button
-          onClick={() => setShowKeyInput(true)}
-          className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left"
-        >
-          <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">API key gerekli</p>
-            <p className="text-xs text-amber-600 mt-0.5">Claude Vision ile adisyon okumak için Anthropic API key'i gir.</p>
-          </div>
-        </button>
-      )}
-
-      {/* Error */}
-      {error && step === "capture" && (
-        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4">
-          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-red-800">Hata</p>
-            <p className="text-xs text-red-600 mt-0.5">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* CAPTURE */}
-      {step === "capture" && (
-        <div className="space-y-3">
-          <p className="text-sm text-gray-500">Adisyon fotoğrafını yükle — Claude Vision her şeyi otomatik okur.</p>
-
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="w-full aspect-video bg-white rounded-2xl flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 hover:border-orange-400 hover:bg-orange-50 active:border-orange-400 active:bg-orange-50 transition-colors"
-          >
-            <Camera className="w-14 h-14 text-gray-300" />
+        ) : (
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 flex flex-col items-center gap-3 bg-gray-50 active:bg-orange-50 active:border-orange-400 transition-colors">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
+              <Camera className="w-8 h-8 text-gray-300" />
+            </div>
             <div className="text-center">
-              <p className="text-sm font-semibold text-gray-500">Fotoğraf Seç</p>
-              <p className="text-xs text-gray-400 mt-0.5">Galeriden veya kameradan</p>
-            </div>
-          </button>
-
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-          />
-        </div>
-      )}
-
-      {/* PARSING */}
-      {step === "parsing" && (
-        <div className="flex flex-col items-center py-16 gap-5">
-          {preview && (
-            <img src={preview} className="w-36 h-36 object-cover rounded-2xl shadow-lg" alt="" />
-          )}
-          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-          </div>
-          <div className="text-center">
-            <p className="font-bold text-gray-900 text-lg">Adisyon okunuyor...</p>
-            <p className="text-sm text-gray-400 mt-1">Claude Vision fiyatları analiz ediyor</p>
-          </div>
-        </div>
-      )}
-
-      {/* REVIEW */}
-      {step === "review" && parsed && (
-        <div className="space-y-4">
-          {preview && (
-            <div className="relative">
-              <img src={preview} className="w-full h-44 object-cover rounded-2xl" alt="" />
-              <button
-                onClick={reset}
-                className="absolute top-2 right-2 bg-black/50 rounded-full p-1.5"
-              >
-                <X className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          )}
-
-          {/* Restaurant name */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Restoran</p>
-            <input
-              type="text"
-              value={restaurantName}
-              onChange={(e) => setRestaurantName(e.target.value)}
-              placeholder="Restoran adı"
-              className="w-full text-lg font-bold text-gray-900 border-b border-gray-100 pb-1 focus:outline-none focus:border-orange-400 bg-transparent"
-            />
-          </div>
-
-          {/* Items */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Ürünler</p>
-            {parsed.items.length > 0 ? (
-              <div className="space-y-1.5">
-                {parsed.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-gray-700 flex-1 mr-2">
-                      {item.quantity > 1 && (
-                        <span className="text-gray-400">{item.quantity}× </span>
-                      )}
-                      {item.name}
-                    </span>
-                    <span className="text-gray-500 shrink-0">
-                      {formatCurrency(item.total_price, parsed.currency)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 italic">Ürün bulunamadı</p>
-            )}
-
-            {/* Totals */}
-            <div className="border-t border-gray-100 mt-3 pt-3 space-y-1">
-              {parsed.subtotal != null && parsed.subtotal > 0 && parsed.subtotal !== parsed.total && (
-                <div className="flex justify-between text-sm text-gray-400">
-                  <span>Ara toplam</span>
-                  <span>{formatCurrency(parsed.subtotal, parsed.currency)}</span>
-                </div>
-              )}
-              {parsed.tax != null && parsed.tax > 0 && (
-                <div className="flex justify-between text-sm text-gray-400">
-                  <span>KDV</span>
-                  <span>{formatCurrency(parsed.tax, parsed.currency)}</span>
-                </div>
-              )}
-              {parsed.service_charge != null && parsed.service_charge > 0 && (
-                <div className="flex justify-between text-sm text-gray-400">
-                  <span>Servis</span>
-                  <span>{formatCurrency(parsed.service_charge, parsed.currency)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-gray-900 text-base">
-                <span>Toplam</span>
-                <span>{formatCurrency(parsed.total ?? 0, parsed.currency)}</span>
-              </div>
+              <p className="font-semibold text-gray-600">Fotoğraf Çek veya Yükle</p>
+              <p className="text-xs text-gray-400 mt-1">Adisyon fotoğrafını ekle</p>
             </div>
           </div>
+        )}
+      </label>
 
-          <button
-            onClick={() => setStep("rating")}
-            className="w-full bg-orange-500 text-white font-bold rounded-full py-3.5 flex items-center justify-center gap-2 active:bg-orange-600"
-          >
-            Devam Et <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+      <button
+        onClick={() => setStep("details")}
+        disabled={!photoUrl}
+        className="w-full bg-orange-500 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold rounded-2xl py-4 text-sm transition-colors active:bg-orange-600"
+      >
+        Devam Et →
+      </button>
 
-      {/* RATING */}
-      {step === "rating" && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-5 text-center">
-              {restaurantName || "Restoran"} için puan ver
-            </h3>
-            <div className="flex justify-center gap-3 mb-5">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} onClick={() => setRating(s)} className="p-1 active:scale-90 transition-transform">
-                  <Star
-                    className={`w-10 h-10 ${
-                      s <= rating ? "fill-yellow-400 stroke-yellow-400" : "fill-gray-100 stroke-gray-300"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Deneyimini yaz (opsiyonel)..."
-              rows={3}
-              className="w-full rounded-xl border border-gray-200 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-          </div>
-
-          <button
-            onClick={() => setStep("done")}
-            className="w-full bg-orange-500 text-white font-bold rounded-full py-3.5 flex items-center justify-center gap-2 active:bg-orange-600"
-          >
-            <Check className="w-5 h-5" /> Paylaş
-          </button>
-          <button onClick={() => setStep("done")} className="w-full text-gray-400 text-sm py-2">
-            Puansız paylaş
-          </button>
-        </div>
-      )}
-
-      {/* DONE */}
-      {step === "done" && (
-        <div className="flex flex-col items-center py-20 gap-4">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-            <Check className="w-10 h-10 text-green-600" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">Teşekkürler!</p>
-          <p className="text-gray-400 text-sm text-center px-8">
-            Adisyonun başarıyla paylaşıldı.
-          </p>
-          <button onClick={reset} className="mt-4 text-orange-600 font-semibold text-sm">
-            Yeni adisyon ekle →
-          </button>
-        </div>
-      )}
+      <button
+        onClick={() => setStep("details")}
+        className="block mx-auto text-xs text-gray-400 font-medium"
+      >
+        Fotoğrafsız devam et
+      </button>
     </div>
   );
 }
