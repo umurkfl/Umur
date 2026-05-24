@@ -264,7 +264,7 @@ export function calcBadges(receipts: StoredReceipt[]): Badge[] {
   receipts.forEach((r) => { const k = r.restaurantName.toLowerCase(); freq[k] = (freq[k] ?? 0) + 1; });
   const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
 
-  if (count === 0) earned.push({ ...ALL_BADGES.find((b) => b.id === "newbie")! });
+  earned.push({ ...ALL_BADGES.find((b) => b.id === "newbie")! });
   if (count >= 1)  earned.push({ ...ALL_BADGES.find((b) => b.id === "first")! });
   if (count >= 3)  earned.push({ ...ALL_BADGES.find((b) => b.id === "katkilci")! });
   if (count >= 10) earned.push({ ...ALL_BADGES.find((b) => b.id === "aktif")! });
