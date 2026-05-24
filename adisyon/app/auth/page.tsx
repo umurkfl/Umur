@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, User, Lock, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { supabase, supabaseAnonKey } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { store } from "@/lib/store";
 import Link from "next/link";
 
@@ -91,25 +91,12 @@ export default function AuthPage() {
     const redirectTo = typeof window !== "undefined"
       ? `${window.location.origin}${window.location.pathname.startsWith("/Umur") ? "/Umur" : ""}/`
       : undefined;
-    // DEBUG: capture URL without navigating
-    const { data: oauthData, error: err } = await supabase.auth.signInWithOAuth({
+    const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo,
-        queryParams: supabaseAnonKey ? { apikey: supabaseAnonKey } : undefined,
-        skipBrowserRedirect: true,
-      },
+      options: { redirectTo },
     });
-    if (err) { setError(translateError(err.message)); setLoading(false); return; }
-    const oauthUrl = oauthData?.url ?? "";
-    // Show generated URL so we can diagnose the issue
-    try {
-      const parsed = new URL(oauthUrl);
-      setError(`DEBUG — host: ${parsed.host} | path: ${parsed.pathname}`);
-    } catch {
-      setError(`DEBUG — URL oluşturulamadı: ${oauthUrl.slice(0, 80)}`);
-    }
-    setLoading(false);
+    if (err) { setError(translateError(err.message)); setLoading(false); }
+    // On success the browser redirects away — no need to handle further
   }
 
   if (confirmSent) {
