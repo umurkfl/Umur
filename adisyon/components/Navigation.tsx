@@ -13,7 +13,7 @@ export function Navigation() {
     { href: "/", icon: Home, label: "Ana Sayfa" },
     { href: "/discover", icon: Search, label: "Keşfet" },
     { href: "/upload", icon: PlusCircle, label: "Ekle" },
-    { href: user ? "/wishlist" : "/auth", icon: Bookmark, label: "Liste" },
+    ...(user ? [{ href: "/wishlist", icon: Bookmark, label: "Liste" }] : []),
     { href: user ? "/profile" : "/auth", icon: User, label: user ? "Profil" : "Giriş" },
   ];
 
@@ -54,7 +54,7 @@ export function Navigation() {
               (href !== "/" && href !== "/auth" && pathname.startsWith(href));
             return (
               <Link
-                key={href}
+                key={label}
                 href={href}
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
                   active ? "text-orange-600" : "text-gray-400 hover:text-gray-600"
