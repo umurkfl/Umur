@@ -142,8 +142,10 @@ export default function UploadPage() {
     if (!user) return;
     const t = parseFloat(total);
     const p = parseInt(people);
+    const receiptId = crypto.randomUUID();
+    const photo = await store.uploadReceiptPhoto(receiptId, photoBase64);
     await store.addReceipt({
-      id: crypto.randomUUID(),
+      id: receiptId,
       userId: user.id,
       userName: user.name,
       restaurantName: name.trim(),
@@ -152,7 +154,7 @@ export default function UploadPage() {
       perPerson: t / p,
       rating,
       comment: comment.trim(),
-      photo: photoBase64,
+      photo,
       createdAt: new Date().toISOString(),
     });
     setStep("done");

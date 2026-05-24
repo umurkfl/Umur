@@ -142,12 +142,26 @@ export const store = {
   },
 
   // Receipts
+  async uploadReceiptPhoto(receiptId: string, base64: string): Promise<string> {
+    if (!supabase || !base64) return base64;
+    try {
+      const resp = await fetch(base64);
+      const blob = await resp.blob();
+      const { error } = await supabase.storage
+        .from("receipt-photos")
+        .upload(`${receiptId}.jpg`, blob, { contentType: "image/jpeg", upsert: true });
+      if (error) return base64;
+      const { data } = supabase.storage.from("receipt-photos").getPublicUrl(`${receiptId}.jpg`);
+      return data.publicUrl;
+    } catch {
+      return base64;
+    }
+  },
   async getReceipts(): Promise<StoredReceipt[]> {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
       if (!error && data) {
         const remote = data.map(rowToReceipt);
-        // Merge any locally-saved receipts that didn't make it to Supabase
         const local = lsRead<StoredReceipt[]>(K.receipts, []);
         const remoteIds = new Set(remote.map((r) => r.id));
         const extras = local.filter((r) => !remoteIds.has(r.id));
@@ -157,19 +171,19 @@ export const store = {
     return lsRead<StoredReceipt[]>(K.receipts, []);
   },
   async addReceipt(r: StoredReceipt): Promise<void> {
-    if (supabase) {
-      const { error } = await supabase.from("receipts").insert({
-        id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
-        total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
-        comment: r.comment, photo: r.photo, created_at: r.createdAt,
-      });
-      if (!error) return;
-      // Supabase insert failed — fall through to localStorage
-    }
+    // Always save locally so the uploader sees it immediately
     const all = lsRead<StoredReceipt[]>(K.receipts, []);
     if (!all.some((x) => x.id === r.id)) {
       all.unshift(r);
       lsWrite(K.receipts, all);
+    }
+    // Also persist to Supabase so other users can see it
+    if (supabase) {
+      await supabase.from("receipts").insert({
+        id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
+        total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
+        comment: r.comment, photo: r.photo, created_at: r.createdAt,
+      });
     }
   },
   async getUserReceipts(userId: string): Promise<StoredReceipt[]> {

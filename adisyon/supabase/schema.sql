@@ -19,6 +19,7 @@ create table if not exists comments (
   id          text primary key,
   user_id     text not null,
   user_name   text not null,
+  user_avatar text not null default '',
   receipt_id  text not null,
   text        text not null,
   created_at  text not null
@@ -41,7 +42,16 @@ create policy "public read receipts"           on receipts          for select u
 create policy "public insert receipts"         on receipts          for insert with check (true);
 create policy "public read comments"           on comments          for select using (true);
 create policy "public insert comments"         on comments          for insert with check (true);
+create policy "public delete comments"         on comments          for delete using (true);
 create policy "public read reactions"          on comment_reactions for select using (true);
 create policy "public insert reactions"        on comment_reactions for insert with check (true);
 create policy "public update reactions"        on comment_reactions for update using (true);
 create policy "public delete reactions"        on comment_reactions for delete using (true);
+
+-- Storage: create the 'receipt-photos' bucket in Supabase Dashboard → Storage → New bucket
+-- Name: receipt-photos, Public: true
+-- Then run these policies:
+create policy "public read receipt photos"
+  on storage.objects for select using (bucket_id = 'receipt-photos');
+create policy "public insert receipt photos"
+  on storage.objects for insert with check (bucket_id = 'receipt-photos');
