@@ -1,4 +1,4 @@
-import process from "node:process";
+// deno-lint-ignore-file no-node-globals
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
