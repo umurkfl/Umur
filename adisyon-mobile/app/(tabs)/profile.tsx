@@ -1,8 +1,8 @@
+import type { ComponentProps } from "react";
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -47,13 +47,15 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          {[
-            { label: "Adisyon", value: STATS.receipts, icon: "receipt-outline" },
-            { label: "Yorum", value: STATS.ratings, icon: "star-outline" },
-            { label: "Check-in", value: STATS.checkins, icon: "location-outline" },
-          ].map(({ label, value, icon }) => (
+          {(
+            [
+              { label: "Adisyon", value: STATS.receipts, icon: "receipt-outline" },
+              { label: "Yorum", value: STATS.ratings, icon: "star-outline" },
+              { label: "Check-in", value: STATS.checkins, icon: "location-outline" },
+            ] as Array<{ label: string; value: number; icon: ComponentProps<typeof Ionicons>["name"] }>
+          ).map(({ label, value, icon }) => (
             <View key={label} style={styles.statBox}>
-              <Ionicons name={icon as any} size={20} color="#f97316" />
+              <Ionicons name={icon} size={20} color="#f97316" />
               <Text style={styles.statValue}>{value}</Text>
               <Text style={styles.statLabel}>{label}</Text>
             </View>

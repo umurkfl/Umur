@@ -55,22 +55,21 @@ function lsWrite<T>(key: string, value: T) {
 
 // ─── Row mappers ─────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToReceipt(r: any): StoredReceipt {
-  return { id: r.id, userId: r.user_id, userName: r.user_name, restaurantName: r.restaurant_name, total: r.total, people: r.people, perPerson: r.per_person, rating: r.rating, comment: r.comment, photo: r.photo ?? "", createdAt: r.created_at };
+type Row = Record<string, unknown>;
+
+function rowToReceipt(r: Row): StoredReceipt {
+  return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, total: r.total as number, people: r.people as number, perPerson: r.per_person as number, rating: r.rating as number, comment: r.comment as string, photo: (r.photo as string) ?? "", createdAt: r.created_at as string };
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToComment(c: any): StoredComment {
-  return { id: c.id, userId: c.user_id, userName: c.user_name, userAvatar: c.user_avatar ?? "", receiptId: c.receipt_id, text: c.text, createdAt: c.created_at };
+function rowToComment(c: Row): StoredComment {
+  return { id: c.id as string, userId: c.user_id as string, userName: c.user_name as string, userAvatar: (c.user_avatar as string) ?? "", receiptId: c.receipt_id as string, text: c.text as string, createdAt: c.created_at as string };
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToReaction(r: any): CommentReaction {
-  return { id: r.id, userId: r.user_id, commentId: r.comment_id, reaction: r.reaction };
+function rowToReaction(r: Row): CommentReaction {
+  return { id: r.id as string, userId: r.user_id as string, commentId: r.comment_id as string, reaction: r.reaction as "like" | "dislike" };
 }
 
 // ─── Image compression ───────────────────────────────────────────────────────
 
-export async function compressImage(file: File): Promise<string> {
+export function compressImage(file: File): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

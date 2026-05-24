@@ -8,7 +8,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_RESTAURANTS, MOCK_RECEIPTS, formatCurrency } from "../../lib/mock";
+import { MOCK_RESTAURANTS, MOCK_RECEIPTS } from "../../lib/mock";
 import { RestaurantCard } from "../../components/RestaurantCard";
 import { ReceiptCard } from "../../components/ReceiptCard";
 
