@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, User, Lock, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAnonKey } from "@/lib/supabase";
 import { store } from "@/lib/store";
 import Link from "next/link";
 
@@ -91,7 +91,13 @@ export default function AuthPage() {
     const redirectTo = typeof window !== "undefined"
       ? `${window.location.origin}${window.location.pathname.startsWith("/Umur") ? "/Umur" : ""}/`
       : undefined;
-    const { error: err } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    const { error: err } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        queryParams: supabaseAnonKey ? { apikey: supabaseAnonKey } : undefined,
+      },
+    });
     if (err) { setError(translateError(err.message)); setLoading(false); }
     // On success the browser redirects away — no need to handle further
   }
