@@ -91,15 +91,25 @@ export default function AuthPage() {
     const redirectTo = typeof window !== "undefined"
       ? `${window.location.origin}${window.location.pathname.startsWith("/Umur") ? "/Umur" : ""}/`
       : undefined;
-    const { error: err } = await supabase.auth.signInWithOAuth({
+    // DEBUG: capture URL without navigating
+    const { data: oauthData, error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo,
         queryParams: supabaseAnonKey ? { apikey: supabaseAnonKey } : undefined,
+        skipBrowserRedirect: true,
       },
     });
-    if (err) { setError(translateError(err.message)); setLoading(false); }
-    // On success the browser redirects away — no need to handle further
+    if (err) { setError(translateError(err.message)); setLoading(false); return; }
+    const oauthUrl = oauthData?.url ?? "";
+    // Show generated URL so we can diagnose the issue
+    try {
+      const parsed = new URL(oauthUrl);
+      setError(`DEBUG — host: ${parsed.host} | path: ${parsed.pathname}`);
+    } catch {
+      setError(`DEBUG — URL oluşturulamadı: ${oauthUrl.slice(0, 80)}`);
+    }
+    setLoading(false);
   }
 
   if (confirmSent) {
