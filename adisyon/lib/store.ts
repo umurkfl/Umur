@@ -109,6 +109,11 @@ export const store = {
     lsWrite(K.users, all);
   },
   updateUserAvatar: (userId: string, avatar: string) => {
+    // Primary key used by Supabase auth path
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem(`adisyon_avatar_${userId}`, avatar); } catch { /* ignore */ }
+    }
+    // Legacy keys for localStorage-only auth fallback
     const all = lsRead<StoredUser[]>(K.users, []);
     const idx = all.findIndex((u) => u.id === userId);
     if (idx >= 0) all[idx].avatar = avatar;
