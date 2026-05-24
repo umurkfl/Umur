@@ -3,13 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star } from "lucide-react";
+import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const MENU_ITEMS = [
   {
     group: "Hesabım",
     items: [
+      { href: "/profile", icon: User, label: "Profilim" },
       { href: "/upload", icon: Receipt, label: "Adisyon Ekle", accent: true },
       { href: "/wishlist", icon: Bookmark, label: "Gitmek İstediklerim" },
       { href: "/badges", icon: Trophy, label: "Rozetlerim" },

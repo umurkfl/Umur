@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { LogOut, Receipt, Star, Camera, UserCheck, ClipboardList, Trophy, Compass, Utensils, Home, type LucideIcon } from "lucide-react";
-
-const BADGE_ICONS: Record<string, LucideIcon> = {
-  newbie: UserCheck, first: Receipt, katkilci: ClipboardList,
-  aktif: Star, sampiyion: Trophy, gezgin: Compass, gurme: Utensils, muhtar: Home,
-};
-
+import {
+  LogOut, Receipt, Star, Camera, Trophy, Bookmark,
+  MapPin, TrendingUp, ChevronRight, Users, Calendar,
+  UserCheck, ClipboardList, Compass, Utensils, Home as HomeIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
+
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  newbie: UserCheck, first: Receipt, katkilci: ClipboardList,
+  aktif: Star, sampiyion: Trophy, gezgin: Compass, gurme: Utensils, muhtar: HomeIcon,
+};
 
 export default function ProfilePage() {
   const { user, login, logout, ready } = useAuth();
@@ -21,6 +25,7 @@ export default function ProfilePage() {
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [showAllReceipts, setShowAllReceipts] = useState(false);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
@@ -29,6 +34,18 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) store.getUserReceipts(user.id).then(setReceipts);
   }, [user]);
+
+  const visitedRestaurants = useMemo(() => {
+    const map: Record<string, { name: string; count: number; lastVisit: string; totalPerPerson: number }> = {};
+    receipts.forEach((r) => {
+      const key = r.restaurantName.toLowerCase().trim();
+      if (!map[key]) map[key] = { name: r.restaurantName, count: 0, lastVisit: r.createdAt, totalPerPerson: 0 };
+      map[key].count++;
+      map[key].totalPerPerson += r.perPerson;
+      if (r.createdAt > map[key].lastVisit) map[key].lastVisit = r.createdAt;
+    });
+    return Object.values(map).sort((a, b) => b.count - a.count);
+  }, [receipts]);
 
   if (!ready || !user) return null;
 
@@ -42,9 +59,15 @@ export default function ProfilePage() {
   const avgRating = ratedReceipts.length
     ? ratedReceipts.reduce((s, r) => s + r.rating, 0) / ratedReceipts.length
     : 0;
+  const avgPerPerson = receipts.length
+    ? receipts.reduce((s, r) => s + r.perPerson, 0) / receipts.length
+    : 0;
+
+  const memberSince = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString("tr-TR", { month: "long", year: "numeric" })
+    : null;
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!user) return;
     const file = e.target.files?.[0];
     if (!file) return;
     if (cropSrc) URL.revokeObjectURL(cropSrc);
@@ -70,135 +93,287 @@ export default function ProfilePage() {
     router.push("/");
   }
 
+  const visibleReceipts = showAllReceipts ? receipts : receipts.slice(0, 4);
+
   return (
-    <div className="space-y-5">
-      <div className="bg-surface rounded-2xl p-5 border border-border shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+    <div className="space-y-4 pb-8">
+
+      {/* ── Hero card ── */}
+      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="h-24 bg-gradient-to-br from-primary to-primary-dark relative">
+          <div className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+        </div>
+
+        <div className="px-5 pb-5">
+          <div className="flex items-end justify-between -mt-10 mb-4">
+            {/* Avatar */}
             <div className="relative">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-primary-light flex items-center justify-center">
-                {user.avatar ? (
-                  <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
-                ) : (
-                  <span className="text-2xl font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>
-                )}
+              <div className="w-20 h-20 rounded-full border-4 border-surface bg-primary-light overflow-hidden flex items-center justify-center shadow-sm">
+                {user.avatar
+                  ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
+                  : <span className="text-3xl font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>
+                }
               </div>
               <button
                 onClick={() => photoInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow"
+                className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-2 border-surface shadow"
               >
                 <Camera className="w-3.5 h-3.5 text-white" />
               </button>
               <input ref={photoInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </div>
 
-            <div>
-              <p className="font-bold text-lg text-charcoal">{user.name}</p>
-              <p className="text-xs text-muted">{user.email}</p>
+            {/* Actions */}
+            <div className="flex items-center gap-2 pb-1">
+              <Link href="/upload"
+                className="flex items-center gap-1.5 bg-primary text-white text-xs font-bold px-3.5 py-2 rounded-full active:bg-primary-dark">
+                <Receipt className="w-3.5 h-3.5" /> Adisyon Ekle
+              </Link>
+              <button onClick={handleLogout}
+                className="p-2 rounded-full border border-border text-muted active:text-red-500 active:border-red-200">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Name & meta */}
+          <div className="mb-4">
+            <h1 className="text-xl font-bold text-charcoal">{user.name}</h1>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {user.email && <p className="text-xs text-muted">{user.email}</p>}
               {user.provider === "google" && (
-                <p className="text-xs text-blue-500 font-medium mt-0.5">Google hesabı</p>
+                <span className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">Google</span>
+              )}
+              {memberSince && (
+                <span className="flex items-center gap-1 text-[11px] text-muted">
+                  <Calendar className="w-3 h-3" /> {memberSince} üye
+                </span>
               )}
             </div>
           </div>
-          <button onClick={handleLogout} className="text-muted active:text-red-500 p-2">
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: "Adisyon", value: String(receipts.length) },
-            { label: "Harcama", value: totalSpend > 0 ? formatCurrency(totalSpend) : "—" },
-            { label: "Ort. Puan", value: ratedReceipts.length > 0 ? avgRating.toFixed(1) : "—" },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-background rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-charcoal truncate">{value}</p>
-              <p className="text-xs text-muted mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-bold text-charcoal">Rozetler</h2>
-            <p className="text-xs text-muted mt-0.5">{badges.length} / {8} kazanıldı</p>
-          </div>
-          <Link href="/badges" className="text-xs text-primary font-semibold bg-primary-light px-3 py-1.5 rounded-full">Tümünü Gör →</Link>
-        </div>
-        <div className="flex gap-5 overflow-x-auto pb-2 no-scrollbar">
-          {badges.map((b) => {
-            const Icon = BADGE_ICONS[b.id] ?? Star;
-            return (
-              <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center">
-                  <Icon className="w-7 h-7 text-white" strokeWidth={1.5} />
-                </div>
-                <p className="text-[10px] font-bold text-ink text-center w-16 leading-tight truncate">
-                  {b.dynamicLabel ?? b.label}
-                </p>
-              </Link>
-            );
-          })}
-          {badges.length === 0 && (
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center">
-                <Trophy className="w-7 h-7 text-border" strokeWidth={1.5} />
-              </div>
-              <p className="text-[10px] text-muted text-center w-20">Adisyon paylaş</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="font-bold text-charcoal mb-3">Paylaştığım Adisyonlar</h2>
-        {receipts.length === 0 ? (
-          <div className="text-center py-10 text-muted">
-            <Receipt className="w-10 h-10 mx-auto mb-2 text-border" />
-            <p className="text-sm">Henüz adisyon paylaşmadın</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {receipts.map((r) => (
-              <div key={r.id} className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-                {r.photo && (
-                  <div className="bg-dark">
-                    <img src={r.photo} alt="" className="w-full max-h-36 object-contain" />
-                  </div>
+          {/* Social stats */}
+          <div className="grid grid-cols-3 border border-border rounded-xl overflow-hidden">
+            {[
+              { label: "Arkadaş", value: "—", tag: "Yakında" },
+              { label: "Restoran", value: visitedRestaurants.length > 0 ? String(visitedRestaurants.length) : "0" },
+              { label: "Adisyon", value: String(receipts.length) },
+            ].map(({ label, value, tag }, i) => (
+              <div key={label} className={`py-3 text-center relative ${i > 0 ? "border-l border-border" : ""}`}>
+                <p className="text-xl font-bold text-charcoal">{value}</p>
+                <p className="text-[11px] text-muted mt-0.5">{label}</p>
+                {tag && (
+                  <span className="absolute top-1.5 right-1.5 text-[8px] bg-primary-light text-primary font-bold px-1 py-0.5 rounded-full leading-none">
+                    {tag}
+                  </span>
                 )}
-                <div className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="min-w-0 flex-1 mr-3">
-                      <p className="font-semibold text-charcoal truncate">{r.restaurantName}</p>
-                      <p className="text-xs text-muted mt-0.5">{timeAgo(r.createdAt)} · {r.people} kişi</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-bold text-ink">{formatCurrency(r.total)}</p>
-                      <p className="text-xs text-primary">{formatCurrency(r.perPerson)} / kişi</p>
-                    </div>
-                  </div>
-                  {r.rating > 0 && (
-                    <div className="flex gap-0.5 mt-2">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
-                      ))}
-                    </div>
-                  )}
-                  {r.comment && <p className="text-sm text-muted mt-1.5 leading-snug">{r.comment}</p>}
-                </div>
               </div>
             ))}
           </div>
-        )}
-      </section>
+        </div>
+      </div>
 
-      <div className="text-center py-4">
-        <Link href="/upload" className="inline-flex items-center gap-2 bg-primary text-white font-bold rounded-full px-6 py-3 text-sm active:bg-primary-dark">
-          <Receipt className="w-4 h-4" />
-          Yeni Adisyon Ekle
-        </Link>
+      {/* ── Harcama özeti ── */}
+      {receipts.length > 0 && (
+        <div className="bg-surface rounded-2xl p-4 border border-border shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-charcoal text-sm">Harcama Özeti</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { emoji: "💸", label: "Toplam Harcama", value: formatCurrency(totalSpend) },
+              { emoji: "👤", label: "Ort. Kişi Başı", value: formatCurrency(avgPerPerson) },
+              { emoji: "⭐", label: "Ort. Puan", value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "Henüz yok" },
+              { emoji: "📍", label: "Benzersiz Mekan", value: `${visitedRestaurants.length} restoran` },
+            ].map(({ emoji, label, value }) => (
+              <div key={label} className="bg-background rounded-xl p-3.5">
+                <p className="text-xl leading-none">{emoji}</p>
+                <p className="font-bold text-charcoal text-sm mt-2">{value}</p>
+                <p className="text-[11px] text-muted mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Gittiğim Yerler ── */}
+      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-charcoal text-sm">Gittiğim Yerler</h2>
+          </div>
+          {visitedRestaurants.length > 0 && (
+            <span className="text-[11px] text-muted bg-background px-2 py-0.5 rounded-full">
+              {visitedRestaurants.length} mekan
+            </span>
+          )}
+        </div>
+
+        {visitedRestaurants.length === 0 ? (
+          <div className="px-4 pb-5 text-center">
+            <MapPin className="w-8 h-8 text-border mx-auto mb-2" />
+            <p className="text-sm text-muted">Adisyon paylaştıkça burada görünür</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {visitedRestaurants.slice(0, 6).map((r) => (
+              <div key={r.name} className="flex items-center gap-3 px-4 py-3">
+                <div className="w-9 h-9 bg-primary-light rounded-xl flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-charcoal text-sm truncate">{r.name}</p>
+                  <p className="text-xs text-muted mt-0.5">{timeAgo(r.lastVisit)}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-ink">{formatCurrency(r.totalPerPerson / r.count)}</p>
+                  <p className="text-[11px] text-muted">
+                    {r.count === 1 ? "1 ziyaret" : `${r.count} ziyaret`}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {visitedRestaurants.length > 6 && (
+              <Link href="/discover" className="flex items-center justify-center gap-1 py-3 text-xs text-primary font-semibold">
+                Tüm mekanları keşfet <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Arkadaşlar (yakında) ── */}
+      <div className="bg-surface rounded-2xl border border-border shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-charcoal text-sm">Arkadaşlarım</h2>
+          </div>
+          <span className="text-[10px] bg-primary-light text-primary font-bold px-2 py-0.5 rounded-full">Yakında</span>
+        </div>
+        <div className="bg-background rounded-xl p-4 text-center">
+          <div className="flex justify-center gap-2 mb-2">
+            {["A","B","C"].map((l) => (
+              <div key={l} className="w-9 h-9 rounded-full bg-border flex items-center justify-center text-sm font-bold text-muted">
+                {l}
+              </div>
+            ))}
+            <div className="w-9 h-9 rounded-full border-2 border-dashed border-border flex items-center justify-center text-muted text-xl">
+              +
+            </div>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">
+            Arkadaşlarını ekle, onların gittiği yerleri gör, harcamalarını karşılaştır.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Rozetlerim ── */}
+      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-charcoal text-sm">Rozetlerim</h2>
+          </div>
+          <Link href="/badges" className="flex items-center gap-0.5 text-xs text-primary font-semibold">
+            Tümü <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        <div className="px-4 pb-4">
+          {badges.length === 0 ? (
+            <div className="flex items-center gap-3 bg-background rounded-xl p-3">
+              <div className="w-12 h-12 rounded-full bg-border/50 flex items-center justify-center shrink-0">
+                <Trophy className="w-6 h-6 text-border" strokeWidth={1.5} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">Henüz rozet kazanılmadı</p>
+                <p className="text-xs text-muted mt-0.5">Adisyon paylaş, rozet kazan!</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+              {badges.map((b) => {
+                const Icon = BADGE_ICONS[b.id] ?? Star;
+                return (
+                  <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
+                    <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
+                      <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <p className="text-[10px] font-bold text-ink text-center w-14 leading-tight truncate">
+                      {b.dynamicLabel ?? b.label}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Son Adisyonlarım ── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-primary" />
+            <h2 className="font-bold text-charcoal text-sm">Son Adisyonlarım</h2>
+          </div>
+          <Link href="/upload"
+            className="text-xs text-primary font-semibold bg-primary-light px-3 py-1 rounded-full">
+            + Ekle
+          </Link>
+        </div>
+
+        {receipts.length === 0 ? (
+          <div className="text-center py-10 bg-surface rounded-2xl border border-border">
+            <Receipt className="w-10 h-10 mx-auto mb-2 text-border" />
+            <p className="text-sm text-muted mb-3">Henüz adisyon paylaşmadın</p>
+            <Link href="/upload"
+              className="inline-flex items-center gap-1.5 bg-primary text-white text-sm font-bold px-4 py-2 rounded-full">
+              <Receipt className="w-3.5 h-3.5" /> İlk adisyonu ekle
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleReceipts.map((r) => (
+              <div key={r.id} className="bg-surface rounded-xl border border-border shadow-sm flex items-center gap-3 p-3">
+                {r.photo
+                  ? <img src={r.photo} className="w-12 h-12 rounded-xl object-cover shrink-0 bg-dark" alt="" />
+                  : (
+                    <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center shrink-0">
+                      <Receipt className="w-5 h-5 text-primary" />
+                    </div>
+                  )
+                }
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-charcoal text-sm truncate">{r.restaurantName}</p>
+                  <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+                  {r.rating > 0 && (
+                    <div className="flex gap-0.5 mt-0.5">
+                      {[1,2,3,4,5].map((s) => (
+                        <Star key={s} className={`w-2.5 h-2.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-charcoal text-sm">{formatCurrency(r.total)}</p>
+                  <p className="text-xs text-primary">{formatCurrency(r.perPerson)}/kişi</p>
+                </div>
+              </div>
+            ))}
+            {receipts.length > 4 && !showAllReceipts && (
+              <button
+                onClick={() => setShowAllReceipts(true)}
+                className="w-full py-2.5 text-xs text-primary font-semibold text-center border border-primary-light rounded-xl bg-surface"
+              >
+                {receipts.length - 4} adisyon daha gör
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
