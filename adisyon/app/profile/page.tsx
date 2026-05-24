@@ -4,15 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { LogOut, Receipt, Star, Camera } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { store, StoredReceipt, calcBadges, compressImage } from "@/lib/store";
+import { store, StoredReceipt, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { CropModal } from "@/components/CropModal";
 
 export default function ProfilePage() {
   const { user, login, logout, ready } = useAuth();
   const router = useRouter();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
@@ -24,6 +26,10 @@ export default function ProfilePage() {
 
   if (!ready || !user) return null;
 
+  if (cropSrc) {
+    return <CropModal src={cropSrc} circular onConfirm={handleCropConfirm} onCancel={handleCropCancel} />;
+  }
+
   const badges = calcBadges(receipts);
   const totalSpend = receipts.reduce((s, r) => s + r.total, 0);
   const ratedReceipts = receipts.filter((r) => r.rating > 0);
@@ -31,13 +37,26 @@ export default function ProfilePage() {
     ? ratedReceipts.reduce((s, r) => s + r.rating, 0) / ratedReceipts.length
     : 0;
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!user) return;
     const file = e.target.files?.[0];
     if (!file) return;
-    const b64 = await compressImage(file);
-    store.updateUserAvatar(user.id, b64);
-    login({ ...user, avatar: b64 });
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(URL.createObjectURL(file));
+    e.target.value = "";
+  }
+
+  function handleCropConfirm(dataUrl: string) {
+    if (!user) return;
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    store.updateUserAvatar(user.id, dataUrl);
+    login({ ...user, avatar: dataUrl });
+  }
+
+  function handleCropCancel() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
   }
 
   function handleLogout() {

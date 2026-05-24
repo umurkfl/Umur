@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
 import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { ReceiptModal } from "@/components/ReceiptModal";
 
 function Avatar({ name, photo, size = "sm" }: { name: string; photo?: string | null; size?: "sm" | "md" }) {
   const cls = size === "sm" ? "w-6 h-6 text-xs" : "w-8 h-8 text-sm";
@@ -35,32 +36,23 @@ function ReactionBar({ commentId }: { commentId: string }) {
     } else {
       const r: CommentReaction = { id: crypto.randomUUID(), userId: user.id, commentId, reaction: type };
       await store.setCommentReaction(r);
-      setReactions((prev) => {
-        const without = prev.filter((r) => r.userId !== user.id);
-        return [...without, r];
-      });
+      setReactions((prev) => [...prev.filter((r) => r.userId !== user.id), r]);
     }
   }
 
   return (
     <div className="flex gap-3 mt-1.5">
-      <button
-        onClick={() => react("like")}
-        className={`flex items-center gap-1 text-xs transition-colors ${myReaction === "like" ? "text-green-600 font-semibold" : "text-gray-400"}`}
-      >
+      <button onClick={() => react("like")} className={`flex items-center gap-1 text-xs transition-colors ${myReaction === "like" ? "text-green-600 font-semibold" : "text-gray-400"}`}>
         <ThumbsUp className="w-3.5 h-3.5" /> {likes > 0 && likes}
       </button>
-      <button
-        onClick={() => react("dislike")}
-        className={`flex items-center gap-1 text-xs transition-colors ${myReaction === "dislike" ? "text-red-500 font-semibold" : "text-gray-400"}`}
-      >
+      <button onClick={() => react("dislike")} className={`flex items-center gap-1 text-xs transition-colors ${myReaction === "dislike" ? "text-red-500 font-semibold" : "text-gray-400"}`}>
         <ThumbsDown className="w-3.5 h-3.5" /> {dislikes > 0 && dislikes}
       </button>
     </div>
   );
 }
 
-function CommentSection({ receiptId }: { receiptId: string }) {
+export function CommentSection({ receiptId }: { receiptId: string }) {
   const { user } = useAuth();
   const [comments, setComments] = useState<StoredComment[]>([]);
   const [text, setText] = useState("");
@@ -72,11 +64,17 @@ function CommentSection({ receiptId }: { receiptId: string }) {
     if (!user || !text.trim()) return;
     const c: StoredComment = {
       id: crypto.randomUUID(), userId: user.id, userName: user.name,
-      receiptId, text: text.trim(), createdAt: new Date().toISOString(),
+      userAvatar: user.avatar ?? "", receiptId, text: text.trim(),
+      createdAt: new Date().toISOString(),
     };
     await store.addComment(c);
     setComments((prev) => [...prev, c]);
     setText("");
+  }
+
+  async function deleteComment(commentId: string) {
+    await store.deleteComment(commentId);
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
   }
 
   const visible = showAll ? comments : comments.slice(0, 2);
@@ -85,11 +83,19 @@ function CommentSection({ receiptId }: { receiptId: string }) {
     <div className="mt-3 border-t border-gray-100 pt-3 space-y-2">
       {visible.map((c) => (
         <div key={c.id} className="flex gap-2">
-          <Avatar name={c.userName} size="sm" />
+          <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
           <div className="flex-1 min-w-0">
-            <div className="bg-gray-50 rounded-xl px-3 py-2">
+            <div className="bg-gray-50 rounded-xl px-3 py-2 relative">
               <p className="text-xs font-semibold text-gray-700">{c.userName}</p>
-              <p className="text-xs text-gray-600 mt-0.5">{c.text}</p>
+              <p className="text-xs text-gray-600 mt-0.5 pr-5">{c.text}</p>
+              {user?.id === c.userId && (
+                <button
+                  onClick={() => deleteComment(c.id)}
+                  className="absolute top-2 right-2 text-gray-300 active:text-red-500"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <ReactionBar commentId={c.id} />
           </div>
@@ -107,9 +113,7 @@ function CommentSection({ receiptId }: { receiptId: string }) {
           <Avatar name={user.name} photo={user.avatar} size="sm" />
           <div className="flex-1 flex gap-2">
             <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
+              type="text" value={text} onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
               placeholder="Yorum yaz..."
               className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -129,37 +133,42 @@ function CommentSection({ receiptId }: { receiptId: string }) {
 }
 
 function UserReceiptCard({ r }: { r: StoredReceipt }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {r.photo && (
-        <div className="bg-gray-900">
-          <img src={r.photo} alt="Adisyon" className="w-full max-h-56 object-contain" />
-        </div>
-      )}
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <p className="font-semibold text-gray-900">{r.restaurantName}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {r.userName} · {timeAgo(r.createdAt)} · {r.people} kişi
-            </p>
-          </div>
-          <div className="text-right shrink-0 ml-2">
-            <p className="font-bold text-gray-900">{formatCurrency(r.total)}</p>
-            <p className="text-xs text-orange-500 font-medium">kişi başı {formatCurrency(r.perPerson)}</p>
-          </div>
-        </div>
-        {r.rating > 0 && (
-          <div className="flex gap-0.5 mb-1.5">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-gray-200"}`} />
-            ))}
+    <>
+      <button className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden active:scale-[0.98] transition-transform" onClick={() => setOpen(true)}>
+        {r.photo && (
+          <div className="bg-gray-900">
+            <img src={r.photo} alt="Adisyon" className="w-full max-h-52 object-contain" />
           </div>
         )}
-        {r.comment && <p className="text-sm text-gray-600 leading-snug mb-1">{r.comment}</p>}
-        <CommentSection receiptId={r.id} />
-      </div>
-    </div>
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-1">
+            <div>
+              <p className="font-semibold text-gray-900">{r.restaurantName}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{r.userName} · {timeAgo(r.createdAt)} · {r.people} kişi</p>
+            </div>
+            <div className="text-right shrink-0 ml-2">
+              <p className="font-bold text-gray-900">{formatCurrency(r.total)}</p>
+              <p className="text-xs text-orange-500 font-medium">kişi başı {formatCurrency(r.perPerson)}</p>
+            </div>
+          </div>
+          {r.rating > 0 && (
+            <div className="flex gap-0.5 mb-1">
+              {[1,2,3,4,5].map((s) => <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-gray-200"}`} />)}
+            </div>
+          )}
+          {r.comment && <p className="text-sm text-gray-600 leading-snug line-clamp-2">{r.comment}</p>}
+        </div>
+      </button>
+
+      {open && (
+        <ReceiptModal receipt={r} onClose={() => setOpen(false)}>
+          <CommentSection receiptId={r.id} />
+        </ReceiptModal>
+      )}
+    </>
   );
 }
 
@@ -173,22 +182,15 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
       <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-3xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-1">Adisyonunu paylaş</h1>
-        <p className="text-orange-100 text-sm mb-4 leading-relaxed">
-          Gerçek fiyatları topluluğunla paylaş, başkalarının deneyimini kolaylaştır.
-        </p>
-        <Link
-          href={user ? "/upload" : "/auth"}
-          className="inline-flex items-center gap-2 bg-white text-orange-600 font-bold rounded-full px-5 py-2.5 text-sm active:scale-95 transition-transform"
-        >
+        <p className="text-orange-100 text-sm mb-4 leading-relaxed">Gerçek fiyatları topluluğunla paylaş, başkalarının deneyimini kolaylaştır.</p>
+        <Link href={user ? "/upload" : "/auth"} className="inline-flex items-center gap-2 bg-white text-orange-600 font-bold rounded-full px-5 py-2.5 text-sm active:scale-95 transition-transform">
           <Camera className="w-4 h-4" />
           {user ? "Adisyon Ekle" : "Katıl & Paylaş"}
         </Link>
       </div>
 
-      {/* Community receipts */}
       {userReceipts.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -201,7 +203,6 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Trending */}
       <section>
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-5 h-5 text-orange-500" />
@@ -230,12 +231,9 @@ export default function HomePage() {
             );
           })}
         </div>
-        <Link href="/discover" className="block text-center text-sm text-orange-600 font-semibold mt-3 py-2">
-          Tüm restoranları gör →
-        </Link>
+        <Link href="/discover" className="block text-center text-sm text-orange-600 font-semibold mt-3 py-2">Tüm restoranları gör →</Link>
       </section>
 
-      {/* Mock receipts */}
       <section className="pb-4">
         <div className="flex items-center gap-2 mb-3">
           <Receipt className="w-5 h-5 text-gray-400" />
@@ -246,9 +244,7 @@ export default function HomePage() {
             const restaurant = RESTAURANTS.find((r) => r.id === receipt.restaurantId)!;
             return (
               <div key={receipt.id}>
-                <Link href={`/restaurants/${restaurant.slug}`} className="text-sm font-semibold text-gray-700 mb-1.5 block">
-                  {restaurant.name}
-                </Link>
+                <Link href={`/restaurants/${restaurant.slug}`} className="text-sm font-semibold text-gray-700 mb-1.5 block">{restaurant.name}</Link>
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs text-gray-400">{timeAgo(receipt.createdAt)}</span>
@@ -256,10 +252,7 @@ export default function HomePage() {
                   </div>
                   {receipt.items.slice(0, 3).map((item) => (
                     <div key={item.id} className="flex justify-between text-sm py-0.5">
-                      <span className="text-gray-600 truncate flex-1 mr-2">
-                        {item.quantity > 1 && <span className="text-gray-400">{item.quantity}× </span>}
-                        {item.name}
-                      </span>
+                      <span className="text-gray-600 truncate flex-1 mr-2">{item.quantity > 1 && <span className="text-gray-400">{item.quantity}× </span>}{item.name}</span>
                       <span className="text-gray-400 shrink-0">{formatCurrency(item.totalPrice)}</span>
                     </div>
                   ))}

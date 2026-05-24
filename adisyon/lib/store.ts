@@ -27,6 +27,7 @@ export interface StoredComment {
   id: string;
   userId: string;
   userName: string;
+  userAvatar: string; // base64 or empty
   receiptId: string;
   text: string;
   createdAt: string;
@@ -60,7 +61,7 @@ function rowToReceipt(r: any): StoredReceipt {
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToComment(c: any): StoredComment {
-  return { id: c.id, userId: c.user_id, userName: c.user_name, receiptId: c.receipt_id, text: c.text, createdAt: c.created_at };
+  return { id: c.id, userId: c.user_id, userName: c.user_name, userAvatar: c.user_avatar ?? "", receiptId: c.receipt_id, text: c.text, createdAt: c.created_at };
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToReaction(r: any): CommentReaction {
@@ -149,13 +150,21 @@ export const store = {
   async addComment(c: StoredComment): Promise<void> {
     if (supabase) {
       await supabase.from("comments").insert({
-        id: c.id, user_id: c.userId, user_name: c.userName,
+        id: c.id, user_id: c.userId, user_name: c.userName, user_avatar: c.userAvatar,
         receipt_id: c.receiptId, text: c.text, created_at: c.createdAt,
       });
       return;
     }
     const all = lsRead<StoredComment[]>(K.comments, []);
     all.push(c);
+    lsWrite(K.comments, all);
+  },
+  async deleteComment(commentId: string): Promise<void> {
+    if (supabase) {
+      await supabase.from("comments").delete().eq("id", commentId);
+      return;
+    }
+    const all = lsRead<StoredComment[]>(K.comments, []).filter((c) => c.id !== commentId);
     lsWrite(K.comments, all);
   },
 

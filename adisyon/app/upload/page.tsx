@@ -3,8 +3,9 @@
 import { useState, useRef, useCallback } from "react";
 import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2, MessageSquare } from "lucide-react";
 import { RESTAURANTS, formatCurrency } from "@/lib/mock";
-import { store, compressImage } from "@/lib/store";
+import { store } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { CropModal } from "@/components/CropModal";
 import Link from "next/link";
 
 interface Suggestion {
@@ -55,6 +56,7 @@ export default function UploadPage() {
   const [step, setStep] = useState<"photo" | "details" | "done">("photo");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string>("");
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -69,13 +71,25 @@ export default function UploadPage() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const perPerson = calcPerPerson(total, people);
 
-  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(URL.createObjectURL(file));
+    e.target.value = "";
+  }
+
+  function handleCropConfirm(dataUrl: string) {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
     if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(URL.createObjectURL(file));
-    const b64 = await compressImage(file);
-    setPhotoBase64(b64);
+    setPhotoUrl(dataUrl);
+    setPhotoBase64(dataUrl);
+  }
+
+  function handleCropCancel() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
   }
 
   const fetchSuggestions = useCallback(async (q: string) => {
@@ -146,12 +160,17 @@ export default function UploadPage() {
     setStep("photo");
     setPhotoUrl(null);
     setPhotoBase64("");
+    setCropSrc(null);
     setName("");
     setTotal("");
     setPeople("2");
     setRating(0);
     setComment("");
     setSuggestions([]);
+  }
+
+  if (cropSrc) {
+    return <CropModal src={cropSrc} onConfirm={handleCropConfirm} onCancel={handleCropCancel} />;
   }
 
   if (!user) {
