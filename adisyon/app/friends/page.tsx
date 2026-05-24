@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Users, Search, MapPin, ChevronRight, UserPlus, Clock, Receipt, Check, X } from "lucide-react";
-import { store, StoredFriendship, StoredCheckIn, StoredReceipt } from "@/lib/store";
+import { store, StoredFriendship, StoredCheckIn, StoredReceipt, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
@@ -123,7 +123,7 @@ export default function FriendsPage() {
     setSearchQuery(q);
     if (!q.trim() || !user) { setSearchResults([]); return; }
     setSearchLoading(true);
-    const results = await store.searchUsers(q, user.id);
+    const results = await store.searchUsers(q.startsWith("@") ? q.slice(1) : q, user.id);
     setSearchResults(results);
     setSearchLoading(false);
   }
@@ -293,7 +293,7 @@ export default function FriendsPage() {
                   </Link>
                   <div className="flex-1 min-w-0">
                     <Link href={`/users?id=${u.id}`}><p className="font-semibold text-ink">{u.name}</p></Link>
-                    <p className="text-xs text-muted">{u.receiptCount} adisyon paylaştı</p>
+                    <p className="text-xs text-muted">{deriveUsername(u.name, u.id)} · {u.receiptCount} adisyon</p>
                   </div>
                   {isFriend ? (
                     <span className="text-xs text-primary font-semibold bg-primary-light px-3 py-1.5 rounded-full">Arkadaş ✓</span>

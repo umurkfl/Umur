@@ -70,6 +70,9 @@ function ProfileContent() {
           <h2 className="text-xl font-bold text-charcoal">
             {loading ? "Yükleniyor..." : userName}
           </h2>
+          {!loading && displayUsername && (
+            <p className="text-xs text-muted mt-0.5">{displayUsername}</p>
+          )}
           <p className="text-sm text-muted mt-0.5">
             {loading ? "" : `${receipts.length} adisyon paylaştı`}
           </p>
