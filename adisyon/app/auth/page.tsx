@@ -25,7 +25,7 @@ function translateError(msg: string): string {
   if (msg.includes("User already registered")) return "Bu e-posta zaten kayıtlı, giriş yap";
   if (msg.includes("Password should be at least")) return "Şifre en az 6 karakter olmalı";
   if (msg.includes("Unable to validate email")) return "Geçerli bir e-posta gir";
-  return msg;
+  return "Bir hata oluştu, tekrar dene";
 }
 
 export default function AuthPage() {
@@ -52,7 +52,12 @@ export default function AuthPage() {
           const { data, error: err } = await supabase.auth.signUp({
             email: email.trim(),
             password,
-            options: { data: { name: name.trim() } },
+            options: {
+              data: { name: name.trim() },
+              emailRedirectTo: typeof window !== "undefined"
+                ? `${window.location.origin}${window.location.pathname.startsWith("/Umur") ? "/Umur" : ""}/`
+                : undefined,
+            },
           });
           if (err) { setError(translateError(err.message)); return; }
           // If email confirmation required, session will be null
