@@ -40,7 +40,6 @@ function UserDropdown({ user, onClose }: { user: { name: string; email: string; 
 
   return (
     <div ref={ref} className="absolute top-full right-0 mt-2 w-64 bg-surface rounded-2xl shadow-xl border border-border overflow-hidden z-50">
-      {/* User info */}
       <div className="px-4 py-3.5 border-b border-border bg-background">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary-light overflow-hidden flex items-center justify-center text-sm font-bold text-primary shrink-0">
@@ -56,7 +55,6 @@ function UserDropdown({ user, onClose }: { user: { name: string; email: string; 
         </div>
       </div>
 
-      {/* Menu groups */}
       {MENU_ITEMS.map((group) => (
         <div key={group.group} className="py-1.5">
           {group.items.map(({ href, icon: Icon, label, accent }) => (
@@ -75,7 +73,6 @@ function UserDropdown({ user, onClose }: { user: { name: string; email: string; 
         </div>
       ))}
 
-      {/* Logout */}
       <div className="border-t border-border py-1.5">
         <button
           onClick={handleLogout}
@@ -105,28 +102,38 @@ export function Navigation() {
     <>
       <header className="sticky top-0 z-50 bg-surface border-b border-border">
         <div className="max-w-2xl mx-auto px-4 h-14 grid grid-cols-3 items-center">
-          {/* Logo — left */}
-          <Link href="/" className="justify-self-start">
-            <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="36" height="36" rx="9" fill="#1D9E75" />
-              <text x="18" y="18" textAnchor="middle" dy="0.35em"
-                fontSize="22" fontWeight="700"
-                fontFamily="'Arial Rounded MT Bold', Nunito, sans-serif"
-                fill="white">g</text>
-              <circle cx="28" cy="8" r="5" fill="#D85A30" />
-            </svg>
+
+          {/* Sol: logo + kullanıcı adı */}
+          <div className="justify-self-start flex items-center gap-2 min-w-0">
+            <Link href="/" className="shrink-0">
+              <svg width="30" height="30" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="36" height="36" rx="9" fill="#1D9E75" />
+                <text x="18" y="18" textAnchor="middle" dy="0.35em"
+                  fontSize="22" fontWeight="700"
+                  fontFamily="'Arial Rounded MT Bold', Nunito, sans-serif"
+                  fill="white">g</text>
+                <circle cx="28" cy="8" r="5" fill="#D85A30" />
+              </svg>
+            </Link>
+            {ready && user && (
+              <span className="text-sm font-semibold text-charcoal truncate max-w-[90px]">
+                {user.name.split(" ")[0]}
+              </span>
+            )}
+          </div>
+
+          {/* Orta: tıklanabilir wordmark */}
+          <Link href="/" className="justify-self-center font-display text-[22px] font-bold text-primary tracking-[-0.3px]">
+            grazer
           </Link>
 
-          {/* Wordmark — center */}
-          <span className="font-display text-[22px] font-bold text-primary tracking-[-0.3px] justify-self-center">grazer</span>
-
-          {/* User — right */}
+          {/* Sağ: avatar dropdown */}
           <div className="justify-self-end relative">
             {ready && (
               user ? (
                 <button
                   onClick={() => setDropdownOpen((v) => !v)}
-                  className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
+                  className="flex items-center gap-1 active:opacity-70 transition-opacity"
                   aria-label="Hesap menüsü"
                 >
                   <div className="w-8 h-8 bg-primary-light rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-primary">
@@ -143,20 +150,18 @@ export function Navigation() {
                 </Link>
               )
             )}
-
             {dropdownOpen && user && (
               <UserDropdown user={user} onClose={() => setDropdownOpen(false)} />
             )}
           </div>
+
         </div>
       </header>
 
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-border safe-area-pb">
         <div className="max-w-2xl mx-auto flex">
           {navItems.map(({ href, icon: Icon, label }) => {
-            const active =
-              pathname === href ||
-              (href !== "/" && pathname.startsWith(href));
+            const active = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (
               <Link
                 key={label}

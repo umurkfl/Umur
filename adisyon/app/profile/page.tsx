@@ -19,6 +19,46 @@ const BADGE_ICONS: Record<string, LucideIcon> = {
   aktif: Star, sampiyion: Trophy, gezgin: Compass, gurme: Utensils, muhtar: HomeIcon,
 };
 
+// Sofra Pusulası — özel ikonlar
+function IconBill() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2h12a1 1 0 0 1 1 1v18l-2.5-1.5L14 21l-2.5-1.5L9 21l-2.5-1.5L4 21V3a1 1 0 0 1 1-1h1z" />
+      <path d="M9 8h6M9 12h4M14 16h1" />
+    </svg>
+  );
+}
+function IconForkPerson() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 2v4a2 2 0 0 0 4 0V2" />
+      <path d="M10 6v16" />
+      <circle cx="18" cy="5" r="2" />
+      <path d="M16 10c0-1.1.9-2 2-2s2 .9 2 2v4h-4v-4z" />
+      <path d="M16 14v6" strokeWidth="1.6" /><path d="M20 14v6" strokeWidth="1.6" />
+    </svg>
+  );
+}
+function IconPlate() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="13" r="7" />
+      <path d="M12 3v3" />
+      <path d="M9.5 8l1.8 2.5" />
+      <path d="M14.5 8l-1.8 2.5" />
+      <path d="M8 11h8" />
+    </svg>
+  );
+}
+function IconCompass() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M16.2 7.8l-2.8 5.4-5.4 2.8 2.8-5.4 5.4-2.8z" />
+    </svg>
+  );
+}
+
 export default function ProfilePage() {
   const { user, login, logout, ready } = useAuth();
   const router = useRouter();
@@ -174,24 +214,26 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Harcama özeti ── */}
+      {/* ── Sofra Pusulası ── */}
       {receipts.length > 0 && (
         <div className="bg-surface rounded-2xl p-4 border border-border shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h2 className="font-bold text-charcoal text-sm">Harcama Özeti</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-charcoal text-sm">Sofra Pusulası</h2>
+            <span className="text-[10px] text-muted bg-background px-2 py-0.5 rounded-full">{receipts.length} adisyon</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { emoji: "💸", label: "Toplam Harcama", value: formatCurrency(totalSpend) },
-              { emoji: "👤", label: "Ort. Kişi Başı", value: formatCurrency(avgPerPerson) },
-              { emoji: "⭐", label: "Ort. Puan", value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "Henüz yok" },
-              { emoji: "📍", label: "Benzersiz Mekan", value: `${visitedRestaurants.length} restoran` },
-            ].map(({ emoji, label, value }) => (
-              <div key={label} className="bg-background rounded-xl p-3.5">
-                <p className="text-xl leading-none">{emoji}</p>
-                <p className="font-bold text-charcoal text-sm mt-2">{value}</p>
-                <p className="text-[11px] text-muted mt-0.5">{label}</p>
+              { Icon: IconBill,      label: "Toplam Harcama",  value: formatCurrency(totalSpend),      color: "text-primary" },
+              { Icon: IconForkPerson,label: "Kişi Başı Ort.",  value: formatCurrency(avgPerPerson),    color: "text-accent" },
+              { Icon: IconPlate,     label: "Deneyim Puanı",   value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "—", color: "text-yellow-500" },
+              { Icon: IconCompass,   label: "Keşfedilen Mekan",value: `${visitedRestaurants.length} mekan`, color: "text-primary" },
+            ].map(({ Icon, label, value, color }) => (
+              <div key={label} className="bg-background rounded-xl p-3.5 flex gap-2.5 items-start">
+                <div className={`mt-0.5 shrink-0 ${color}`}><Icon /></div>
+                <div className="min-w-0">
+                  <p className="font-bold text-charcoal text-sm leading-tight">{value}</p>
+                  <p className="text-[11px] text-muted mt-0.5 leading-tight">{label}</p>
+                </div>
               </div>
             ))}
           </div>
