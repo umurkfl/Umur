@@ -126,27 +126,43 @@ export const store = {
   async getReceipts(): Promise<StoredReceipt[]> {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
-      if (!error && data) return data.map(rowToReceipt);
+      if (!error && data) {
+        const remote = data.map(rowToReceipt);
+        // Merge any locally-saved receipts that didn't make it to Supabase
+        const local = lsRead<StoredReceipt[]>(K.receipts, []);
+        const remoteIds = new Set(remote.map((r) => r.id));
+        const extras = local.filter((r) => !remoteIds.has(r.id));
+        return extras.length ? [...extras, ...remote] : remote;
+      }
     }
     return lsRead<StoredReceipt[]>(K.receipts, []);
   },
   async addReceipt(r: StoredReceipt): Promise<void> {
     if (supabase) {
-      await supabase.from("receipts").insert({
+      const { error } = await supabase.from("receipts").insert({
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
         comment: r.comment, photo: r.photo, created_at: r.createdAt,
       });
-      return;
+      if (!error) return;
+      // Supabase insert failed — fall through to localStorage
     }
     const all = lsRead<StoredReceipt[]>(K.receipts, []);
-    all.unshift(r);
-    lsWrite(K.receipts, all);
+    if (!all.some((x) => x.id === r.id)) {
+      all.unshift(r);
+      lsWrite(K.receipts, all);
+    }
   },
   async getUserReceipts(userId: string): Promise<StoredReceipt[]> {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-      if (!error && data) return data.map(rowToReceipt);
+      if (!error && data) {
+        const remote = data.map(rowToReceipt);
+        const local = lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.userId === userId);
+        const remoteIds = new Set(remote.map((r) => r.id));
+        const extras = local.filter((r) => !remoteIds.has(r.id));
+        return extras.length ? [...extras, ...remote] : remote;
+      }
     }
     return lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.userId === userId);
   },
