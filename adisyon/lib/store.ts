@@ -161,12 +161,16 @@ export const store = {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
       if (!error && data) {
+        lsWrite("adisyon_debug", `FETCH OK: ${data.length} kayıt`);
         const remote = data.map(rowToReceipt);
         const local = lsRead<StoredReceipt[]>(K.receipts, []);
         const remoteIds = new Set(remote.map((r) => r.id));
         const extras = local.filter((r) => !remoteIds.has(r.id));
         return extras.length ? [...extras, ...remote] : remote;
       }
+      lsWrite("adisyon_debug", `FETCH HATA: ${error?.message} (${error?.code})`);
+    } else {
+      lsWrite("adisyon_debug", "supabase=null — secrets boş");
     }
     return lsRead<StoredReceipt[]>(K.receipts, []);
   },

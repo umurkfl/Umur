@@ -305,10 +305,11 @@ export default function HomePage() {
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
   const [debugMsg, setDebugMsg] = useState<string | null>(null);
 
-  useEffect(() => { store.getReceipts().then(setUserReceipts); }, []);
   useEffect(() => {
-    const msg = localStorage.getItem("adisyon_debug");
-    if (msg) setDebugMsg(msg);
+    store.getReceipts().then((r) => {
+      setUserReceipts(r);
+      setDebugMsg(localStorage.getItem("adisyon_debug"));
+    });
   }, []);
 
   const trending = RESTAURANTS.slice().sort((a, b) => b.receiptCount - a.receiptCount).slice(0, 3);
