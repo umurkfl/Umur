@@ -36,27 +36,39 @@ export function Navigation() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-surface border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/"><GrazerLogo /></Link>
-          {ready && (
-            user ? (
-              <Link href="/profile" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary-light rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-primary">
-                  {user.avatar
-                    ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
-                    : user.name.charAt(0).toUpperCase()
-                  }
-                </div>
-                <span className="text-sm font-semibold text-ink hidden sm:block">
-                  {user.name.split(" ")[0]}
-                </span>
-              </Link>
-            ) : (
-              <Link href="/auth" className="text-sm font-semibold text-primary bg-primary-light px-3 py-1.5 rounded-full">
-                Giriş Yap
-              </Link>
-            )
-          )}
+        <div className="max-w-2xl mx-auto px-4 h-14 grid grid-cols-3 items-center">
+          <Link href="/" className="justify-self-start">
+            <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="36" height="36" rx="9" fill="#1D9E75" />
+              <text x="18" y="18" textAnchor="middle" dy="0.35em"
+                fontSize="22" fontWeight="700"
+                fontFamily="'Arial Rounded MT Bold', Nunito, sans-serif"
+                fill="white">g</text>
+              <circle cx="28" cy="8" r="5" fill="#D85A30" />
+            </svg>
+          </Link>
+          <span className="font-display text-[22px] font-bold text-primary tracking-[-0.3px] justify-self-center">grazer</span>
+          <div className="justify-self-end">
+            {ready && (
+              user ? (
+                <Link href="/profile" className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-primary-light rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-primary">
+                    {user.avatar
+                      ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
+                      : user.name.charAt(0).toUpperCase()
+                    }
+                  </div>
+                  <span className="text-sm font-semibold text-ink hidden sm:block">
+                    {user.name.split(" ")[0]}
+                  </span>
+                </Link>
+              ) : (
+                <Link href="/auth" className="text-sm font-semibold text-primary bg-primary-light px-3 py-1.5 rounded-full">
+                  Giriş Yap
+                </Link>
+              )
+            )}
+          </div>
         </div>
       </header>
 
