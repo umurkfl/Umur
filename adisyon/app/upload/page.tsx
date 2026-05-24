@@ -176,7 +176,7 @@ export default function UploadPage() {
   }
 
   if (cropSrc) {
-    return <CropModal src={cropSrc} onConfirm={handleCropConfirm} onCancel={handleCropCancel} />;
+    return <CropModal src={cropSrc} cropW={240} cropH={320} onConfirm={handleCropConfirm} onCancel={handleCropCancel} />;
   }
 
   if (!user) {

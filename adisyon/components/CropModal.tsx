@@ -5,13 +5,13 @@ import { X } from "lucide-react";
 interface Props {
   src: string;
   circular?: boolean;
+  cropW?: number;
+  cropH?: number;
   onConfirm: (dataUrl: string) => void;
   onCancel: () => void;
 }
 
-const CROP = 280;
-
-export function CropModal({ src, circular = false, onConfirm, onCancel }: Props) {
+export function CropModal({ src, circular = false, cropW = 280, cropH = 280, onConfirm, onCancel }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -25,9 +25,9 @@ export function CropModal({ src, circular = false, onConfirm, onCancel }: Props)
     const ch = containerRef.current.clientHeight;
     const iw = imgRef.current.naturalWidth;
     const ih = imgRef.current.naturalHeight;
-    const scale = Math.max(CROP / iw, CROP / ih) * 1.05;
+    const scale = Math.max(cropW / iw, cropH / ih) * 1.05;
     setT({ x: (cw - iw * scale) / 2, y: (ch - ih * scale) / 2, scale });
-  }, [loaded]);
+  }, [loaded, cropW, cropH]);
 
   function dist(touches: React.TouchList) {
     const dx = touches[0].clientX - touches[1].clientX;
@@ -70,22 +70,22 @@ export function CropModal({ src, circular = false, onConfirm, onCancel }: Props)
     if (!imgRef.current || !containerRef.current) return;
     const cw = containerRef.current.clientWidth;
     const ch = containerRef.current.clientHeight;
-    const cropLeft = (cw - CROP) / 2;
-    const cropTop = (ch - CROP) / 2;
+    const cropLeft = (cw - cropW) / 2;
+    const cropTop = (ch - cropH) / 2;
     const imgX = (cropLeft - t.x) / t.scale;
     const imgY = (cropTop - t.y) / t.scale;
-    const imgCropSize = CROP / t.scale;
-    const out = 400;
+    const outW = 400;
+    const outH = circular ? 400 : Math.round(400 * cropH / cropW);
     const canvas = document.createElement("canvas");
-    canvas.width = out;
-    canvas.height = out;
+    canvas.width = outW;
+    canvas.height = outH;
     const ctx = canvas.getContext("2d")!;
     if (circular) {
       ctx.beginPath();
-      ctx.arc(out / 2, out / 2, out / 2, 0, Math.PI * 2);
+      ctx.arc(outW / 2, outH / 2, outW / 2, 0, Math.PI * 2);
       ctx.clip();
     }
-    ctx.drawImage(imgRef.current, imgX, imgY, imgCropSize, imgCropSize, 0, 0, out, out);
+    ctx.drawImage(imgRef.current, imgX, imgY, cropW / t.scale, cropH / t.scale, 0, 0, outW, outH);
     onConfirm(canvas.toDataURL("image/jpeg", 0.85));
   }
 
@@ -118,12 +118,11 @@ export function CropModal({ src, circular = false, onConfirm, onCancel }: Props)
           draggable={false}
         />
 
-        {/* Overlay with transparent crop window */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-black/55" />
           <div
             className={`absolute bg-transparent border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] ${circular ? "rounded-full" : "rounded-xl"}`}
-            style={{ width: CROP, height: CROP, left: "50%", top: "50%", transform: "translate(-50%,-50%)" }}
+            style={{ width: cropW, height: cropH, left: "50%", top: "50%", transform: "translate(-50%,-50%)" }}
           />
         </div>
       </div>
