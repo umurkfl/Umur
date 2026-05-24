@@ -161,7 +161,7 @@ export const store = {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
       if (!error && data) {
-        lsWrite("adisyon_debug", `FETCH OK: ${data.length} kayıt`);
+        lsWrite("adisyon_debug", `FETCH OK: ${data.length} kayıt | kullanıcılar: ${data.map((r: Row) => r.user_name).join(", ")}`);
         const remote = data.map(rowToReceipt);
         const local = lsRead<StoredReceipt[]>(K.receipts, []);
         const remoteIds = new Set(remote.map((r) => r.id));
