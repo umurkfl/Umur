@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
-2:I[47257,["/Umur/_next/static/chunks/0y~db6o590ujl.js","/Umur/_next/static/chunks/0jj_91k9nkbjk.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"ClientPageRoot"]
-3:I[31713,["/Umur/_next/static/chunks/0y~db6o590ujl.js","/Umur/_next/static/chunks/0jj_91k9nkbjk.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js","/Umur/_next/static/chunks/16a~6m4_5v7ka.js"],"default"]
-6:I[97367,["/Umur/_next/static/chunks/0y~db6o590ujl.js","/Umur/_next/static/chunks/0jj_91k9nkbjk.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
+2:I[47257,["/Umur/_next/static/chunks/0y~db6o590ujl.js","/Umur/_next/static/chunks/17ed~ihxgz7ke.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"ClientPageRoot"]
+3:I[31713,["/Umur/_next/static/chunks/0y~db6o590ujl.js","/Umur/_next/static/chunks/17ed~ihxgz7ke.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js","/Umur/_next/static/chunks/16a~6m4_5v7ka.js"],"default"]
+6:I[97367,["/Umur/_next/static/chunks/0y~db6o590ujl.js","/Umur/_next/static/chunks/17ed~ihxgz7ke.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Umur/_next/static/chunks/16a~6m4_5v7ka.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"Ey_qhd9H3HYm17mz4jdi0"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Umur/_next/static/chunks/16a~6m4_5v7ka.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"JPaF3yFW3Jb_SARdzp9cx"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null
