@@ -23,13 +23,18 @@ function readAvatar(userId: string): string | null {
 function toStoredUser(u: User): StoredUser {
   const meta = u.user_metadata ?? {};
   const provider = u.app_metadata?.provider === "google" ? "google" : "email";
+  const name = meta.name || meta.full_name || u.email?.split("@")[0] || "Kullanıcı";
+  const storedUsername = typeof window !== "undefined"
+    ? (localStorage.getItem(`adisyon_username_${u.id}`) ?? (meta.username as string | undefined) ?? undefined)
+    : (meta.username as string | undefined) ?? undefined;
   return {
     id: u.id,
     email: u.email ?? "",
-    name: meta.name || meta.full_name || u.email?.split("@")[0] || "Kullanıcı",
+    name,
     avatar: readAvatar(u.id) ?? (meta.avatar_url as string | null) ?? null,
     provider: provider as "email" | "google",
     createdAt: u.created_at ?? new Date().toISOString(),
+    username: storedUsername,
   };
 }
 

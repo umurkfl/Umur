@@ -7,6 +7,7 @@ export interface StoredUser {
   avatar: string | null; // base64 profile photo
   provider: "email" | "google";
   createdAt: string;
+  username?: string;  // @handle e.g. "@umur_a3b2"
 }
 
 export interface StoredReceipt {
@@ -139,6 +140,15 @@ export function compressImage(file: File): Promise<string> {
   });
 }
 
+export function deriveUsername(name: string, userId: string): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "user";
+  return "@" + base + userId.slice(-4);
+}
+
+export function formatUsername(raw: string): string {
+  return raw.startsWith("@") ? raw : "@" + raw;
+}
+
 // ─── store API ────────────────────────────────────────────────────────────────
 
 export const store = {
@@ -164,6 +174,23 @@ export const store = {
     lsWrite(K.users, all);
     const current = lsRead<StoredUser | null>(K.current, null);
     if (current?.id === userId) lsWrite(K.current, { ...current, avatar });
+  },
+  setUsername: (userId: string, username: string): void => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(`adisyon_username_${userId}`, username); } catch { /* ignore */ }
+    const all = lsRead<StoredUser[]>(K.users, []);
+    const idx = all.findIndex((u) => u.id === userId);
+    if (idx >= 0) { all[idx].username = username; lsWrite(K.users, all); }
+    const current = lsRead<StoredUser | null>(K.current, null);
+    if (current?.id === userId) lsWrite(K.current, { ...current, username });
+  },
+  getStoredUsername: (userId: string): string | null => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(`adisyon_username_${userId}`);
+  },
+  isUsernameAvailable: (username: string): boolean => {
+    const all = lsRead<StoredUser[]>(K.users, []);
+    return !all.some((u) => u.username?.toLowerCase() === username.toLowerCase());
   },
 
   // Receipts
@@ -379,7 +406,7 @@ export const store = {
   // Friends
   async searchUsers(query: string, currentUserId: string): Promise<Array<{ id: string; name: string; receiptCount: number }>> {
     if (!supabase || !query.trim()) return [];
-    const { data } = await supabase.from("receipts").select("user_id, user_name").ilike("user_name", `%${query.trim()}%`).limit(50);
+    const { data } = await supabase.from("receipts").select("user_id, user_name").ilike("user_name", `%${(query.startsWith("@") ? query.slice(1) : query).trim()}%`).limit(50);
     if (!data) return [];
     const map = new Map<string, { id: string; name: string; receiptCount: number }>();
     for (const r of data) {

@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
-import { store, StoredReceipt, StoredFriendship } from "@/lib/store";
+import { store, StoredReceipt, StoredFriendship, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
@@ -42,6 +42,7 @@ function ProfileContent() {
   }
 
   const userName = receipts[0]?.userName ?? "Kullanıcı";
+  const displayUsername = !loading && userId ? deriveUsername(userName, userId) : null;
 
   if (!userId) {
     return (

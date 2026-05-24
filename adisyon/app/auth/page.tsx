@@ -8,6 +8,14 @@ import { supabase, supabaseAnonKey } from "@/lib/supabase";
 import { store } from "@/lib/store";
 import Link from "next/link";
 
+function validateUsername(u: string): string | null {
+  if (u.length < 3) return "En az 3 karakter olmalı";
+  if (u.length > 20) return "En fazla 20 karakter olabilir";
+  if (!/^[a-z0-9_]+$/.test(u)) return "Sadece harf, rakam ve _ kullanabilirsin";
+  if (!/^[a-z]/.test(u)) return "Harfle başlamalı";
+  return null;
+}
+
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden>
@@ -33,6 +41,8 @@ export default function AuthPage() {
   const { login } = useAuth();
   const [tab, setTab] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -49,11 +59,15 @@ export default function AuthPage() {
       try {
         if (tab === "register") {
           if (!name.trim()) { setError("İsim gerekli"); return; }
+          const usernameHandle = "@" + username;
+          const usernameErr = validateUsername(username);
+          if (usernameErr) { setError(usernameErr); return; }
+          if (!store.isUsernameAvailable(usernameHandle)) { setError("Bu kullanıcı adı alınmış"); return; }
           const { data, error: err } = await supabase.auth.signUp({
             email: email.trim(),
             password,
             options: {
-              data: { name: name.trim() },
+              data: { name: name.trim(), username: usernameHandle },
               emailRedirectTo: typeof window !== "undefined"
                 ? `${window.location.origin}${window.location.pathname.startsWith("/Umur") ? "/Umur" : ""}/`
                 : undefined,
@@ -62,6 +76,7 @@ export default function AuthPage() {
           if (err) { setError(translateError(err.message)); return; }
           // If email confirmation required, session will be null
           if (!data.session) { setConfirmSent(true); return; }
+          if (data.user) store.setUsername(data.user.id, usernameHandle);
         } else {
           const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
           if (err) { setError(translateError(err.message)); return; }
@@ -79,8 +94,12 @@ export default function AuthPage() {
       if (!name.trim()) { setError("İsim gerekli"); return; }
       if (!email.includes("@")) { setError("Geçerli bir e-posta gir"); return; }
       if (store.findUserByEmail(email)) { setError("Bu e-posta zaten kayıtlı"); return; }
-      const user = { id: crypto.randomUUID(), name: name.trim(), email: email.toLowerCase().trim(), avatar: null, provider: "email" as const, createdAt: new Date().toISOString() };
+      const usernameHandle = "@" + username;
+      const usernameErr = validateUsername(username);
+      if (usernameErr) { setError(usernameErr); return; }
+      const user = { id: crypto.randomUUID(), name: name.trim(), email: email.toLowerCase().trim(), avatar: null, provider: "email" as const, createdAt: new Date().toISOString(), username: usernameHandle };
       store.createUser(user);
+      store.setUsername(user.id, usernameHandle);
       login(user);
     } else {
       const user = store.findUserByEmail(email);
@@ -162,6 +181,28 @@ export default function AuthPage() {
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
             <input type="text" placeholder="Adın Soyadın" value={name} onChange={(e) => setName(e.target.value)}
               className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+        )}
+
+        {tab === "register" && (
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-medium pointer-events-none select-none">@</span>
+            <input
+              type="text"
+              placeholder="kullanici_adi"
+              value={username}
+              onChange={(e) => {
+                const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+                setUsername(val);
+                setUsernameAvailable(val.length >= 3 ? store.isUsernameAvailable("@" + val) : null);
+              }}
+              className="w-full pl-7 pr-10 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            {username.length >= 3 && (
+              <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold ${usernameAvailable ? "text-primary" : "text-red-500"}`}>
+                {usernameAvailable ? "✓" : "Alınmış"}
+              </span>
+            )}
           </div>
         )}
 
