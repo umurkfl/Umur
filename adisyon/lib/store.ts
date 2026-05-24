@@ -177,12 +177,15 @@ export const store = {
       all.unshift(r);
       lsWrite(K.receipts, all);
     }
-    // Also persist to Supabase so other users can see it
+    // Also persist to Supabase so other users can see it.
+    // Never store base64 in Supabase — rows get too large and fetches fail.
+    // If Storage upload succeeded, r.photo is a CDN URL; otherwise use empty string.
     if (supabase) {
+      const supabasePhoto = r.photo.startsWith("data:") ? "" : r.photo;
       await supabase.from("receipts").insert({
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
-        comment: r.comment, photo: r.photo, created_at: r.createdAt,
+        comment: r.comment, photo: supabasePhoto, created_at: r.createdAt,
       });
     }
   },
