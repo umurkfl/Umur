@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
-2:I[47257,["/Umur/_next/static/chunks/0sn.00~sxv.s1.js","/Umur/_next/static/chunks/07q_a-pba8rh3.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"ClientPageRoot"]
-3:I[2153,["/Umur/_next/static/chunks/0sn.00~sxv.s1.js","/Umur/_next/static/chunks/07q_a-pba8rh3.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js","/Umur/_next/static/chunks/0lcfy.jvg~put.js"],"default"]
-6:I[97367,["/Umur/_next/static/chunks/0sn.00~sxv.s1.js","/Umur/_next/static/chunks/07q_a-pba8rh3.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
+2:I[47257,["/Umur/_next/static/chunks/0sn.00~sxv.s1.js","/Umur/_next/static/chunks/0vt9np2vvi0u1.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"ClientPageRoot"]
+3:I[2153,["/Umur/_next/static/chunks/0sn.00~sxv.s1.js","/Umur/_next/static/chunks/0vt9np2vvi0u1.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js","/Umur/_next/static/chunks/0lcfy.jvg~put.js"],"default"]
+6:I[97367,["/Umur/_next/static/chunks/0sn.00~sxv.s1.js","/Umur/_next/static/chunks/0vt9np2vvi0u1.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Umur/_next/static/chunks/0lcfy.jvg~put.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"9k0c53GBkU3PnvS7GUFcp"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Umur/_next/static/chunks/0lcfy.jvg~put.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"tyYARKfqYOF3f-rzYeYos"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null
