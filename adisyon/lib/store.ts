@@ -46,7 +46,20 @@ export interface WishlistItem {
   restaurantName: string;
   restaurantSlug: string | null;
   addedAt: string;
+  listId: string;
 }
+
+export interface WishlistList {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: string;
+}
+
+export const WISHLIST_SUGGESTIONS = [
+  "İstanbul", "Ankara", "İzmir",
+  "Restoranlar", "Kafeler", "Gece Çıkışları", "Brunch", "İş Yemekleri",
+];
 
 export interface ReceiptLike {
   id: string;
@@ -56,7 +69,7 @@ export interface ReceiptLike {
 
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", receiptLikes: "adisyon_receipt_likes" };
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -233,21 +246,63 @@ export const store = {
     lsWrite(K.reactions, all);
   },
 
-  // Wishlist (localStorage only — per-device)
+  // Wishlist lists
+  getWishlistLists(userId: string): WishlistList[] {
+    return lsRead<WishlistList[]>(K.wishlistLists, []).filter((l) => l.userId === userId);
+  },
+  createWishlistList(list: WishlistList): void {
+    const all = lsRead<WishlistList[]>(K.wishlistLists, []);
+    all.push(list);
+    lsWrite(K.wishlistLists, all);
+  },
+  deleteWishlistList(userId: string, listId: string): void {
+    const lists = lsRead<WishlistList[]>(K.wishlistLists, []).filter(
+      (l) => !(l.userId === userId && l.id === listId)
+    );
+    lsWrite(K.wishlistLists, lists);
+    // Remove all items in that list
+    const items = lsRead<WishlistItem[]>(K.wishlist, []).filter(
+      (w) => !(w.userId === userId && w.listId === listId)
+    );
+    lsWrite(K.wishlist, items);
+  },
+  renameWishlistList(userId: string, listId: string, name: string): void {
+    const all = lsRead<WishlistList[]>(K.wishlistLists, []);
+    const idx = all.findIndex((l) => l.userId === userId && l.id === listId);
+    if (idx >= 0) { all[idx].name = name; lsWrite(K.wishlistLists, all); }
+  },
+
+  // Wishlist items (localStorage only — per-device)
   getWishlist(userId: string): WishlistItem[] {
     return lsRead<WishlistItem[]>(K.wishlist, []).filter((w) => w.userId === userId);
+  },
+  getWishlistByList(userId: string, listId: string): WishlistItem[] {
+    return lsRead<WishlistItem[]>(K.wishlist, []).filter(
+      (w) => w.userId === userId && w.listId === listId
+    );
   },
   isInWishlist(userId: string, restaurantName: string): boolean {
     return lsRead<WishlistItem[]>(K.wishlist, []).some(
       (w) => w.userId === userId && w.restaurantName.toLowerCase() === restaurantName.toLowerCase()
     );
   },
+  isInWishlistList(userId: string, restaurantName: string, listId: string): boolean {
+    return lsRead<WishlistItem[]>(K.wishlist, []).some(
+      (w) => w.userId === userId && w.listId === listId && w.restaurantName.toLowerCase() === restaurantName.toLowerCase()
+    );
+  },
   addToWishlist(item: WishlistItem): void {
     const all = lsRead<WishlistItem[]>(K.wishlist, []);
-    if (!all.some((w) => w.userId === item.userId && w.restaurantName.toLowerCase() === item.restaurantName.toLowerCase())) {
+    if (!all.some((w) => w.userId === item.userId && w.listId === item.listId && w.restaurantName.toLowerCase() === item.restaurantName.toLowerCase())) {
       all.push(item);
       lsWrite(K.wishlist, all);
     }
+  },
+  removeFromWishlistList(userId: string, restaurantName: string, listId: string): void {
+    const all = lsRead<WishlistItem[]>(K.wishlist, []).filter(
+      (w) => !(w.userId === userId && w.listId === listId && w.restaurantName.toLowerCase() === restaurantName.toLowerCase())
+    );
+    lsWrite(K.wishlist, all);
   },
   removeFromWishlist(userId: string, restaurantName: string): void {
     const all = lsRead<WishlistItem[]>(K.wishlist, []).filter(
