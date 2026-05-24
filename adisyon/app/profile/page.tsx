@@ -4,18 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { LogOut, Receipt, Star, Camera } from "lucide-react";
 
-const BADGE_GRADIENTS: Record<string, string> = {
-  newbie: "from-sky-400 to-blue-500", first: "from-emerald-400 to-green-600",
-  katkilci: "from-yellow-400 to-amber-500", aktif: "from-orange-400 to-orange-600",
-  sampiyion: "from-yellow-300 via-orange-400 to-red-500", gezgin: "from-teal-400 to-cyan-500",
-  gurme: "from-violet-400 to-purple-600", muhtar: "from-indigo-400 to-indigo-600",
-};
-const BADGE_GLOW: Record<string, string> = {
-  newbie: "rgba(56,189,248,0.45)", first: "rgba(52,211,153,0.45)",
-  katkilci: "rgba(251,191,36,0.45)", aktif: "rgba(251,146,60,0.45)",
-  sampiyion: "rgba(251,191,36,0.55)", gezgin: "rgba(45,212,191,0.45)",
-  gurme: "rgba(167,139,250,0.45)", muhtar: "rgba(129,140,248,0.45)",
-};
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -138,27 +126,16 @@ export default function ProfilePage() {
           <Link href="/badges" className="text-xs text-orange-500 font-semibold bg-orange-50 px-3 py-1.5 rounded-full">Tümünü Gör →</Link>
         </div>
         <div className="flex gap-5 overflow-x-auto pb-2 no-scrollbar">
-          {badges.map((b) => {
-            const grad = BADGE_GRADIENTS[b.id] ?? "from-gray-400 to-gray-500";
-            const glow = BADGE_GLOW[b.id] ?? "rgba(0,0,0,0.15)";
-            return (
-              <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
-                <div className="relative">
-                  <div className={`absolute -inset-1.5 rounded-full bg-gradient-to-br ${grad} blur-md opacity-30`} />
-                  <div
-                    className={`relative w-16 h-16 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center`}
-                    style={{ boxShadow: `0 6px 16px ${glow}` }}
-                  >
-                    <div className="absolute top-1.5 left-2 w-4 h-2 bg-white/30 rounded-full blur-sm rotate-[-20deg]" />
-                    <span className="text-3xl">{b.emoji}</span>
-                  </div>
-                </div>
-                <p className="text-[10px] font-bold text-gray-700 text-center w-16 leading-tight truncate">
-                  {b.dynamicLabel ?? b.label}
-                </p>
-              </Link>
-            );
-          })}
+          {badges.map((b) => (
+            <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
+              <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center">
+                <span className="text-3xl">{b.emoji}</span>
+              </div>
+              <p className="text-[10px] font-bold text-gray-700 text-center w-16 leading-tight truncate">
+                {b.dynamicLabel ?? b.label}
+              </p>
+            </Link>
+          ))}
           {badges.length === 0 && (
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
