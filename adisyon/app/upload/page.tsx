@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2, MessageSquare } from "lucide-react";
+import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2, MessageSquare, Scissors } from "lucide-react";
 import { RESTAURANTS, formatCurrency } from "@/lib/mock";
-import { store } from "@/lib/store";
+import { store, compressImage } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { CropModal } from "@/components/CropModal";
 import Link from "next/link";
@@ -57,6 +57,7 @@ export default function UploadPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string>("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [rawSrc, setRawSrc] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -71,24 +72,29 @@ export default function UploadPage() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const perPerson = calcPerPerson(total, people);
 
-  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (cropSrc) URL.revokeObjectURL(cropSrc);
-    setCropSrc(URL.createObjectURL(file));
     e.target.value = "";
+    if (rawSrc) URL.revokeObjectURL(rawSrc);
+    const newRaw = URL.createObjectURL(file);
+    setRawSrc(newRaw);
+    const compressed = await compressImage(file);
+    setPhotoUrl(compressed);
+    setPhotoBase64(compressed);
+  }
+
+  function handleCropOpen() {
+    if (rawSrc) setCropSrc(rawSrc);
   }
 
   function handleCropConfirm(dataUrl: string) {
-    if (cropSrc) URL.revokeObjectURL(cropSrc);
     setCropSrc(null);
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
     setPhotoUrl(dataUrl);
     setPhotoBase64(dataUrl);
   }
 
   function handleCropCancel() {
-    if (cropSrc) URL.revokeObjectURL(cropSrc);
     setCropSrc(null);
   }
 
@@ -380,6 +386,9 @@ export default function UploadPage() {
         <div className="bg-black rounded-2xl overflow-hidden">
           <img src={photoUrl} alt="Adisyon" className="w-full max-h-[60vh] object-contain" />
           <div className="flex gap-2 p-3 justify-end">
+            <button onClick={handleCropOpen} className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+              <Scissors className="w-3.5 h-3.5" /> Kırp
+            </button>
             <label htmlFor="input-camera" className="cursor-pointer bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
               <Camera className="w-3.5 h-3.5" /> Yeniden Çek
             </label>
