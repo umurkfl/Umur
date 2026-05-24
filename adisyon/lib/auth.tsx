@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { StoredUser, store } from "./store";
+import { StoredUser, store, deriveUsername } from "./store";
 
 interface AuthCtx {
   user: StoredUser | null;
@@ -24,9 +24,14 @@ function toStoredUser(u: User): StoredUser {
   const meta = u.user_metadata ?? {};
   const provider = u.app_metadata?.provider === "google" ? "google" : "email";
   const name = meta.name || meta.full_name || u.email?.split("@")[0] || "Kullanıcı";
-  const storedUsername = typeof window !== "undefined"
+  let username = typeof window !== "undefined"
     ? (localStorage.getItem(`adisyon_username_${u.id}`) ?? (meta.username as string | undefined) ?? undefined)
     : (meta.username as string | undefined) ?? undefined;
+  // Auto-assign a unique @username for existing users who don't have one yet
+  if (!username && typeof window !== "undefined") {
+    username = deriveUsername(name, u.id);
+    try { localStorage.setItem(`adisyon_username_${u.id}`, username); } catch { /* ignore */ }
+  }
   return {
     id: u.id,
     email: u.email ?? "",
@@ -34,7 +39,7 @@ function toStoredUser(u: User): StoredUser {
     avatar: readAvatar(u.id) ?? (meta.avatar_url as string | null) ?? null,
     provider: provider as "email" | "google",
     createdAt: u.created_at ?? new Date().toISOString(),
-    username: storedUsername,
+    username,
   };
 }
 
@@ -45,7 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) {
       // No Supabase configured — fall back to localStorage auth
-      setUser(store.getCurrentUser());
+      const u = store.getCurrentUser();
+      if (u && !u.username) {
+        const generated = deriveUsername(u.name, u.id);
+        store.setUsername(u.id, generated);
+        setUser({ ...u, username: generated });
+      } else {
+        setUser(u);
+      }
       setReady(true);
       return;
     }
