@@ -2,26 +2,74 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock, UserCheck, Receipt, ClipboardList, Star, Trophy, Compass, Utensils, Home, type LucideIcon } from "lucide-react";
-import { ALL_BADGES, BadgeDef, calcBadges, StoredReceipt, store } from "@/lib/store";
+import { Lock, UserCheck, Receipt, ClipboardList, Star, Trophy, Compass, Utensils, Home, Users, Diamond, Wallet, Rocket, Camera, Calendar, Heart, ThumbsUp, type LucideIcon } from "lucide-react";
+import { ALL_BADGES, BadgeDef, Badge, calcBadges, StoredReceipt, store } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 
 const BADGE_ICONS: Record<string, LucideIcon> = {
-  newbie:    UserCheck,
-  first:     Receipt,
-  katkilci:  ClipboardList,
-  aktif:     Star,
-  sampiyion: Trophy,
-  gezgin:    Compass,
-  gurme:     Utensils,
-  muhtar:    Home,
+  newbie:     UserCheck,
+  first:      Receipt,
+  katkilci:   ClipboardList,
+  aktif:      Star,
+  sampiyion:  Trophy,
+  gezgin:     Compass,
+  gurme:      Utensils,
+  muhtar:     Home,
+  grup:       Users,
+  luks:       Diamond,
+  ekonomik:   Wallet,
+  zirve:      Rocket,
+  fotograf:   Camera,
+  hafta_sonu: Calendar,
+  sadik:      Heart,
+  tatli:      ThumbsUp,
 };
 
-function BadgeCoin({ badge, earned, label }: { badge: BadgeDef; earned: boolean; label: string }) {
+function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: BadgeDef; earned: boolean; earnedBadge?: Badge; onClose: () => void }) {
   const Icon = BADGE_ICONS[badge.id] ?? Star;
-
   return (
-    <div className={`flex flex-col items-center gap-2.5 ${earned ? "" : "opacity-35"}`}>
+    <>
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl p-6">
+        <div className="flex justify-center mb-5">
+          <div className="w-10 h-1 bg-border rounded-full" />
+        </div>
+        <div className="flex flex-col items-center gap-4">
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center relative ${earned ? "bg-primary" : "bg-border"}`}>
+            <Icon className="w-11 h-11 text-white" strokeWidth={1.5} />
+            {!earned && (
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-muted rounded-full flex items-center justify-center border-2 border-surface">
+                <Lock className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+              </div>
+            )}
+          </div>
+          <div className="text-center">
+            <p className="text-xl font-bold text-charcoal">{earnedBadge?.dynamicLabel ?? badge.label}</p>
+            {earned
+              ? <p className="text-sm text-primary font-semibold mt-1">✓ Kazanıldı</p>
+              : <p className="text-sm text-muted mt-1">Henüz kazanılmadı</p>
+            }
+          </div>
+          <div className="w-full bg-background rounded-2xl p-4 space-y-2">
+            <p className="text-sm text-ink leading-relaxed">{badge.description}</p>
+            <div className="flex items-start gap-2 pt-2 border-t border-border">
+              <span className="text-xs font-semibold text-muted uppercase tracking-wide shrink-0">Nasıl kazanılır:</span>
+              <span className="text-xs text-primary font-semibold">{badge.howTo}</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-full py-3 bg-background border border-border rounded-2xl text-sm font-semibold text-muted">
+            Kapat
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BadgeCoin({ badge, earned, label, onClick }: { badge: BadgeDef; earned: boolean; label: string; onClick: () => void }) {
+  const Icon = BADGE_ICONS[badge.id] ?? Star;
+  return (
+    <button onClick={onClick} className={`flex flex-col items-center gap-2.5 ${earned ? "" : "opacity-35"} active:scale-95 transition-transform`}>
       <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${earned ? "bg-primary" : "bg-border"}`}>
         <Icon className="w-9 h-9 text-white" strokeWidth={1.5} />
         {!earned && (
@@ -37,13 +85,14 @@ function BadgeCoin({ badge, earned, label }: { badge: BadgeDef; earned: boolean;
           : <p className="text-[10px] text-muted mt-0.5 leading-tight line-clamp-2">{badge.howTo}</p>
         }
       </div>
-    </div>
+    </button>
   );
 }
 
 export default function BadgesPage() {
   const { user } = useAuth();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
+  const [selectedBadge, setSelectedBadge] = useState<BadgeDef | null>(null);
 
   useEffect(() => {
     if (user) store.getUserReceipts(user.id).then(setReceipts);
@@ -82,7 +131,13 @@ export default function BadgesPage() {
           const isEarned = earnedIds.has(badge.id);
           const earnedBadge = earned.find((b) => b.id === badge.id);
           return (
-            <BadgeCoin key={badge.id} badge={badge} earned={isEarned} label={earnedBadge?.dynamicLabel ?? badge.label} />
+            <BadgeCoin
+              key={badge.id}
+              badge={badge}
+              earned={isEarned}
+              label={earnedBadge?.dynamicLabel ?? badge.label}
+              onClick={() => setSelectedBadge(badge)}
+            />
           );
         })}
       </div>
@@ -91,6 +146,15 @@ export default function BadgesPage() {
         <div className="text-center">
           <Link href="/auth" className="bg-primary text-white font-bold rounded-full px-6 py-3 text-sm">Giriş Yap</Link>
         </div>
+      )}
+
+      {selectedBadge && (
+        <BadgeDetailSheet
+          badge={selectedBadge}
+          earned={earnedIds.has(selectedBadge.id)}
+          earnedBadge={earned.find((b) => b.id === selectedBadge.id)}
+          onClose={() => setSelectedBadge(null)}
+        />
       )}
     </div>
   );

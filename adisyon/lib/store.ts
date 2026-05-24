@@ -67,9 +67,28 @@ export interface ReceiptLike {
   receiptId: string;
 }
 
+export interface StoredFriendship {
+  id: string;
+  userId: string;
+  friendId: string;
+  userName: string;
+  friendName: string;
+  status: "pending" | "accepted";
+  createdAt: string;
+}
+
+export interface StoredCheckIn {
+  id: string;
+  userId: string;
+  userName: string;
+  restaurantName: string;
+  message: string;
+  createdAt: string;
+}
+
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes" };
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes", friendships: "adisyon_friendships", checkIns: "adisyon_check_ins" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -92,6 +111,12 @@ function rowToComment(c: Row): StoredComment {
 }
 function rowToReaction(r: Row): CommentReaction {
   return { id: r.id as string, userId: r.user_id as string, commentId: r.comment_id as string, reaction: r.reaction as "like" | "dislike" };
+}
+function rowToFriendship(r: Row): StoredFriendship {
+  return { id: r.id as string, userId: r.user_id as string, friendId: r.friend_id as string, userName: r.user_name as string, friendName: r.friend_name as string, status: r.status as "pending" | "accepted", createdAt: r.created_at as string };
+}
+function rowToCheckIn(r: Row): StoredCheckIn {
+  return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, message: (r.message as string) ?? "", createdAt: r.created_at as string };
 }
 
 // ─── Image compression ───────────────────────────────────────────────────────
@@ -350,6 +375,82 @@ export const store = {
     lsWrite(K.receiptLikes, all);
     return true;
   },
+
+  // Friends
+  async searchUsers(query: string, currentUserId: string): Promise<Array<{ id: string; name: string; receiptCount: number }>> {
+    if (!supabase || !query.trim()) return [];
+    const { data } = await supabase.from("receipts").select("user_id, user_name").ilike("user_name", `%${query.trim()}%`).limit(50);
+    if (!data) return [];
+    const map = new Map<string, { id: string; name: string; receiptCount: number }>();
+    for (const r of data) {
+      const id = r.user_id as string;
+      if (id === currentUserId) continue;
+      const name = r.user_name as string;
+      const ex = map.get(id);
+      if (ex) ex.receiptCount++; else map.set(id, { id, name, receiptCount: 1 });
+    }
+    return Array.from(map.values());
+  },
+  async getFriendships(userId: string): Promise<StoredFriendship[]> {
+    if (supabase) {
+      const { data, error } = await supabase.from("friendships").select("*").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      if (!error && data) {
+        const remote = data.map(rowToFriendship);
+        lsWrite(K.friendships, remote);
+        return remote;
+      }
+    }
+    return lsRead<StoredFriendship[]>(K.friendships, []).filter((f) => f.userId === userId || f.friendId === userId);
+  },
+  async sendFriendRequest(fromUserId: string, fromUserName: string, toUserId: string, toUserName: string): Promise<void> {
+    const friendship: StoredFriendship = { id: crypto.randomUUID(), userId: fromUserId, friendId: toUserId, userName: fromUserName, friendName: toUserName, status: "pending", createdAt: new Date().toISOString() };
+    const all = lsRead<StoredFriendship[]>(K.friendships, []);
+    if (!all.some((f) => (f.userId === fromUserId && f.friendId === toUserId) || (f.userId === toUserId && f.friendId === fromUserId))) {
+      all.push(friendship);
+      lsWrite(K.friendships, all);
+    }
+    if (supabase) {
+      await supabase.from("friendships").insert({ id: friendship.id, user_id: friendship.userId, friend_id: friendship.friendId, user_name: friendship.userName, friend_name: friendship.friendName, status: "pending", created_at: friendship.createdAt });
+    }
+  },
+  async acceptFriendRequest(friendshipId: string): Promise<void> {
+    const all = lsRead<StoredFriendship[]>(K.friendships, []);
+    const idx = all.findIndex((f) => f.id === friendshipId);
+    if (idx >= 0) { all[idx].status = "accepted"; lsWrite(K.friendships, all); }
+    if (supabase) {
+      await supabase.from("friendships").update({ status: "accepted" }).eq("id", friendshipId);
+    }
+  },
+  async removeFriendship(friendshipId: string): Promise<void> {
+    const all = lsRead<StoredFriendship[]>(K.friendships, []).filter((f) => f.id !== friendshipId);
+    lsWrite(K.friendships, all);
+    if (supabase) {
+      await supabase.from("friendships").delete().eq("id", friendshipId);
+    }
+  },
+  async getFriendActivity(friendIds: string[]): Promise<{ receipts: StoredReceipt[]; checkIns: StoredCheckIn[] }> {
+    if (!friendIds.length) return { receipts: [], checkIns: [] };
+    const receipts: StoredReceipt[] = [];
+    const checkIns: StoredCheckIn[] = [];
+    if (supabase) {
+      const [{ data: rData }, { data: cData }] = await Promise.all([
+        supabase.from("receipts").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(30),
+        supabase.from("check_ins").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(20),
+      ]);
+      if (rData) receipts.push(...rData.map(rowToReceipt));
+      if (cData) checkIns.push(...cData.map(rowToCheckIn));
+    }
+    return { receipts, checkIns };
+  },
+  async checkIn(userId: string, userName: string, restaurantName: string, message: string): Promise<void> {
+    const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString() };
+    if (supabase) {
+      await supabase.from("check_ins").insert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt });
+    }
+    const all = lsRead<StoredCheckIn[]>(K.checkIns, []);
+    all.unshift(ci);
+    lsWrite(K.checkIns, all.slice(0, 50));
+  },
 };
 
 // ─── Badge definitions & engine ──────────────────────────────────────────────
@@ -372,6 +473,14 @@ export const ALL_BADGES: BadgeDef[] = [
   { id: "gezgin",    emoji: "🗺️", label: "Gezgin",           description: "Farklı mekânları keşfetmeyi seversin",         howTo: "5 farklı restoran ziyaret et",    color: "bg-teal-100"   },
   { id: "gurme",     emoji: "🍽️", label: "Gurme",            description: "Restoran keşfinde uzman sayılırsın",           howTo: "10 farklı restoran keşfet",       color: "bg-purple-100" },
   { id: "muhtar",    emoji: "🏘️", label: "Semt Muhtarı",    description: "Bir mekânın en sadık takipçisisin",            howTo: "Aynı restoranı 3+ kez ziyaret et", color: "bg-indigo-100" },
+  { id: "grup",      emoji: "👥", label: "Grup Lideri",     description: "Büyük bir topluluğu yemekte bir araya getirdin",          howTo: "6+ kişilik bir adisyon paylaş",                 color: "bg-cyan-100"   },
+  { id: "luks",      emoji: "💎", label: "Lüks Seçim",      description: "Hayatın tadını çıkarıyorsun",                             howTo: "Kişi başı 500₺+ adisyon paylaş",                color: "bg-violet-100" },
+  { id: "ekonomik",  emoji: "🪙", label: "Akıllı Seçim",    description: "Lezzetli yiyecekleri uygun fiyata buluyorsun",            howTo: "Kişi başı 80₺ altında adisyon paylaş",          color: "bg-lime-100"   },
+  { id: "zirve",     emoji: "🚀", label: "Efsane",           description: "Adisyon paylaşımında gerçek bir efsane oldun",            howTo: "50 adisyon paylaş",                             color: "bg-rose-100"   },
+  { id: "fotograf",  emoji: "📸", label: "Fotoğrafçı",      description: "Adisyonlarını görsellerle zenginleştiriyorsun",           howTo: "3 fotoğraflı adisyon paylaş",                   color: "bg-amber-100"  },
+  { id: "hafta_sonu",emoji: "🎉", label: "Hafta Sonu Ruhu", description: "Haftasonlarını dolu dolu geçiriyorsun",                   howTo: "3 hafta sonu (Cmt/Paz) adisyonu paylaş",        color: "bg-pink-100"   },
+  { id: "sadik",     emoji: "❤️", label: "Sadık Müdavim",   description: "Favori mekânına bağlı kalıyorsun",                       howTo: "Aynı restoranda 5+ adisyon paylaş",             color: "bg-red-100"    },
+  { id: "tatli",     emoji: "⭐", label: "Nazik Eleştirmen", description: "Pozitif bakış açısıyla değerlendirmeler yapıyorsun",    howTo: "5+ adisyonda ortalama 4+ yıldız",               color: "bg-yellow-100" },
 ];
 
 export interface Badge extends BadgeDef {
@@ -397,5 +506,24 @@ export function calcBadges(receipts: StoredReceipt[]): Badge[] {
     const name = receipts.find((r) => r.restaurantName.toLowerCase() === top[0])!.restaurantName;
     earned.push({ ...ALL_BADGES.find((b) => b.id === "muhtar")!, dynamicLabel: `${name} Muhtarı` });
   }
+
+  const photoCount = receipts.filter((r) => r.photo && r.photo.length > 0).length;
+  const weekendCount = receipts.filter((r) => { const d = new Date(r.createdAt).getDay(); return d === 0 || d === 6; }).length;
+  const ratedReceipts = receipts.filter((r) => r.rating > 0);
+  const avgRating = ratedReceipts.length >= 5 ? ratedReceipts.reduce((s, r) => s + r.rating, 0) / ratedReceipts.length : 0;
+  const maxFreqEntry = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+
+  if (receipts.some((r) => r.people >= 6))  earned.push({ ...ALL_BADGES.find((b) => b.id === "grup")! });
+  if (receipts.some((r) => r.perPerson >= 500)) earned.push({ ...ALL_BADGES.find((b) => b.id === "luks")! });
+  if (receipts.some((r) => r.perPerson < 80))   earned.push({ ...ALL_BADGES.find((b) => b.id === "ekonomik")! });
+  if (count >= 50)       earned.push({ ...ALL_BADGES.find((b) => b.id === "zirve")! });
+  if (photoCount >= 3)   earned.push({ ...ALL_BADGES.find((b) => b.id === "fotograf")! });
+  if (weekendCount >= 3) earned.push({ ...ALL_BADGES.find((b) => b.id === "hafta_sonu")! });
+  if (maxFreqEntry && maxFreqEntry[1] >= 5) {
+    const name = receipts.find((r) => r.restaurantName.toLowerCase() === maxFreqEntry[0])!.restaurantName;
+    earned.push({ ...ALL_BADGES.find((b) => b.id === "sadik")!, dynamicLabel: `${name} Sadığı` });
+  }
+  if (avgRating >= 4) earned.push({ ...ALL_BADGES.find((b) => b.id === "tatli")! });
+
   return earned;
 }

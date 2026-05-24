@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
-import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo } from "@/lib/mock";
+import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
+import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { WishlistButton } from "@/components/WishlistButton";
@@ -234,10 +234,29 @@ function HelpfulButton({ receiptId }: { receiptId: string }) {
 // ─── Receipt detail sheet ────────────────────────────────────────────────────
 
 function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => void }) {
+  const { user } = useAuth();
+  const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
+
+  useEffect(() => {
+    if (!user || user.id === r.userId) return;
+    store.getFriendships(user.id).then((fs) => {
+      const match = fs.find((f) => (f.userId === user.id && f.friendId === r.userId) || (f.userId === r.userId && f.friendId === user.id));
+      if (!match) setFriendStatus("none");
+      else if (match.status === "accepted") setFriendStatus("friend");
+      else setFriendStatus("pending");
+    });
+  }, [user, r.userId]);
+
+  async function addFriend() {
+    if (!user) return;
+    await store.sendFriendRequest(user.id, user.name, r.userId, r.userName);
+    setFriendStatus("pending");
+  }
 
   return (
     <>
@@ -260,20 +279,31 @@ function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => v
           </button>
         </div>
 
-        <Link
-          href={`/users?id=${r.userId}`}
-          onClick={onClose}
-          className="flex items-center gap-3 px-4 py-2.5 active:bg-background/80 border-b border-border/40"
-        >
-          <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
-            {r.userName.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">{r.userName}</p>
-            <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-        </Link>
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
+          <Link href={`/users?id=${r.userId}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
+              {r.userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-ink">{r.userName}</p>
+              <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+          </Link>
+          {user && user.id !== r.userId && (
+            <button
+              onClick={addFriend}
+              disabled={friendStatus !== "none"}
+              className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+                friendStatus === "friend" ? "bg-primary-light text-primary" :
+                friendStatus === "pending" ? "bg-background border border-border text-muted" :
+                "bg-primary text-white active:scale-95"
+              }`}
+            >
+              {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
+            </button>
+          )}
+        </div>
 
         <div className="px-4 py-3 flex items-center gap-4 border-b border-border/40">
           <div className="bg-primary-light rounded-xl px-4 py-2">
@@ -385,8 +415,6 @@ export default function HomePage() {
     store.getReceipts().then(setUserReceipts);
   }, []);
 
-  const trending = RESTAURANTS.slice().sort((a, b) => b.receiptCount - a.receiptCount).slice(0, 3);
-
   return (
     <div className="space-y-0">
       {/* Hero CTA */}
@@ -399,85 +427,18 @@ export default function HomePage() {
         </Link>
       </div>
 
-      {/* Community feed */}
+      {/* Feed */}
       {userReceipts.length > 0 && (
         <section className="mb-6">
           <div className="flex items-center gap-2 px-4 mb-3">
             <Receipt className="w-5 h-5 text-primary" />
-            <h2 className="font-bold text-charcoal">Topluluktan Son Paylaşımlar</h2>
+            <h2 className="font-bold text-charcoal">Akış</h2>
           </div>
           <div className="space-y-3 px-4">
-            {userReceipts.slice(0, 10).map((r) => <UserReceiptCard key={r.id} r={r} onOpen={() => setSelected(r)} />)}
+            {userReceipts.slice(0, 20).map((r) => <UserReceiptCard key={r.id} r={r} onOpen={() => setSelected(r)} />)}
           </div>
         </section>
       )}
-
-      {/* Trending */}
-      <section className="px-4 mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-5 h-5 text-primary" />
-          <h2 className="font-bold text-charcoal">Bu Hafta Popüler</h2>
-        </div>
-        <div className="space-y-3">
-          {trending.map((r) => {
-            const c = priceColors(r.priceRange);
-            return (
-              <Link key={r.id} href={`/restaurants/${r.slug}`} className="block">
-                <div className="bg-surface rounded-2xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-charcoal">{r.name}</p>
-                      <p className="text-xs text-muted mt-0.5">{r.cuisine} · {r.city}</p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className={`px-2 py-1 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
-                      <WishlistButton restaurantName={r.name} restaurantSlug={r.slug} size="sm" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-muted">Kişi başı <span className="font-semibold text-ink">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
-                    <span className="text-yellow-500 font-semibold">★ {r.avgRating.toFixed(1)}</span>
-                    <span className="text-muted ml-auto text-xs">{r.receiptCount} adisyon</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-        <Link href="/discover" className="block text-center text-sm text-primary font-semibold mt-3 py-2">Tüm restoranları gör →</Link>
-      </section>
-
-      {/* Sample receipts */}
-      <section className="px-4 pb-24">
-        <div className="flex items-center gap-2 mb-3">
-          <Receipt className="w-5 h-5 text-muted" />
-          <h2 className="font-bold text-charcoal">Örnek Adisyonlar</h2>
-        </div>
-        <div className="space-y-4">
-          {RECEIPTS.slice(0, 3).map((receipt) => {
-            const restaurant = RESTAURANTS.find((r) => r.id === receipt.restaurantId)!;
-            return (
-              <div key={receipt.id}>
-                <Link href={`/restaurants/${restaurant.slug}`} className="text-sm font-semibold text-ink mb-1.5 block">{restaurant.name}</Link>
-                <div className="bg-surface rounded-2xl p-4 border border-border shadow-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-muted">{timeAgo(receipt.createdAt)}</span>
-                    <span className="font-bold text-charcoal">{formatCurrency(receipt.total)}</span>
-                  </div>
-                  {receipt.items.slice(0, 3).map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm py-0.5">
-                      <span className="text-ink truncate flex-1 mr-2">{item.quantity > 1 && <span className="text-muted">{item.quantity}× </span>}{item.name}</span>
-                      <span className="text-muted shrink-0">{formatCurrency(item.totalPrice)}</span>
-                    </div>
-                  ))}
-                  {receipt.items.length > 3 && <p className="text-xs text-muted mt-1">+{receipt.items.length - 3} ürün daha</p>}
-                  <CommentSection receiptId={receipt.id} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
 
       {selected && <ReceiptDetailSheet r={selected} onClose={() => setSelected(null)} />}
     </div>
