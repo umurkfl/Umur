@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2, MessageSquare } from "lucide-react";
 import { RESTAURANTS, formatCurrency } from "@/lib/mock";
-import { store } from "@/lib/store";
+import { store, compressImage } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 
@@ -54,6 +54,7 @@ export default function UploadPage() {
   const { user } = useAuth();
   const [step, setStep] = useState<"photo" | "details" | "done">("photo");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string>("");
 
   const [name, setName] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -68,11 +69,13 @@ export default function UploadPage() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const perPerson = calcPerPerson(total, people);
 
-  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     setPhotoUrl(URL.createObjectURL(file));
+    const b64 = await compressImage(file);
+    setPhotoBase64(b64);
   }
 
   const fetchSuggestions = useCallback(async (q: string) => {
@@ -133,6 +136,7 @@ export default function UploadPage() {
       perPerson: t / p,
       rating,
       comment: comment.trim(),
+      photo: photoBase64,
       createdAt: new Date().toISOString(),
     });
     setStep("done");
@@ -141,6 +145,7 @@ export default function UploadPage() {
   function reset() {
     setStep("photo");
     setPhotoUrl(null);
+    setPhotoBase64("");
     setName("");
     setTotal("");
     setPeople("2");

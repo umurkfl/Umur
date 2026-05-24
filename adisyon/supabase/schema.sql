@@ -11,6 +11,7 @@ create table if not exists receipts (
   per_person    numeric not null,
   rating        integer not null default 0,
   comment       text not null default '',
+  photo         text not null default '',
   created_at    text not null
 );
 
@@ -23,11 +24,24 @@ create table if not exists comments (
   created_at  text not null
 );
 
--- Allow public read + write (no auth required)
-alter table receipts enable row level security;
-alter table comments enable row level security;
+create table if not exists comment_reactions (
+  id          text primary key,
+  user_id     text not null,
+  comment_id  text not null,
+  reaction    text not null,  -- 'like' or 'dislike'
+  unique(user_id, comment_id)
+);
 
-create policy "public read receipts"  on receipts for select using (true);
-create policy "public insert receipts" on receipts for insert with check (true);
-create policy "public read comments"  on comments for select using (true);
-create policy "public insert comments" on comments for insert with check (true);
+-- Row-level security (public read + write, no auth required)
+alter table receipts          enable row level security;
+alter table comments          enable row level security;
+alter table comment_reactions enable row level security;
+
+create policy "public read receipts"           on receipts          for select using (true);
+create policy "public insert receipts"         on receipts          for insert with check (true);
+create policy "public read comments"           on comments          for select using (true);
+create policy "public insert comments"         on comments          for insert with check (true);
+create policy "public read reactions"          on comment_reactions for select using (true);
+create policy "public insert reactions"        on comment_reactions for insert with check (true);
+create policy "public update reactions"        on comment_reactions for update using (true);
+create policy "public delete reactions"        on comment_reactions for delete using (true);

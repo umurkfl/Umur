@@ -26,8 +26,11 @@ export function Navigation() {
           {ready && (
             user ? (
               <Link href="/profile" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-sm font-bold text-orange-600">
-                  {user.name.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 bg-orange-100 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-orange-600">
+                  {user.avatar
+                    ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
+                    : user.name.charAt(0).toUpperCase()
+                  }
                 </div>
                 <span className="text-sm font-semibold text-gray-700 hidden sm:block">
                   {user.name.split(" ")[0]}

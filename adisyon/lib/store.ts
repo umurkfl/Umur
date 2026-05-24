@@ -4,7 +4,7 @@ export interface StoredUser {
   id: string;
   name: string;
   email: string;
-  avatar: string | null;
+  avatar: string | null; // base64 profile photo
   provider: "email" | "google";
   createdAt: string;
 }
@@ -19,6 +19,7 @@ export interface StoredReceipt {
   perPerson: number;
   rating: number;
   comment: string;
+  photo: string; // base64 compressed image, empty string if none
   createdAt: string;
 }
 
@@ -31,9 +32,16 @@ export interface StoredComment {
   createdAt: string;
 }
 
-// ─── localStorage helpers (auth + offline fallback) ───────────────────────
+export interface CommentReaction {
+  id: string;
+  userId: string;
+  commentId: string;
+  reaction: "like" | "dislike";
+}
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments" };
+// ─── localStorage helpers ────────────────────────────────────────────────────
+
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -44,21 +52,45 @@ function lsWrite<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// ─── Row mappers (snake_case ↔ camelCase) ─────────────────────────────────
+// ─── Row mappers ─────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToReceipt(r: any): StoredReceipt {
-  return { id: r.id, userId: r.user_id, userName: r.user_name, restaurantName: r.restaurant_name, total: r.total, people: r.people, perPerson: r.per_person, rating: r.rating, comment: r.comment, createdAt: r.created_at };
+  return { id: r.id, userId: r.user_id, userName: r.user_name, restaurantName: r.restaurant_name, total: r.total, people: r.people, perPerson: r.per_person, rating: r.rating, comment: r.comment, photo: r.photo ?? "", createdAt: r.created_at };
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToComment(c: any): StoredComment {
   return { id: c.id, userId: c.user_id, userName: c.user_name, receiptId: c.receipt_id, text: c.text, createdAt: c.created_at };
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToReaction(r: any): CommentReaction {
+  return { id: r.id, userId: r.user_id, commentId: r.comment_id, reaction: r.reaction };
+}
 
-// ─── store API ────────────────────────────────────────────────────────────
+// ─── Image compression ───────────────────────────────────────────────────────
+
+export async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const maxW = 600;
+      const ratio = Math.min(1, maxW / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.6));
+    };
+    img.src = url;
+  });
+}
+
+// ─── store API ────────────────────────────────────────────────────────────────
 
 export const store = {
-  // Auth (always localStorage — no server needed)
+  // Auth (localStorage only)
   getCurrentUser: () => lsRead<StoredUser | null>(K.current, null),
   setCurrentUser: (u: StoredUser | null) => lsWrite(K.current, u),
   findUserByEmail: (email: string) =>
@@ -68,22 +100,29 @@ export const store = {
     all.push(u);
     lsWrite(K.users, all);
   },
+  updateUserAvatar: (userId: string, avatar: string) => {
+    const all = lsRead<StoredUser[]>(K.users, []);
+    const idx = all.findIndex((u) => u.id === userId);
+    if (idx >= 0) all[idx].avatar = avatar;
+    lsWrite(K.users, all);
+    const current = lsRead<StoredUser | null>(K.current, null);
+    if (current?.id === userId) lsWrite(K.current, { ...current, avatar });
+  },
 
   // Receipts
   async getReceipts(): Promise<StoredReceipt[]> {
     if (supabase) {
-      const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
       if (!error && data) return data.map(rowToReceipt);
     }
     return lsRead<StoredReceipt[]>(K.receipts, []);
   },
-
   async addReceipt(r: StoredReceipt): Promise<void> {
     if (supabase) {
       await supabase.from("receipts").insert({
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
-        comment: r.comment, created_at: r.createdAt,
+        comment: r.comment, photo: r.photo, created_at: r.createdAt,
       });
       return;
     }
@@ -91,7 +130,6 @@ export const store = {
     all.unshift(r);
     lsWrite(K.receipts, all);
   },
-
   async getUserReceipts(userId: string): Promise<StoredReceipt[]> {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
@@ -108,7 +146,6 @@ export const store = {
     }
     return lsRead<StoredComment[]>(K.comments, []).filter((c) => c.receiptId === receiptId);
   },
-
   async addComment(c: StoredComment): Promise<void> {
     if (supabase) {
       await supabase.from("comments").insert({
@@ -121,35 +158,83 @@ export const store = {
     all.push(c);
     lsWrite(K.comments, all);
   },
+
+  // Comment reactions
+  async getCommentReactions(commentId: string): Promise<CommentReaction[]> {
+    if (supabase) {
+      const { data, error } = await supabase.from("comment_reactions").select("*").eq("comment_id", commentId);
+      if (!error && data) return data.map(rowToReaction);
+    }
+    return lsRead<CommentReaction[]>(K.reactions, []).filter((r) => r.commentId === commentId);
+  },
+  async setCommentReaction(reaction: CommentReaction): Promise<void> {
+    if (supabase) {
+      await supabase.from("comment_reactions").upsert({
+        id: reaction.id, user_id: reaction.userId, comment_id: reaction.commentId, reaction: reaction.reaction,
+      }, { onConflict: "user_id,comment_id" });
+      return;
+    }
+    const all = lsRead<CommentReaction[]>(K.reactions, []);
+    const idx = all.findIndex((r) => r.userId === reaction.userId && r.commentId === reaction.commentId);
+    if (idx >= 0) all[idx] = reaction; else all.push(reaction);
+    lsWrite(K.reactions, all);
+  },
+  async removeCommentReaction(userId: string, commentId: string): Promise<void> {
+    if (supabase) {
+      await supabase.from("comment_reactions").delete().eq("user_id", userId).eq("comment_id", commentId);
+      return;
+    }
+    const all = lsRead<CommentReaction[]>(K.reactions, []).filter(
+      (r) => !(r.userId === userId && r.commentId === commentId)
+    );
+    lsWrite(K.reactions, all);
+  },
 };
 
-// ─── Badge engine ─────────────────────────────────────────────────────────
+// ─── Badge definitions & engine ──────────────────────────────────────────────
 
-export interface Badge {
+export interface BadgeDef {
   id: string;
   emoji: string;
   label: string;
   description: string;
+  howTo: string;
+  color: string; // tailwind bg class
+}
+
+export const ALL_BADGES: BadgeDef[] = [
+  { id: "newbie",    emoji: "👋", label: "Yeni Üye",        description: "Platforma hoş geldin!",                       howTo: "Kayıt ol",                        color: "bg-blue-100"   },
+  { id: "first",     emoji: "🧾", label: "İlk Adisyon",     description: "İlk adisyonunu başarıyla paylaştın",           howTo: "1 adisyon paylaş",                color: "bg-green-100"  },
+  { id: "katkilci",  emoji: "📋", label: "Katkıcı",         description: "Topluluğa düzenli katkıda bulunuyorsun",       howTo: "3 adisyon paylaş",                color: "bg-yellow-100" },
+  { id: "aktif",     emoji: "⭐", label: "Aktif Katkıcı",   description: "Adisyon paylaşımında aktif bir üyesin",        howTo: "10 adisyon paylaş",               color: "bg-orange-100" },
+  { id: "sampiyion", emoji: "🏆", label: "Şampiyon",        description: "Adisyon paylaşımında zirveye ulaştın",         howTo: "20 adisyon paylaş",               color: "bg-red-100"    },
+  { id: "gezgin",    emoji: "🗺️", label: "Gezgin",           description: "Farklı mekânları keşfetmeyi seversin",         howTo: "5 farklı restoran ziyaret et",    color: "bg-teal-100"   },
+  { id: "gurme",     emoji: "🍽️", label: "Gurme",            description: "Restoran keşfinde uzman sayılırsın",           howTo: "10 farklı restoran keşfet",       color: "bg-purple-100" },
+  { id: "muhtar",    emoji: "🏘️", label: "Semt Muhtarı",    description: "Bir mekânın en sadık takipçisisin",            howTo: "Aynı restoranı 3+ kez ziyaret et", color: "bg-indigo-100" },
+];
+
+export interface Badge extends BadgeDef {
+  dynamicLabel?: string; // override for muhtar
 }
 
 export function calcBadges(receipts: StoredReceipt[]): Badge[] {
-  const badges: Badge[] = [];
+  const earned: Badge[] = [];
   const count = receipts.length;
   const uniqueRestaurants = new Set(receipts.map((r) => r.restaurantName.toLowerCase())).size;
   const freq: Record<string, number> = {};
   receipts.forEach((r) => { const k = r.restaurantName.toLowerCase(); freq[k] = (freq[k] ?? 0) + 1; });
   const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
 
-  if (count >= 1) badges.push({ id: "first", emoji: "🧾", label: "İlk Adisyon", description: "İlk adisyonunu paylaştın" });
-  if (count >= 3) badges.push({ id: "katkilci", emoji: "📋", label: "Katkıcı", description: "3+ adisyon paylaştın" });
-  if (count >= 10) badges.push({ id: "aktif", emoji: "⭐", label: "Aktif Katkıcı", description: "10+ adisyon paylaştın" });
-  if (count >= 20) badges.push({ id: "sampiyion", emoji: "🏆", label: "Şampiyon", description: "20+ adisyon paylaştın" });
-  if (uniqueRestaurants >= 5) badges.push({ id: "gezgin", emoji: "🗺️", label: "Gezgin", description: "5+ farklı restoran ziyaret ettin" });
-  if (uniqueRestaurants >= 10) badges.push({ id: "gurme", emoji: "🍽️", label: "Gurme", description: "10+ farklı restoran keşfettin" });
+  if (count === 0) earned.push({ ...ALL_BADGES.find((b) => b.id === "newbie")! });
+  if (count >= 1)  earned.push({ ...ALL_BADGES.find((b) => b.id === "first")! });
+  if (count >= 3)  earned.push({ ...ALL_BADGES.find((b) => b.id === "katkilci")! });
+  if (count >= 10) earned.push({ ...ALL_BADGES.find((b) => b.id === "aktif")! });
+  if (count >= 20) earned.push({ ...ALL_BADGES.find((b) => b.id === "sampiyion")! });
+  if (uniqueRestaurants >= 5)  earned.push({ ...ALL_BADGES.find((b) => b.id === "gezgin")! });
+  if (uniqueRestaurants >= 10) earned.push({ ...ALL_BADGES.find((b) => b.id === "gurme")! });
   if (top && top[1] >= 3) {
     const name = receipts.find((r) => r.restaurantName.toLowerCase() === top[0])!.restaurantName;
-    badges.push({ id: "muhtar", emoji: "🏘️", label: `${name} Muhtarı`, description: `${name} için ${top[1]} adisyon paylaştın` });
+    earned.push({ ...ALL_BADGES.find((b) => b.id === "muhtar")!, dynamicLabel: `${name} Muhtarı` });
   }
-  if (count === 0) badges.push({ id: "newbie", emoji: "👋", label: "Yeni Üye", description: "Hoş geldin!" });
-  return badges;
+  return earned;
 }

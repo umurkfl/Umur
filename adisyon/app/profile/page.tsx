@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { LogOut, Receipt, Star } from "lucide-react";
+import { LogOut, Receipt, Star, Camera } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { store, StoredReceipt, calcBadges } from "@/lib/store";
+import { store, StoredReceipt, calcBadges, compressImage } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
-  const { user, logout, ready } = useAuth();
+  const { user, login, logout, ready } = useAuth();
   const router = useRouter();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
@@ -30,6 +31,15 @@ export default function ProfilePage() {
     ? ratedReceipts.reduce((s, r) => s + r.rating, 0) / ratedReceipts.length
     : 0;
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const b64 = await compressImage(file);
+    store.updateUserAvatar(user.id, b64);
+    login({ ...user, avatar: b64 });
+  }
+
   function handleLogout() {
     logout();
     router.push("/");
@@ -41,9 +51,24 @@ export default function ProfilePage() {
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center text-2xl font-bold text-orange-600">
-              {user.name.charAt(0).toUpperCase()}
+            {/* Avatar with upload */}
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center">
+                {user.avatar ? (
+                  <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
+                ) : (
+                  <span className="text-2xl font-bold text-orange-600">{user.name.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center shadow"
+              >
+                <Camera className="w-3.5 h-3.5 text-white" />
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </div>
+
             <div>
               <p className="font-bold text-lg text-gray-900">{user.name}</p>
               <p className="text-xs text-gray-400">{user.email}</p>
@@ -71,28 +96,28 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Badges */}
+      {/* Badges preview */}
       <section>
-        <h2 className="font-bold text-gray-900 mb-3">Rozetler</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-gray-900">Rozetler</h2>
+          <Link href="/badges" className="text-xs text-orange-500 font-semibold">Tümünü Gör →</Link>
+        </div>
         {badges.length === 0 ? (
           <div className="bg-white rounded-2xl p-5 border border-gray-100 text-center">
             <p className="text-3xl mb-2">🧾</p>
             <p className="text-sm font-semibold text-gray-700">İlk adisyonunu paylaş</p>
             <p className="text-xs text-gray-400 mt-1">Rozetler kazanmaya başla</p>
-            <Link href="/upload" className="inline-block mt-3 text-sm text-orange-600 font-bold">
-              Adisyon Ekle →
-            </Link>
+            <Link href="/upload" className="inline-block mt-3 text-sm text-orange-600 font-bold">Adisyon Ekle →</Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
             {badges.map((b) => (
-              <div key={b.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-start gap-3">
-                <span className="text-3xl shrink-0">{b.emoji}</span>
-                <div className="min-w-0">
-                  <p className="font-bold text-gray-900 text-sm truncate">{b.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5 leading-snug">{b.description}</p>
+              <Link key={b.id} href="/badges" className="shrink-0">
+                <div className={`${b.color} rounded-2xl p-3 w-28 text-center`}>
+                  <p className="text-3xl mb-1">{b.emoji}</p>
+                  <p className="font-bold text-gray-900 text-xs leading-tight truncate">{b.dynamicLabel ?? b.label}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -109,28 +134,32 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-3">
             {receipts.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div className="min-w-0 flex-1 mr-3">
-                    <p className="font-semibold text-gray-900 truncate">{r.restaurantName}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo(r.createdAt)} · {r.people} kişi</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-gray-700">{formatCurrency(r.total)}</p>
-                    <p className="text-xs text-orange-500">{formatCurrency(r.perPerson)} / kişi</p>
-                  </div>
-                </div>
-                {r.rating > 0 && (
-                  <div className="flex gap-0.5 mt-2">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star
-                        key={s}
-                        className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-gray-200"}`}
-                      />
-                    ))}
+              <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                {r.photo && (
+                  <div className="bg-gray-900">
+                    <img src={r.photo} alt="" className="w-full max-h-36 object-contain" />
                   </div>
                 )}
-                {r.comment && <p className="text-sm text-gray-500 mt-1.5 leading-snug">{r.comment}</p>}
+                <div className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="min-w-0 flex-1 mr-3">
+                      <p className="font-semibold text-gray-900 truncate">{r.restaurantName}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-gray-700">{formatCurrency(r.total)}</p>
+                      <p className="text-xs text-orange-500">{formatCurrency(r.perPerson)} / kişi</p>
+                    </div>
+                  </div>
+                  {r.rating > 0 && (
+                    <div className="flex gap-0.5 mt-2">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-gray-200"}`} />
+                      ))}
+                    </div>
+                  )}
+                  {r.comment && <p className="text-sm text-gray-500 mt-1.5 leading-snug">{r.comment}</p>}
+                </div>
               </div>
             ))}
           </div>
@@ -138,10 +167,7 @@ export default function ProfilePage() {
       </section>
 
       <div className="text-center py-4">
-        <Link
-          href="/upload"
-          className="inline-flex items-center gap-2 bg-orange-500 text-white font-bold rounded-full px-6 py-3 text-sm active:bg-orange-600"
-        >
+        <Link href="/upload" className="inline-flex items-center gap-2 bg-orange-500 text-white font-bold rounded-full px-6 py-3 text-sm active:bg-orange-600">
           <Receipt className="w-4 h-4" />
           Yeni Adisyon Ekle
         </Link>
