@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Search, Star } from "lucide-react";
+import { Search, Star, SlidersHorizontal, X } from "lucide-react";
 import { RESTAURANTS, formatCurrency, priceLabel, priceColors } from "@/lib/mock";
 import { store, StoredReceipt } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
@@ -12,8 +12,13 @@ import { WishlistButton } from "@/components/WishlistButton";
 const SORTS = [
   { label: "En Popüler", value: "count" },
   { label: "En Yüksek Puan", value: "rating" },
-  { label: "En Uygun", value: "price" },
+  { label: "En Uygun", value: "price-asc" },
+  { label: "En Pahalı", value: "price-desc" },
+  { label: "En Yeni", value: "newest" },
 ];
+
+const CITIES = Array.from(new Set(RESTAURANTS.map((r) => r.city)));
+const CUISINES = Array.from(new Set(RESTAURANTS.map((r) => r.cuisine)));
 
 interface UserRestaurant {
   id: string;
@@ -21,6 +26,7 @@ interface UserRestaurant {
   avgSpendPerPerson: number;
   avgRating: number;
   receiptCount: number;
+  latestAt: string;
   receipts: StoredReceipt[];
 }
 
@@ -62,7 +68,7 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
                   <p className="text-xs font-semibold text-ink">{receipt.userName}</p>
                   {receipt.rating > 0 && (
                     <div className="flex gap-0.5 mt-0.5">
-                      {[1,2,3,4,5].map((s) => (
+                      {[1, 2, 3, 4, 5].map((s) => (
                         <Star key={s} className={`w-3 h-3 ${s <= receipt.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
                       ))}
                     </div>
@@ -87,13 +93,39 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
   );
 }
 
+function FilterPill({
+  label, active, onClick,
+}: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+        active ? "bg-primary text-white border-primary" : "bg-surface text-ink border-border"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function DiscoverPage() {
   const [q, setQ] = useState("");
-  const [price, setPrice] = useState(0);
   const [sort, setSort] = useState("count");
+  const [city, setCity] = useState("");
+  const [cuisine, setCuisine] = useState("");
+  const [price, setPrice] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
 
   useEffect(() => { store.getReceipts().then(setUserReceipts); }, []);
+
+  const hasActiveFilters = city !== "" || cuisine !== "" || price !== 0;
+
+  function clearFilters() {
+    setCity("");
+    setCuisine("");
+    setPrice(0);
+  }
 
   const userRestaurants = useMemo<UserRestaurant[]>(() => {
     const byName: Record<string, StoredReceipt[]> = {};
@@ -104,12 +136,14 @@ export default function DiscoverPage() {
     });
     return Object.entries(byName).map(([, receipts]) => {
       const rated = receipts.filter((r) => r.rating > 0);
+      const sorted = [...receipts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return {
         id: receipts[0].restaurantName,
         name: receipts[0].restaurantName,
         avgSpendPerPerson: receipts.reduce((s, r) => s + r.perPerson, 0) / receipts.length,
         avgRating: rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : 0,
         receiptCount: receipts.length,
+        latestAt: sorted[0]?.createdAt ?? "",
         receipts,
       };
     });
@@ -117,63 +151,130 @@ export default function DiscoverPage() {
 
   const mockResults = RESTAURANTS
     .filter((r) => {
-      const m = r.name.toLowerCase().includes(q.toLowerCase()) ||
+      const matchQ = !q || r.name.toLowerCase().includes(q.toLowerCase()) ||
         r.cuisine.toLowerCase().includes(q.toLowerCase()) ||
         r.city.toLowerCase().includes(q.toLowerCase());
-      return m && (price === 0 || r.priceRange === price);
+      return matchQ &&
+        (price === 0 || r.priceRange === price) &&
+        (!city || r.city === city) &&
+        (!cuisine || r.cuisine === cuisine);
     })
     .sort((a, b) => {
       if (sort === "rating") return b.avgRating - a.avgRating;
-      if (sort === "price") return a.avgSpendPerPerson - b.avgSpendPerPerson;
+      if (sort === "price-asc") return a.avgSpendPerPerson - b.avgSpendPerPerson;
+      if (sort === "price-desc") return b.avgSpendPerPerson - a.avgSpendPerPerson;
+      if (sort === "newest") return parseInt(b.id) - parseInt(a.id);
       return b.receiptCount - a.receiptCount;
     });
 
   const filteredUser = userRestaurants
     .filter((r) =>
-      r.name.toLowerCase().includes(q.toLowerCase()) &&
+      (!q || r.name.toLowerCase().includes(q.toLowerCase())) &&
       !RESTAURANTS.some((m) => m.name.toLowerCase() === r.name.toLowerCase())
     )
     .sort((a, b) => {
       if (sort === "rating") return b.avgRating - a.avgRating;
-      if (sort === "price") return a.avgSpendPerPerson - b.avgSpendPerPerson;
+      if (sort === "price-asc") return a.avgSpendPerPerson - b.avgSpendPerPerson;
+      if (sort === "price-desc") return b.avgSpendPerPerson - a.avgSpendPerPerson;
+      if (sort === "newest") return b.latestAt.localeCompare(a.latestAt);
       return b.receiptCount - a.receiptCount;
     });
 
   const hasResults = mockResults.length > 0 || filteredUser.length > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <h1 className="text-xl font-bold text-charcoal">Restoranları Keşfet</h1>
 
+      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input
-          type="search" placeholder="Restoran, mutfak veya şehir ara..."
-          value={q} onChange={(e) => setQ(e.target.value)}
+          type="search"
+          placeholder="Restoran, mutfak veya şehir ara..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
+      {/* Sort */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {SORTS.map((s) => (
-          <button key={s.value} onClick={() => setSort(s.value)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${sort === s.value ? "bg-primary text-white border-primary" : "bg-surface text-ink border-border"}`}>
-            {s.label}
-          </button>
-        ))}
-        <div className="w-px bg-border shrink-0 mx-1" />
-        {[1, 2, 3].map((p) => (
-          <button key={p} onClick={() => setPrice(price === p ? 0 : p)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${price === p ? "bg-primary text-white border-primary" : "bg-surface text-ink border-border"}`}>
-            {"₺".repeat(p)}
-          </button>
+          <FilterPill key={s.value} label={s.label} active={sort === s.value} onClick={() => setSort(s.value)} />
         ))}
       </div>
 
+      {/* Filter toggle */}
+      <button
+        onClick={() => setFiltersOpen((v) => !v)}
+        className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+          hasActiveFilters
+            ? "bg-primary text-white border-primary"
+            : "bg-surface text-ink border-border"
+        }`}
+      >
+        <SlidersHorizontal className="w-3.5 h-3.5" />
+        Filtrele
+        {hasActiveFilters && (
+          <span
+            onClick={(e) => { e.stopPropagation(); clearFilters(); }}
+            className="ml-0.5 p-0.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+          >
+            <X className="w-2.5 h-2.5" />
+          </span>
+        )}
+      </button>
+
+      {filtersOpen && (
+        <div className="bg-surface rounded-2xl border border-border p-4 space-y-3">
+          {/* City filter */}
+          {CITIES.length > 1 && (
+            <div>
+              <p className="text-xs font-semibold text-muted mb-2">Şehir</p>
+              <div className="flex gap-2 flex-wrap">
+                <FilterPill label="Tümü" active={city === ""} onClick={() => setCity("")} />
+                {CITIES.map((c) => (
+                  <FilterPill key={c} label={c} active={city === c} onClick={() => setCity(city === c ? "" : c)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cuisine filter */}
+          <div>
+            <p className="text-xs font-semibold text-muted mb-2">Mekan Türü</p>
+            <div className="flex gap-2 flex-wrap">
+              <FilterPill label="Tümü" active={cuisine === ""} onClick={() => setCuisine("")} />
+              {CUISINES.map((c) => (
+                <FilterPill key={c} label={c} active={cuisine === c} onClick={() => setCuisine(cuisine === c ? "" : c)} />
+              ))}
+            </div>
+          </div>
+
+          {/* Price range filter */}
+          <div>
+            <p className="text-xs font-semibold text-muted mb-2">Fiyat Aralığı</p>
+            <div className="flex gap-2">
+              <FilterPill label="Tümü" active={price === 0} onClick={() => setPrice(0)} />
+              {[1, 2, 3].map((p) => (
+                <FilterPill key={p} label={"₺".repeat(p)} active={price === p} onClick={() => setPrice(price === p ? 0 : p)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results */}
       {!hasResults ? (
         <div className="text-center py-16 text-muted">
           <Search className="w-12 h-12 mx-auto mb-3 text-border" />
           <p className="font-medium">Sonuç bulunamadı</p>
+          {hasActiveFilters && (
+            <button onClick={clearFilters} className="mt-3 text-sm text-primary font-semibold">
+              Filtreleri temizle
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3 pb-4">
