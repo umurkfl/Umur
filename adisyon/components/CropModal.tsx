@@ -113,7 +113,7 @@ export function CropModal({ src, circular = false, cropW = 280, cropH = 280, onC
           src={src}
           alt=""
           className="absolute"
-          style={{ transform: `translate(${t.x}px,${t.y}px) scale(${t.scale})`, transformOrigin: "0 0", userSelect: "none", pointerEvents: "none" }}
+          style={{ transform: `translate(${t.x}px,${t.y}px) scale(${t.scale})`, transformOrigin: "0 0", userSelect: "none", pointerEvents: "none", maxWidth: "none", height: "auto" }}
           onLoad={() => setLoaded(true)}
           draggable={false}
         />

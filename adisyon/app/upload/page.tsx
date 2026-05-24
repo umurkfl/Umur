@@ -57,7 +57,6 @@ export default function UploadPage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string>("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [rawSrc, setRawSrc] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -76,16 +75,13 @@ export default function UploadPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
-    if (rawSrc) URL.revokeObjectURL(rawSrc);
-    const newRaw = URL.createObjectURL(file);
-    setRawSrc(newRaw);
     const compressed = await compressImage(file);
     setPhotoUrl(compressed);
     setPhotoBase64(compressed);
   }
 
   function handleCropOpen() {
-    if (rawSrc) setCropSrc(rawSrc);
+    if (photoUrl) setCropSrc(photoUrl);
   }
 
   function handleCropConfirm(dataUrl: string) {
