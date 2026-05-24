@@ -262,9 +262,15 @@ export default function FriendsPage() {
             <div className="mt-4">
               <p className="text-xs font-semibold text-muted mb-2 px-1">Bekleyen İstekler</p>
               {pendingOutgoing.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5 opacity-60 mb-2">
+                <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5 mb-2">
                   <div className="w-10 h-10 bg-border rounded-full flex items-center justify-center text-sm font-bold text-muted shrink-0">{f.friendName.charAt(0).toUpperCase()}</div>
-                  <div className="flex-1"><p className="font-semibold text-ink">{f.friendName}</p><p className="text-xs text-muted">İstek gönderildi</p></div>
+                  <div className="flex-1 min-w-0"><p className="font-semibold text-ink">{f.friendName}</p><p className="text-xs text-muted">İstek gönderildi</p></div>
+                  <button
+                    onClick={() => rejectRequest(f.id)}
+                    className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border border-border text-muted bg-background active:scale-95 transition-transform"
+                  >
+                    Geri Çek
+                  </button>
                 </div>
               ))}
             </div>
@@ -298,7 +304,15 @@ export default function FriendsPage() {
                   {isFriend ? (
                     <span className="text-xs text-primary font-semibold bg-primary-light px-3 py-1.5 rounded-full">Arkadaş ✓</span>
                   ) : isPending ? (
-                    <span className="text-xs text-muted font-semibold bg-background border border-border px-3 py-1.5 rounded-full">Bekliyor</span>
+                    <button
+                      onClick={() => {
+                        const f = friendships.find((x) => x.userId === user.id && x.friendId === u.id && x.status === "pending");
+                        if (f) rejectRequest(f.id);
+                      }}
+                      className="text-xs text-muted font-semibold bg-background border border-border px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+                    >
+                      Geri Çek
+                    </button>
                   ) : (
                     <button onClick={() => sendRequest(u.id, u.name)} className="flex items-center gap-1 text-xs font-semibold bg-primary text-white px-3 py-1.5 rounded-full active:scale-95 transition-transform">
                       <UserPlus className="w-3.5 h-3.5" /> Ekle
