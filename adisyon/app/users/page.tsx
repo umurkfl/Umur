@@ -4,14 +4,17 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
-import { store, StoredReceipt } from "@/lib/store";
+import { store, StoredReceipt, StoredFriendship } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
 function ProfileContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("id") ?? "";
+  const { user } = useAuth();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
@@ -20,6 +23,23 @@ function ProfileContent() {
       setLoading(false);
     });
   }, [userId]);
+
+  useEffect(() => {
+    if (!user || !userId || user.id === userId) return;
+    store.getFriendships(user.id).then((fs: StoredFriendship[]) => {
+      const match = fs.find((f) => (f.userId === user.id && f.friendId === userId) || (f.userId === userId && f.friendId === user.id));
+      if (!match) setFriendStatus("none");
+      else if (match.status === "accepted") setFriendStatus("friend");
+      else setFriendStatus("pending");
+    });
+  }, [user, userId]);
+
+  async function addFriend() {
+    if (!user) return;
+    const targetName = receipts[0]?.userName ?? "Kullanıcı";
+    await store.sendFriendRequest(user.id, user.name, userId, targetName);
+    setFriendStatus("pending");
+  }
 
   const userName = receipts[0]?.userName ?? "Kullanıcı";
 
@@ -45,7 +65,7 @@ function ProfileContent() {
         <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center text-2xl font-bold text-primary shrink-0">
           {loading ? "?" : userName.charAt(0).toUpperCase()}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold text-charcoal">
             {loading ? "Yükleniyor..." : userName}
           </h2>
@@ -53,6 +73,19 @@ function ProfileContent() {
             {loading ? "" : `${receipts.length} adisyon paylaştı`}
           </p>
         </div>
+        {user && user.id !== userId && !loading && (
+          <button
+            onClick={addFriend}
+            disabled={friendStatus !== "none"}
+            className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+              friendStatus === "friend" ? "bg-primary-light text-primary" :
+              friendStatus === "pending" ? "bg-background border border-border text-muted" :
+              "bg-primary text-white active:scale-95"
+            }`}
+          >
+            {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
+          </button>
+        )}
       </div>
 
       {loading ? (

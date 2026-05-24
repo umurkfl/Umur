@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User } from "lucide-react";
+import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const MENU_ITEMS = [
@@ -12,6 +12,7 @@ const MENU_ITEMS = [
     items: [
       { href: "/profile", icon: User, label: "Profilim" },
       { href: "/upload", icon: Receipt, label: "Adisyon Ekle", accent: true },
+      { href: "/friends", icon: Users, label: "Arkadaşlar" },
       { href: "/wishlist", icon: Bookmark, label: "Gitmek İstediklerim" },
       { href: "/badges", icon: Trophy, label: "Rozetlerim" },
       { href: "/discover", icon: Star, label: "Restoranları Keşfet" },
@@ -95,6 +96,7 @@ export function Navigation() {
     { href: "/", icon: Home, label: "Ana Sayfa" },
     { href: "/discover", icon: Search, label: "Keşfet" },
     { href: "/upload", icon: PlusCircle, label: "Ekle" },
+    { href: "/friends", icon: Users, label: "Arkadaşlar" },
     ...(user ? [{ href: "/wishlist", icon: Bookmark, label: "Liste" }] : []),
   ];
 
