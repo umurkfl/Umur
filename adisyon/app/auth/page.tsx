@@ -25,7 +25,7 @@ function translateError(msg: string): string {
   if (msg.includes("User already registered")) return "Bu e-posta zaten kayıtlı, giriş yap";
   if (msg.includes("Password should be at least")) return "Şifre en az 6 karakter olmalı";
   if (msg.includes("Unable to validate email")) return "Geçerli bir e-posta gir";
-  return "Bir hata oluştu, tekrar dene";
+  return msg;
 }
 
 export default function AuthPage() {
