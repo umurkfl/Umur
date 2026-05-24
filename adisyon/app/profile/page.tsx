@@ -72,22 +72,20 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-5">
-      {/* Profile card */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <div className="bg-surface rounded-2xl p-5 border border-border shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            {/* Avatar with upload */}
             <div className="relative">
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-orange-100 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-primary-light flex items-center justify-center">
                 {user.avatar ? (
                   <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
                 ) : (
-                  <span className="text-2xl font-bold text-orange-600">{user.name.charAt(0).toUpperCase()}</span>
+                  <span className="text-2xl font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>
                 )}
               </div>
               <button
                 onClick={() => photoInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center shadow"
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow"
               >
                 <Camera className="w-3.5 h-3.5 text-white" />
               </button>
@@ -95,14 +93,14 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <p className="font-bold text-lg text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-400">{user.email}</p>
+              <p className="font-bold text-lg text-charcoal">{user.name}</p>
+              <p className="text-xs text-muted">{user.email}</p>
               {user.provider === "google" && (
                 <p className="text-xs text-blue-500 font-medium mt-0.5">Google hesabı</p>
               )}
             </div>
           </div>
-          <button onClick={handleLogout} className="text-gray-400 active:text-red-500 p-2">
+          <button onClick={handleLogout} className="text-muted active:text-red-500 p-2">
             <LogOut className="w-5 h-5" />
           </button>
         </div>
@@ -113,32 +111,31 @@ export default function ProfilePage() {
             { label: "Harcama", value: totalSpend > 0 ? formatCurrency(totalSpend) : "—" },
             { label: "Ort. Puan", value: ratedReceipts.length > 0 ? avgRating.toFixed(1) : "—" },
           ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-gray-900 truncate">{value}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+            <div key={label} className="bg-background rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-charcoal truncate">{value}</p>
+              <p className="text-xs text-muted mt-0.5">{label}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Badges preview */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-bold text-gray-900">Rozetler</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{badges.length} / {8} kazanıldı</p>
+            <h2 className="font-bold text-charcoal">Rozetler</h2>
+            <p className="text-xs text-muted mt-0.5">{badges.length} / {8} kazanıldı</p>
           </div>
-          <Link href="/badges" className="text-xs text-orange-500 font-semibold bg-orange-50 px-3 py-1.5 rounded-full">Tümünü Gör →</Link>
+          <Link href="/badges" className="text-xs text-primary font-semibold bg-primary-light px-3 py-1.5 rounded-full">Tümünü Gör →</Link>
         </div>
         <div className="flex gap-5 overflow-x-auto pb-2 no-scrollbar">
           {badges.map((b) => {
             const Icon = BADGE_ICONS[b.id] ?? Star;
             return (
               <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
-                <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center">
                   <Icon className="w-7 h-7 text-white" strokeWidth={1.5} />
                 </div>
-                <p className="text-[10px] font-bold text-gray-700 text-center w-16 leading-tight truncate">
+                <p className="text-[10px] font-bold text-ink text-center w-16 leading-tight truncate">
                   {b.dynamicLabel ?? b.label}
                 </p>
               </Link>
@@ -146,51 +143,50 @@ export default function ProfilePage() {
           })}
           {badges.length === 0 && (
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-                <Trophy className="w-7 h-7 text-gray-300" strokeWidth={1.5} />
+              <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center">
+                <Trophy className="w-7 h-7 text-border" strokeWidth={1.5} />
               </div>
-              <p className="text-[10px] text-gray-400 text-center w-20">Adisyon paylaş</p>
+              <p className="text-[10px] text-muted text-center w-20">Adisyon paylaş</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Receipt history */}
       <section>
-        <h2 className="font-bold text-gray-900 mb-3">Paylaştığım Adisyonlar</h2>
+        <h2 className="font-bold text-charcoal mb-3">Paylaştığım Adisyonlar</h2>
         {receipts.length === 0 ? (
-          <div className="text-center py-10 text-gray-400">
-            <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+          <div className="text-center py-10 text-muted">
+            <Receipt className="w-10 h-10 mx-auto mb-2 text-border" />
             <p className="text-sm">Henüz adisyon paylaşmadın</p>
           </div>
         ) : (
           <div className="space-y-3">
             {receipts.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div key={r.id} className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
                 {r.photo && (
-                  <div className="bg-gray-900">
+                  <div className="bg-dark">
                     <img src={r.photo} alt="" className="w-full max-h-36 object-contain" />
                   </div>
                 )}
                 <div className="p-4">
                   <div className="flex justify-between items-start">
                     <div className="min-w-0 flex-1 mr-3">
-                      <p className="font-semibold text-gray-900 truncate">{r.restaurantName}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+                      <p className="font-semibold text-charcoal truncate">{r.restaurantName}</p>
+                      <p className="text-xs text-muted mt-0.5">{timeAgo(r.createdAt)} · {r.people} kişi</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-bold text-gray-700">{formatCurrency(r.total)}</p>
-                      <p className="text-xs text-orange-500">{formatCurrency(r.perPerson)} / kişi</p>
+                      <p className="font-bold text-ink">{formatCurrency(r.total)}</p>
+                      <p className="text-xs text-primary">{formatCurrency(r.perPerson)} / kişi</p>
                     </div>
                   </div>
                   {r.rating > 0 && (
                     <div className="flex gap-0.5 mt-2">
                       {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-gray-200"}`} />
+                        <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
                       ))}
                     </div>
                   )}
-                  {r.comment && <p className="text-sm text-gray-500 mt-1.5 leading-snug">{r.comment}</p>}
+                  {r.comment && <p className="text-sm text-muted mt-1.5 leading-snug">{r.comment}</p>}
                 </div>
               </div>
             ))}
@@ -199,7 +195,7 @@ export default function ProfilePage() {
       </section>
 
       <div className="text-center py-4">
-        <Link href="/upload" className="inline-flex items-center gap-2 bg-orange-500 text-white font-bold rounded-full px-6 py-3 text-sm active:bg-orange-600">
+        <Link href="/upload" className="inline-flex items-center gap-2 bg-primary text-white font-bold rounded-full px-6 py-3 text-sm active:bg-primary-dark">
           <Receipt className="w-4 h-4" />
           Yeni Adisyon Ekle
         </Link>

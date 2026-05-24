@@ -5,6 +5,22 @@ import { usePathname } from "next/navigation";
 import { Home, Search, PlusCircle, User, Bookmark } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
+function GrazerLogo() {
+  return (
+    <div className="flex items-center gap-2">
+      <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="36" height="36" rx="9" fill="#1D9E75" />
+        <text x="18" y="18" textAnchor="middle" dy="0.35em"
+          fontSize="22" fontWeight="700"
+          fontFamily="'Arial Rounded MT Bold', Nunito, sans-serif"
+          fill="white">g</text>
+        <circle cx="28" cy="8" r="5" fill="#D85A30" />
+      </svg>
+      <span className="font-display text-[22px] font-bold text-primary tracking-[-0.3px]">grazer</span>
+    </div>
+  );
+}
+
 export function Navigation() {
   const pathname = usePathname();
   const { user, ready } = useAuth();
@@ -19,26 +35,24 @@ export function Navigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-surface border-b border-border">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-orange-600 tracking-tight">
-            Adisyon
-          </Link>
+          <Link href="/"><GrazerLogo /></Link>
           {ready && (
             user ? (
               <Link href="/profile" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-orange-100 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-orange-600">
+                <div className="w-8 h-8 bg-primary-light rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-primary">
                   {user.avatar
                     ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
                     : user.name.charAt(0).toUpperCase()
                   }
                 </div>
-                <span className="text-sm font-semibold text-gray-700 hidden sm:block">
+                <span className="text-sm font-semibold text-ink hidden sm:block">
                   {user.name.split(" ")[0]}
                 </span>
               </Link>
             ) : (
-              <Link href="/auth" className="text-sm font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full">
+              <Link href="/auth" className="text-sm font-semibold text-primary bg-primary-light px-3 py-1.5 rounded-full">
                 Giriş Yap
               </Link>
             )
@@ -46,7 +60,7 @@ export function Navigation() {
         </div>
       </header>
 
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-gray-200 safe-area-pb">
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-border safe-area-pb">
         <div className="max-w-2xl mx-auto flex">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active =
@@ -57,7 +71,7 @@ export function Navigation() {
                 key={label}
                 href={href}
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-                  active ? "text-orange-600" : "text-gray-400 hover:text-gray-600"
+                  active ? "text-primary" : "text-muted hover:text-ink"
                 }`}
               >
                 <Icon className={`w-6 h-6 ${active ? "stroke-[2.5]" : "stroke-[1.5]"}`} />

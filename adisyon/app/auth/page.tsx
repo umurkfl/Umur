@@ -110,12 +110,12 @@ export default function AuthPage() {
   if (confirmSent) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center text-center space-y-4 px-4">
-        <CheckCircle className="w-16 h-16 text-green-500" />
-        <h2 className="text-xl font-bold text-gray-900">E-postanı doğrula</h2>
-        <p className="text-sm text-gray-500 max-w-xs">
+        <CheckCircle className="w-16 h-16 text-primary" />
+        <h2 className="text-xl font-bold text-charcoal">E-postanı doğrula</h2>
+        <p className="text-sm text-muted max-w-xs">
           <strong>{email}</strong> adresine doğrulama bağlantısı gönderdik. Bağlantıya tıkladıktan sonra giriş yapabilirsin.
         </p>
-        <button onClick={() => setConfirmSent(false)} className="text-sm text-orange-500 font-semibold">
+        <button onClick={() => setConfirmSent(false)} className="text-sm text-primary font-semibold">
           ← Geri dön
         </button>
       </div>
@@ -125,32 +125,32 @@ export default function AuthPage() {
   return (
     <div className="min-h-[80vh] flex flex-col justify-center space-y-6 max-w-sm mx-auto">
       <div className="text-center">
-        <Link href="/" className="inline-flex items-center gap-1 text-gray-400 text-sm mb-6">
+        <Link href="/" className="inline-flex items-center gap-1 text-muted text-sm mb-6">
           <ArrowLeft className="w-4 h-4" /> Ana Sayfa
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Adisyon</h1>
-        <p className="text-sm text-gray-500 mt-1">Topluluğa katıl, deneyimini paylaş</p>
+        <h1 className="text-2xl font-bold text-charcoal font-display">grazer</h1>
+        <p className="text-sm text-muted mt-1">Topluluğa katıl, deneyimini paylaş</p>
       </div>
 
       <button
         onClick={handleGoogle}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 rounded-2xl py-3.5 text-sm font-semibold text-gray-700 shadow-sm active:bg-gray-50 disabled:opacity-50 transition-colors"
+        className="w-full flex items-center justify-center gap-3 bg-surface border border-border rounded-2xl py-3.5 text-sm font-semibold text-ink shadow-sm active:bg-background disabled:opacity-50 transition-colors"
       >
         <GoogleIcon />
         Google ile devam et
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-xs text-gray-400">veya</span>
-        <div className="flex-1 h-px bg-gray-200" />
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-xs text-muted">veya</span>
+        <div className="flex-1 h-px bg-border" />
       </div>
 
-      <div className="flex bg-gray-100 rounded-xl p-1">
+      <div className="flex bg-background rounded-xl p-1">
         {(["login", "register"] as const).map((t) => (
           <button key={t} onClick={() => { setTab(t); setError(""); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === t ? "bg-surface text-charcoal shadow-sm" : "text-muted"}`}>
             {t === "login" ? "Giriş Yap" : "Kayıt Ol"}
           </button>
         ))}
@@ -159,28 +159,28 @@ export default function AuthPage() {
       <form onSubmit={handleSubmit} className="space-y-3">
         {tab === "register" && (
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
             <input type="text" placeholder="Adın Soyadın" value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
         )}
 
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
           <input type="email" placeholder="E-posta adresin" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
         </div>
 
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
           <input type="password" placeholder={tab === "register" ? "Şifre (en az 6 karakter)" : "Şifre"} value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
         </div>
 
         {error && <p className="text-sm text-red-500 font-medium px-1">{error}</p>}
 
         <button type="submit" disabled={loading}
-          className="w-full bg-orange-500 disabled:bg-orange-300 text-white font-bold rounded-2xl py-4 text-sm active:bg-orange-600 transition-colors mt-2 flex items-center justify-center gap-2">
+          className="w-full bg-primary disabled:bg-primary-light disabled:text-primary text-white font-bold rounded-2xl py-4 text-sm active:bg-primary-dark transition-colors mt-2 flex items-center justify-center gap-2">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {tab === "login" ? "Giriş Yap" : "Hesap Oluştur"}
         </button>

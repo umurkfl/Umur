@@ -41,9 +41,9 @@ export function WishlistButton({ restaurantName, restaurantSlug = null, size = "
     <button
       onClick={toggle}
       aria-label={saved ? "Listeden çıkar" : "Listeye ekle"}
-      className={`${pad} rounded-full transition-colors active:scale-90 ${saved ? "text-orange-500" : "text-gray-300 active:text-orange-400"}`}
+      className={`${pad} rounded-full transition-colors active:scale-90 ${saved ? "text-primary" : "text-border active:text-primary"}`}
     >
-      <Bookmark className={`${sz} ${saved ? "fill-orange-500 stroke-orange-500" : "stroke-current"}`} />
+      <Bookmark className={`${sz} ${saved ? "fill-primary stroke-primary" : "stroke-current"}`} />
     </button>
   );
 }

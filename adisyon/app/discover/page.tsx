@@ -30,22 +30,22 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
 
   return (
     <>
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100">
+      <div className="bg-surface rounded-2xl p-4 shadow-sm border border-primary-light">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-            <p className="font-semibold text-gray-900">{r.name}</p>
-            <span className="text-xs bg-orange-100 text-orange-600 font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
+            <p className="font-semibold text-charcoal">{r.name}</p>
+            <span className="text-xs bg-primary-light text-primary font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
           </div>
           <WishlistButton restaurantName={r.name} size="sm" />
         </div>
         <div className="flex items-center gap-4 text-sm mb-3">
-          <span className="text-gray-500">Kişi başı <span className="font-semibold text-gray-800">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
+          <span className="text-muted">Kişi başı <span className="font-semibold text-ink">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
           {r.avgRating > 0 && <span className="text-yellow-500 font-semibold">★ {r.avgRating.toFixed(1)}</span>}
-          <span className="text-gray-400 ml-auto text-xs">{r.receiptCount} adisyon</span>
+          <span className="text-muted ml-auto text-xs">{r.receiptCount} adisyon</span>
         </div>
         <button
           onClick={() => setOpen(!open)}
-          className="w-full text-xs text-orange-600 font-semibold border border-orange-200 rounded-xl py-2 active:bg-orange-50"
+          className="w-full text-xs text-primary font-semibold border border-primary-light rounded-xl py-2 active:bg-primary-light"
         >
           {open ? "Adisyonları Gizle" : `${r.receiptCount} Adisyonu Gör`}
         </button>
@@ -56,21 +56,21 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
               <button
                 key={receipt.id}
                 onClick={() => setActiveReceipt(receipt)}
-                className="w-full text-left bg-gray-50 rounded-xl p-3 flex items-center justify-between active:bg-orange-50"
+                className="w-full text-left bg-background rounded-xl p-3 flex items-center justify-between active:bg-primary-light"
               >
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">{receipt.userName}</p>
+                  <p className="text-xs font-semibold text-ink">{receipt.userName}</p>
                   {receipt.rating > 0 && (
                     <div className="flex gap-0.5 mt-0.5">
                       {[1,2,3,4,5].map((s) => (
-                        <Star key={s} className={`w-3 h-3 ${s <= receipt.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-gray-200"}`} />
+                        <Star key={s} className={`w-3 h-3 ${s <= receipt.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
                       ))}
                     </div>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gray-800">{formatCurrency(receipt.total)}</p>
-                  <p className="text-xs text-orange-500">{receipt.people} kişi</p>
+                  <p className="text-sm font-bold text-ink">{formatCurrency(receipt.total)}</p>
+                  <p className="text-xs text-primary">{receipt.people} kişi</p>
                 </div>
               </button>
             ))}
@@ -143,36 +143,36 @@ export default function DiscoverPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Restoranları Keşfet</h1>
+      <h1 className="text-xl font-bold text-charcoal">Restoranları Keşfet</h1>
 
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input
           type="search" placeholder="Restoran, mutfak veya şehir ara..."
           value={q} onChange={(e) => setQ(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         {SORTS.map((s) => (
           <button key={s.value} onClick={() => setSort(s.value)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${sort === s.value ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-600 border-gray-200"}`}>
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${sort === s.value ? "bg-primary text-white border-primary" : "bg-surface text-ink border-border"}`}>
             {s.label}
           </button>
         ))}
-        <div className="w-px bg-gray-200 shrink-0 mx-1" />
+        <div className="w-px bg-border shrink-0 mx-1" />
         {[1, 2, 3].map((p) => (
           <button key={p} onClick={() => setPrice(price === p ? 0 : p)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${price === p ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-600 border-gray-200"}`}>
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${price === p ? "bg-primary text-white border-primary" : "bg-surface text-ink border-border"}`}>
             {"₺".repeat(p)}
           </button>
         ))}
       </div>
 
       {!hasResults ? (
-        <div className="text-center py-16 text-gray-400">
-          <Search className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+        <div className="text-center py-16 text-muted">
+          <Search className="w-12 h-12 mx-auto mb-3 text-border" />
           <p className="font-medium">Sonuç bulunamadı</p>
         </div>
       ) : (
@@ -182,11 +182,11 @@ export default function DiscoverPage() {
             const c = priceColors(r.priceRange);
             return (
               <Link key={r.id} href={`/restaurants/${r.slug}`} className="block">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform">
+                <div className="bg-surface rounded-2xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900">{r.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{r.cuisine} · {r.city}</p>
+                      <p className="font-semibold text-charcoal">{r.name}</p>
+                      <p className="text-xs text-muted mt-0.5">{r.cuisine} · {r.city}</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <span className={`px-2 py-1 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
@@ -194,9 +194,9 @@ export default function DiscoverPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="text-gray-500">Kişi başı <span className="font-semibold text-gray-800">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
+                    <span className="text-muted">Kişi başı <span className="font-semibold text-ink">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
                     <span className="text-yellow-500 font-semibold">★ {r.avgRating.toFixed(1)}</span>
-                    <span className="text-gray-400 ml-auto text-xs">{r.receiptCount} adisyon</span>
+                    <span className="text-muted ml-auto text-xs">{r.receiptCount} adisyon</span>
                   </div>
                 </div>
               </Link>
