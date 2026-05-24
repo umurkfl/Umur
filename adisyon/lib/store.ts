@@ -182,11 +182,14 @@ export const store = {
     // If Storage upload succeeded, r.photo is a CDN URL; otherwise use empty string.
     if (supabase) {
       const supabasePhoto = r.photo.startsWith("data:") ? "" : r.photo;
-      await supabase.from("receipts").insert({
+      const { error } = await supabase.from("receipts").insert({
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
         comment: r.comment, photo: supabasePhoto, created_at: r.createdAt,
       });
+      lsWrite("adisyon_debug", error ? `INSERT HATA: ${error.message} (${error.code})` : "INSERT OK");
+    } else {
+      lsWrite("adisyon_debug", "supabase=null (secrets boş veya yanlış)");
     }
   },
   async getUserReceipts(userId: string): Promise<StoredReceipt[]> {

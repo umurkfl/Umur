@@ -303,13 +303,23 @@ function UserReceiptCard({ r }: { r: StoredReceipt }) {
 export default function HomePage() {
   const { user } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
+  const [debugMsg, setDebugMsg] = useState<string | null>(null);
 
   useEffect(() => { store.getReceipts().then(setUserReceipts); }, []);
+  useEffect(() => {
+    const msg = localStorage.getItem("adisyon_debug");
+    if (msg) setDebugMsg(msg);
+  }, []);
 
   const trending = RESTAURANTS.slice().sort((a, b) => b.receiptCount - a.receiptCount).slice(0, 3);
 
   return (
     <div className="space-y-0">
+      {debugMsg && (
+        <div className="mx-4 mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-xs text-yellow-800 font-mono break-all">
+          🔍 {debugMsg}
+        </div>
+      )}
       {/* Hero CTA */}
       <div className="bg-gradient-to-br from-primary to-primary-dark mx-4 mt-4 mb-5 rounded-3xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-1">Adisyonunu paylaş</h1>
