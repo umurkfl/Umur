@@ -161,16 +161,13 @@ export const store = {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
       if (!error && data) {
-        lsWrite("adisyon_debug", `FETCH OK: ${data.length} kayıt | kullanıcılar: ${data.map((r: Row) => r.user_name).join(", ")}`);
         const remote = data.map(rowToReceipt);
         const local = lsRead<StoredReceipt[]>(K.receipts, []);
         const remoteIds = new Set(remote.map((r) => r.id));
         const extras = local.filter((r) => !remoteIds.has(r.id));
-        return extras.length ? [...extras, ...remote] : remote;
+        if (!extras.length) return remote;
+        return [...extras, ...remote].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       }
-      lsWrite("adisyon_debug", `FETCH HATA: ${error?.message} (${error?.code})`);
-    } else {
-      lsWrite("adisyon_debug", "supabase=null — secrets boş");
     }
     return lsRead<StoredReceipt[]>(K.receipts, []);
   },
@@ -186,14 +183,11 @@ export const store = {
     // If Storage upload succeeded, r.photo is a CDN URL; otherwise use empty string.
     if (supabase) {
       const supabasePhoto = r.photo.startsWith("data:") ? "" : r.photo;
-      const { error } = await supabase.from("receipts").insert({
+      await supabase.from("receipts").insert({
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
         comment: r.comment, photo: supabasePhoto, created_at: r.createdAt,
       });
-      lsWrite("adisyon_debug", error ? `INSERT HATA: ${error.message} (${error.code})` : "INSERT OK");
-    } else {
-      lsWrite("adisyon_debug", "supabase=null (secrets boş veya yanlış)");
     }
   },
   async getUserReceipts(userId: string): Promise<StoredReceipt[]> {

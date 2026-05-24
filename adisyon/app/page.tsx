@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
+import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
 import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -231,27 +231,95 @@ function HelpfulButton({ receiptId }: { receiptId: string }) {
   );
 }
 
+// ─── Receipt detail sheet ────────────────────────────────────────────────────
+
+function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => void }) {
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
+          <div className="w-10 h-1 bg-border rounded-full" />
+        </div>
+
+        {r.photo && (
+          <div className="bg-dark">
+            <img src={r.photo} alt={r.restaurantName} className="w-full max-h-72 object-contain" />
+          </div>
+        )}
+
+        <div className="px-4 pt-3 pb-1 flex items-center justify-between">
+          <h2 className="font-bold text-charcoal text-lg">{r.restaurantName}</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-background text-muted shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <Link
+          href={`/users?id=${r.userId}`}
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-2.5 active:bg-background/80 border-b border-border/40"
+        >
+          <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
+            {r.userName.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ink">{r.userName}</p>
+            <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+        </Link>
+
+        <div className="px-4 py-3 flex items-center gap-4 border-b border-border/40">
+          <div className="bg-primary-light rounded-xl px-4 py-2">
+            <p className="text-xl font-bold text-primary leading-none">{formatCurrency(r.perPerson)}</p>
+            <p className="text-[10px] text-primary/70 mt-0.5">kişi başı</p>
+          </div>
+          <p className="text-sm text-muted">Toplam: <span className="font-semibold text-ink">{formatCurrency(r.total)}</span></p>
+        </div>
+
+        {(r.rating > 0 || r.comment) && (
+          <div className="px-4 py-3 border-b border-border/40 space-y-1.5">
+            {r.rating > 0 && (
+              <div className="flex gap-0.5">
+                {[1,2,3,4,5].map((s) => (
+                  <Star key={s} className={`w-4 h-4 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+                ))}
+              </div>
+            )}
+            {r.comment && <p className="text-sm text-ink">{r.comment}</p>}
+          </div>
+        )}
+
+        <div className="pb-8">
+          <CommentSection receiptId={r.id} inline />
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Receipt card ─────────────────────────────────────────────────────────────
 
-function UserReceiptCard({ r }: { r: StoredReceipt }) {
+function UserReceiptCard({ r, onOpen }: { r: StoredReceipt; onOpen: () => void }) {
   return (
     <article className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-      {/* Fotoğraf */}
-      {r.photo && (
-        <div className="bg-dark">
-          <img src={r.photo} alt={r.restaurantName} className="w-full max-h-72 object-contain" />
-        </div>
-      )}
-
       {/* Fiyat + meta */}
       <div className="px-4 pt-3.5 pb-1 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="font-bold text-charcoal text-base leading-tight truncate">{r.restaurantName}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-              {r.userName.charAt(0).toUpperCase()}
-            </div>
-            <span className="text-xs text-muted">{r.userName}</span>
+            <Link href={`/users?id=${r.userId}`} className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                {r.userName.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xs text-primary font-medium">{r.userName}</span>
+            </Link>
             <span className="text-border text-xs">·</span>
             <span className="text-xs text-muted">{timeAgo(r.createdAt)}</span>
             <span className="text-border text-xs">·</span>
@@ -287,6 +355,14 @@ function UserReceiptCard({ r }: { r: StoredReceipt }) {
       {/* Aksiyonlar */}
       <div className="px-4 py-2.5 flex items-center gap-2 border-t border-border/60">
         <HelpfulButton receiptId={r.id} />
+        {r.photo && (
+          <button
+            onClick={onOpen}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 transition-all"
+          >
+            📷 Fotoğraf
+          </button>
+        )}
         <div className="ml-auto">
           <WishlistButton restaurantName={r.restaurantName} size="sm" />
         </div>
@@ -303,24 +379,16 @@ function UserReceiptCard({ r }: { r: StoredReceipt }) {
 export default function HomePage() {
   const { user } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
-  const [debugMsg, setDebugMsg] = useState<string | null>(null);
+  const [selected, setSelected] = useState<StoredReceipt | null>(null);
 
   useEffect(() => {
-    store.getReceipts().then((r) => {
-      setUserReceipts(r);
-      setDebugMsg(localStorage.getItem("adisyon_debug"));
-    });
+    store.getReceipts().then(setUserReceipts);
   }, []);
 
   const trending = RESTAURANTS.slice().sort((a, b) => b.receiptCount - a.receiptCount).slice(0, 3);
 
   return (
     <div className="space-y-0">
-      {debugMsg && (
-        <div className="mx-4 mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-xs text-yellow-800 font-mono break-all">
-          🔍 {debugMsg}
-        </div>
-      )}
       {/* Hero CTA */}
       <div className="bg-gradient-to-br from-primary to-primary-dark mx-4 mt-4 mb-5 rounded-3xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-1">Adisyonunu paylaş</h1>
@@ -339,7 +407,7 @@ export default function HomePage() {
             <h2 className="font-bold text-charcoal">Topluluktan Son Paylaşımlar</h2>
           </div>
           <div className="space-y-3 px-4">
-            {userReceipts.slice(0, 10).map((r) => <UserReceiptCard key={r.id} r={r} />)}
+            {userReceipts.slice(0, 10).map((r) => <UserReceiptCard key={r.id} r={r} onOpen={() => setSelected(r)} />)}
           </div>
         </section>
       )}
@@ -410,6 +478,8 @@ export default function HomePage() {
           })}
         </div>
       </section>
+
+      {selected && <ReceiptDetailSheet r={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
