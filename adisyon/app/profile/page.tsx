@@ -218,7 +218,7 @@ export default function ProfilePage() {
       {receipts.length > 0 && (
         <div className="bg-surface rounded-2xl p-4 border border-border shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-charcoal text-sm">Sofra Pusulası</h2>
+            <h2 className="font-bold text-charcoal text-sm">Aktivite</h2>
             <span className="text-[10px] text-muted bg-background px-2 py-0.5 rounded-full">{receipts.length} adisyon</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
