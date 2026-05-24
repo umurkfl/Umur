@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { LogOut, Receipt, Star, Camera } from "lucide-react";
+import { LogOut, Receipt, Star, Camera, UserCheck, ClipboardList, Trophy, Compass, Utensils, Home, type LucideIcon } from "lucide-react";
+
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  newbie: UserCheck, first: Receipt, katkilci: ClipboardList,
+  aktif: Star, sampiyion: Trophy, gezgin: Compass, gurme: Utensils, muhtar: Home,
+};
 
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, calcBadges } from "@/lib/store";
@@ -126,20 +131,23 @@ export default function ProfilePage() {
           <Link href="/badges" className="text-xs text-orange-500 font-semibold bg-orange-50 px-3 py-1.5 rounded-full">Tümünü Gör →</Link>
         </div>
         <div className="flex gap-5 overflow-x-auto pb-2 no-scrollbar">
-          {badges.map((b) => (
-            <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
-              <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center">
-                <span className="text-3xl">{b.emoji}</span>
-              </div>
-              <p className="text-[10px] font-bold text-gray-700 text-center w-16 leading-tight truncate">
-                {b.dynamicLabel ?? b.label}
-              </p>
-            </Link>
-          ))}
+          {badges.map((b) => {
+            const Icon = BADGE_ICONS[b.id] ?? Star;
+            return (
+              <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
+                <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center">
+                  <Icon className="w-7 h-7 text-white" strokeWidth={1.5} />
+                </div>
+                <p className="text-[10px] font-bold text-gray-700 text-center w-16 leading-tight truncate">
+                  {b.dynamicLabel ?? b.label}
+                </p>
+              </Link>
+            );
+          })}
           {badges.length === 0 && (
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-2xl opacity-30">🏅</span>
+                <Trophy className="w-7 h-7 text-gray-300" strokeWidth={1.5} />
               </div>
               <p className="text-[10px] text-gray-400 text-center w-20">Adisyon paylaş</p>
             </div>

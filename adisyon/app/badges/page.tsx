@@ -2,30 +2,40 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock, UserCheck, Receipt, ClipboardList, Star, Trophy, Compass, Utensils, Home, type LucideIcon } from "lucide-react";
 import { ALL_BADGES, BadgeDef, calcBadges, StoredReceipt, store } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  newbie:    UserCheck,
+  first:     Receipt,
+  katkilci:  ClipboardList,
+  aktif:     Star,
+  sampiyion: Trophy,
+  gezgin:    Compass,
+  gurme:     Utensils,
+  muhtar:    Home,
+};
+
 function BadgeCoin({ badge, earned, label }: { badge: BadgeDef; earned: boolean; label: string }) {
+  const Icon = BADGE_ICONS[badge.id] ?? Star;
+
   return (
-    <div className={`flex flex-col items-center gap-2 ${earned ? "" : "opacity-35"}`}>
-      <div className="relative">
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center ${earned ? "bg-orange-500" : "bg-gray-200"}`}>
-          <span className="text-4xl select-none">{badge.emoji}</span>
-          {!earned && (
-            <div className="absolute inset-0 rounded-full flex items-center justify-center bg-gray-100/50">
-              <Lock className="w-5 h-5 text-gray-400" />
-            </div>
-          )}
-        </div>
+    <div className={`flex flex-col items-center gap-2.5 ${earned ? "" : "opacity-35"}`}>
+      <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${earned ? "bg-orange-500" : "bg-gray-300"}`}>
+        <Icon className="w-9 h-9 text-white" strokeWidth={1.5} />
+        {!earned && (
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center border-2 border-white">
+            <Lock className="w-3 h-3 text-white" strokeWidth={2.5} />
+          </div>
+        )}
       </div>
       <div className="text-center px-1">
         <p className={`text-xs font-bold leading-tight ${earned ? "text-gray-800" : "text-gray-400"}`}>{label}</p>
-        {earned ? (
-          <p className="text-[10px] text-orange-500 font-semibold mt-0.5">✓ Kazanıldı</p>
-        ) : (
-          <p className="text-[10px] text-gray-400 mt-0.5 leading-tight line-clamp-2">{badge.howTo}</p>
-        )}
+        {earned
+          ? <p className="text-[10px] text-orange-500 font-semibold mt-0.5">✓ Kazanıldı</p>
+          : <p className="text-[10px] text-gray-400 mt-0.5 leading-tight line-clamp-2">{badge.howTo}</p>
+        }
       </div>
     </div>
   );
@@ -50,7 +60,6 @@ export default function BadgesPage() {
         <h1 className="text-xl font-bold text-gray-900">Rozetler</h1>
       </div>
 
-      {/* Progress card */}
       <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-3xl p-5 text-white">
         <div className="flex items-end justify-between mb-3">
           <div>
@@ -68,7 +77,6 @@ export default function BadgesPage() {
         <p className="text-orange-100 text-xs mt-2">{ALL_BADGES.length - earnedIds.size} rozet daha kazanabilirsin</p>
       </div>
 
-      {/* Badge grid */}
       <div className="grid grid-cols-3 gap-x-4 gap-y-8">
         {ALL_BADGES.map((badge: BadgeDef) => {
           const isEarned = earnedIds.has(badge.id);
