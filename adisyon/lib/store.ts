@@ -40,9 +40,17 @@ export interface CommentReaction {
   reaction: "like" | "dislike";
 }
 
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  restaurantName: string;
+  restaurantSlug: string | null;
+  addedAt: string;
+}
+
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions" };
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -196,6 +204,29 @@ export const store = {
       (r) => !(r.userId === userId && r.commentId === commentId)
     );
     lsWrite(K.reactions, all);
+  },
+
+  // Wishlist (localStorage only — per-device)
+  getWishlist(userId: string): WishlistItem[] {
+    return lsRead<WishlistItem[]>(K.wishlist, []).filter((w) => w.userId === userId);
+  },
+  isInWishlist(userId: string, restaurantName: string): boolean {
+    return lsRead<WishlistItem[]>(K.wishlist, []).some(
+      (w) => w.userId === userId && w.restaurantName.toLowerCase() === restaurantName.toLowerCase()
+    );
+  },
+  addToWishlist(item: WishlistItem): void {
+    const all = lsRead<WishlistItem[]>(K.wishlist, []);
+    if (!all.some((w) => w.userId === item.userId && w.restaurantName.toLowerCase() === item.restaurantName.toLowerCase())) {
+      all.push(item);
+      lsWrite(K.wishlist, all);
+    }
+  },
+  removeFromWishlist(userId: string, restaurantName: string): void {
+    const all = lsRead<WishlistItem[]>(K.wishlist, []).filter(
+      (w) => !(w.userId === userId && w.restaurantName.toLowerCase() === restaurantName.toLowerCase())
+    );
+    lsWrite(K.wishlist, all);
   },
 };
 

@@ -7,6 +7,7 @@ import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { WishlistButton } from "@/components/WishlistButton";
 
 function Avatar({ name, photo, size = "sm" }: { name: string; photo?: string | null; size?: "sm" | "md" }) {
   const cls = size === "sm" ? "w-6 h-6 text-xs" : "w-8 h-8 text-sm";
@@ -215,11 +216,14 @@ export default function HomePage() {
               <Link key={r.id} href={`/restaurants/${r.slug}`} className="block">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900">{r.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{r.cuisine} · {r.city}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className={`px-2 py-1 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
+                      <WishlistButton restaurantName={r.name} restaurantSlug={r.slug} size="sm" />
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-gray-500">Kişi başı <span className="font-semibold text-gray-800">~{formatCurrency(r.avgSpendPerPerson)}</span></span>

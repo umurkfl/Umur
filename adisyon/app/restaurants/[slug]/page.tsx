@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Star, Receipt } from "lucide-react";
 import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo } from "@/lib/mock";
+import { WishlistButton } from "@/components/WishlistButton";
 
 export function generateStaticParams() {
   return RESTAURANTS.map((r) => ({ slug: r.slug }));
@@ -30,9 +31,12 @@ export default async function RestaurantPage({ params }: { params: Promise<{ slu
             </p>
             <p className="text-xs text-gray-400 mt-0.5">{restaurant.cuisine}</p>
           </div>
-          <span className={`px-3 py-1.5 rounded-full text-sm font-bold shrink-0 ${c.bg} ${c.text}`}>
-            {priceLabel(restaurant.priceRange)}
-          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>
+              {priceLabel(restaurant.priceRange)}
+            </span>
+            <WishlistButton restaurantName={restaurant.name} restaurantSlug={restaurant.slug} />
+          </div>
         </div>
 
         {/* Stats row */}

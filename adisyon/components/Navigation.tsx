@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, PlusCircle, User } from "lucide-react";
+import { Home, Search, PlusCircle, User, Bookmark } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function Navigation() {
@@ -13,6 +13,7 @@ export function Navigation() {
     { href: "/", icon: Home, label: "Ana Sayfa" },
     { href: "/discover", icon: Search, label: "Keşfet" },
     { href: "/upload", icon: PlusCircle, label: "Ekle" },
+    { href: user ? "/wishlist" : "/auth", icon: Bookmark, label: "Liste" },
     { href: user ? "/profile" : "/auth", icon: User, label: user ? "Profil" : "Giriş" },
   ];
 

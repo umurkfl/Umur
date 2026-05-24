@@ -7,6 +7,7 @@ import { RESTAURANTS, formatCurrency, priceLabel, priceColors } from "@/lib/mock
 import { store, StoredReceipt } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CommentSection } from "@/app/page";
+import { WishlistButton } from "@/components/WishlistButton";
 
 const SORTS = [
   { label: "En Popüler", value: "count" },
@@ -31,10 +32,11 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
     <>
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
             <p className="font-semibold text-gray-900">{r.name}</p>
             <span className="text-xs bg-orange-100 text-orange-600 font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
           </div>
+          <WishlistButton restaurantName={r.name} size="sm" />
         </div>
         <div className="flex items-center gap-4 text-sm mb-3">
           <span className="text-gray-500">Kişi başı <span className="font-semibold text-gray-800">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
@@ -182,11 +184,14 @@ export default function DiscoverPage() {
               <Link key={r.id} href={`/restaurants/${r.slug}`} className="block">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900">{r.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{r.cuisine} · {r.city}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-sm font-bold shrink-0 ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className={`px-2 py-1 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
+                      <WishlistButton restaurantName={r.name} restaurantSlug={r.slug} size="sm" />
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-gray-500">Kişi başı <span className="font-semibold text-gray-800">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
