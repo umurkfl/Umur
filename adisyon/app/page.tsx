@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2 } from "lucide-react";
+import { Camera, TrendingUp, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, Heart, MessageCircle } from "lucide-react";
 import { RESTAURANTS, RECEIPTS, formatCurrency, priceLabel, priceColors, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import { ReceiptModal } from "@/components/ReceiptModal";
 import { WishlistButton } from "@/components/WishlistButton";
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
 
 function Avatar({ name, photo, size = "sm" }: { name: string; photo?: string | null; size?: "sm" | "md" }) {
   const cls = size === "sm" ? "w-6 h-6 text-xs" : "w-8 h-8 text-sm";
@@ -18,6 +19,8 @@ function Avatar({ name, photo, size = "sm" }: { name: string; photo?: string | n
     </div>
   );
 }
+
+// ─── Comment reaction bar ────────────────────────────────────────────────────
 
 function ReactionBar({ commentId }: { commentId: string }) {
   const { user } = useAuth();
@@ -42,18 +45,20 @@ function ReactionBar({ commentId }: { commentId: string }) {
   }
 
   return (
-    <div className="flex gap-3 mt-1.5">
+    <div className="flex gap-3 mt-1">
       <button onClick={() => react("like")} className={`flex items-center gap-1 text-xs transition-colors ${myReaction === "like" ? "text-primary font-semibold" : "text-muted"}`}>
-        <ThumbsUp className="w-3.5 h-3.5" /> {likes > 0 && likes}
+        <ThumbsUp className="w-3 h-3" /> {likes > 0 && likes}
       </button>
       <button onClick={() => react("dislike")} className={`flex items-center gap-1 text-xs transition-colors ${myReaction === "dislike" ? "text-red-500 font-semibold" : "text-muted"}`}>
-        <ThumbsDown className="w-3.5 h-3.5" /> {dislikes > 0 && dislikes}
+        <ThumbsDown className="w-3 h-3" /> {dislikes > 0 && dislikes}
       </button>
     </div>
   );
 }
 
-export function CommentSection({ receiptId }: { receiptId: string }) {
+// ─── Comment section ─────────────────────────────────────────────────────────
+
+export function CommentSection({ receiptId, inline = false }: { receiptId: string; inline?: boolean }) {
   const { user } = useAuth();
   const [comments, setComments] = useState<StoredComment[]>([]);
   const [text, setText] = useState("");
@@ -78,8 +83,67 @@ export function CommentSection({ receiptId }: { receiptId: string }) {
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   }
 
-  const visible = showAll ? comments : comments.slice(0, 2);
+  const visible = showAll ? comments : comments.slice(-2);
 
+  if (inline) {
+    return (
+      <div className="px-3 pb-3 space-y-1.5">
+        {/* Comments */}
+        {comments.length > 2 && !showAll && (
+          <button onClick={() => setShowAll(true)} className="text-xs text-muted font-semibold">
+            Tüm {comments.length} yorumu gör
+          </button>
+        )}
+        {visible.map((c) => (
+          <div key={c.id} className="flex gap-2 items-start group">
+            <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs leading-snug">
+                <span className="font-semibold text-charcoal">{c.userName}</span>
+                {" "}
+                <span className="text-ink">{c.text}</span>
+              </p>
+              <div className="flex items-center gap-3 mt-0.5">
+                <span className="text-[10px] text-muted">{timeAgo(c.createdAt)}</span>
+                <ReactionBar commentId={c.id} />
+                {user?.id === c.userId && (
+                  <button onClick={() => deleteComment(c.id)} className="text-[10px] text-muted active:text-red-500 opacity-0 group-active:opacity-100">
+                    sil
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Input */}
+        {user ? (
+          <div className="flex gap-2 items-center pt-1">
+            <Avatar name={user.name} photo={user.avatar} size="sm" />
+            <div className="flex-1 flex gap-2 bg-background rounded-full px-3 py-1.5 border border-border">
+              <input
+                type="text" value={text} onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && send()}
+                placeholder="Yorum ekle..."
+                className="flex-1 bg-transparent text-xs focus:outline-none text-ink placeholder:text-muted"
+              />
+              {text.trim() && (
+                <button onClick={send} className="text-primary text-xs font-bold shrink-0">
+                  Paylaş
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <Link href="/auth" className="text-xs text-primary font-semibold">
+            Yorum yapmak için giriş yap →
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  // Modal / non-inline mode (kept for ReceiptModal usage)
   return (
     <div className="mt-3 border-t border-border pt-3 space-y-2">
       {visible.map((c) => (
@@ -90,10 +154,7 @@ export function CommentSection({ receiptId }: { receiptId: string }) {
               <p className="text-xs font-semibold text-ink">{c.userName}</p>
               <p className="text-xs text-ink mt-0.5 pr-5">{c.text}</p>
               {user?.id === c.userId && (
-                <button
-                  onClick={() => deleteComment(c.id)}
-                  className="absolute top-2 right-2 text-border active:text-red-500"
-                >
+                <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-border active:text-red-500">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -102,13 +163,11 @@ export function CommentSection({ receiptId }: { receiptId: string }) {
           </div>
         </div>
       ))}
-
       {comments.length > 2 && !showAll && (
         <button onClick={() => setShowAll(true)} className="text-xs text-primary font-semibold ml-8">
           {comments.length - 2} yorum daha gör
         </button>
       )}
-
       {user ? (
         <div className="flex gap-2 pt-1">
           <Avatar name={user.name} photo={user.avatar} size="sm" />
@@ -133,45 +192,107 @@ export function CommentSection({ receiptId }: { receiptId: string }) {
   );
 }
 
-function UserReceiptCard({ r }: { r: StoredReceipt }) {
-  const [open, setOpen] = useState(false);
+// ─── Receipt like button ──────────────────────────────────────────────────────
+
+function ReceiptLikeButton({ receiptId }: { receiptId: string }) {
+  const { user } = useAuth();
+  const [liked, setLiked] = useState(false);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const likes = store.getReceiptLikes(receiptId);
+    setCount(likes.length);
+    if (user) setLiked(store.isReceiptLiked(user.id, receiptId));
+  }, [receiptId, user]);
+
+  function toggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!user) return;
+    const nowLiked = store.toggleReceiptLike(user.id, receiptId);
+    setLiked(nowLiked);
+    setCount((c) => c + (nowLiked ? 1 : -1));
+  }
 
   return (
-    <>
-      <button className="w-full text-left bg-surface rounded-2xl border border-border shadow-sm overflow-hidden active:scale-[0.98] transition-transform" onClick={() => setOpen(true)}>
-        {r.photo && (
-          <div className="bg-dark">
-            <img src={r.photo} alt="Adisyon" className="w-full max-h-52 object-contain" />
-          </div>
-        )}
-        <div className="p-4">
-          <div className="flex items-start justify-between mb-1">
-            <div>
-              <p className="font-semibold text-charcoal">{r.restaurantName}</p>
-              <p className="text-xs text-muted mt-0.5">{r.userName} · {timeAgo(r.createdAt)} · {r.people} kişi</p>
-            </div>
-            <div className="text-right shrink-0 ml-2">
-              <p className="font-bold text-charcoal">{formatCurrency(r.total)}</p>
-              <p className="text-xs text-primary font-medium">kişi başı {formatCurrency(r.perPerson)}</p>
-            </div>
-          </div>
-          {r.rating > 0 && (
-            <div className="flex gap-0.5 mb-1">
-              {[1,2,3,4,5].map((s) => <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />)}
-            </div>
-          )}
-          {r.comment && <p className="text-sm text-ink leading-snug line-clamp-2">{r.comment}</p>}
-        </div>
-      </button>
-
-      {open && (
-        <ReceiptModal receipt={r} onClose={() => setOpen(false)}>
-          <CommentSection receiptId={r.id} />
-        </ReceiptModal>
-      )}
-    </>
+    <button onClick={toggle} className="flex items-center gap-1.5 active:scale-90 transition-transform">
+      <Heart className={`w-6 h-6 transition-colors ${liked ? "fill-red-500 stroke-red-500" : "stroke-charcoal"}`} />
+      {count > 0 && <span className="text-sm font-semibold text-charcoal">{count}</span>}
+    </button>
   );
 }
+
+// ─── Instagram-style receipt card ────────────────────────────────────────────
+
+function UserReceiptCard({ r }: { r: StoredReceipt }) {
+  const [commentOpen, setCommentOpen] = useState(false);
+
+  return (
+    <article className="bg-surface border-b border-border">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
+          {r.userName.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-charcoal truncate">{r.restaurantName}</p>
+          <p className="text-xs text-muted">{r.userName} · {timeAgo(r.createdAt)}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-bold text-primary">{formatCurrency(r.perPerson)}</p>
+          <p className="text-[10px] text-muted">/kişi</p>
+        </div>
+      </div>
+
+      {/* Photo */}
+      {r.photo && (
+        <div className="bg-dark">
+          <img src={r.photo} alt={r.restaurantName} className="w-full max-h-[480px] object-contain" />
+        </div>
+      )}
+
+      {/* Action bar */}
+      <div className="flex items-center gap-4 px-4 pt-3 pb-1">
+        <ReceiptLikeButton receiptId={r.id} />
+        <button
+          onClick={() => setCommentOpen((v) => !v)}
+          className="flex items-center gap-1.5 active:scale-90 transition-transform"
+        >
+          <MessageCircle className={`w-6 h-6 transition-colors ${commentOpen ? "stroke-primary" : "stroke-charcoal"}`} />
+        </button>
+        <div className="ml-auto">
+          <WishlistButton restaurantName={r.restaurantName} size="sm" />
+        </div>
+      </div>
+
+      {/* Caption / receipt info */}
+      <div className="px-4 pb-2 space-y-1">
+        {r.rating > 0 && (
+          <div className="flex gap-0.5">
+            {[1,2,3,4,5].map((s) => (
+              <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+            ))}
+          </div>
+        )}
+        {r.comment && (
+          <p className="text-sm">
+            <span className="font-semibold text-charcoal">{r.userName}</span>
+            {" "}
+            <span className="text-ink">{r.comment}</span>
+          </p>
+        )}
+        <div className="flex gap-3 text-xs text-muted flex-wrap">
+          <span>{r.people} kişi</span>
+          <span>Toplam <span className="font-semibold text-ink">{formatCurrency(r.total)}</span></span>
+        </div>
+      </div>
+
+      {/* Inline comments — always shown */}
+      <CommentSection receiptId={r.id} inline />
+    </article>
+  );
+}
+
+// ─── Home page ────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -182,8 +303,9 @@ export default function HomePage() {
   const trending = RESTAURANTS.slice().sort((a, b) => b.receiptCount - a.receiptCount).slice(0, 3);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-6 text-white">
+    <div className="space-y-0">
+      {/* Hero CTA */}
+      <div className="bg-gradient-to-br from-primary to-primary-dark mx-4 mt-4 mb-5 rounded-3xl p-6 text-white">
         <h1 className="text-2xl font-bold mb-1">Adisyonunu paylaş</h1>
         <p className="text-white/80 text-sm mb-4 leading-relaxed">Gerçek fiyatları topluluğunla paylaş, başkalarının deneyimini kolaylaştır.</p>
         <Link href={user ? "/upload" : "/auth"} className="inline-flex items-center gap-2 bg-white text-primary font-bold rounded-full px-5 py-2.5 text-sm active:scale-95 transition-transform">
@@ -192,19 +314,21 @@ export default function HomePage() {
         </Link>
       </div>
 
+      {/* Community feed */}
       {userReceipts.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-3">
+        <section className="mb-6">
+          <div className="flex items-center gap-2 px-4 mb-3">
             <Receipt className="w-5 h-5 text-primary" />
-            <h2 className="font-bold text-charcoal">Topluluktan Son Adisyonlar</h2>
+            <h2 className="font-bold text-charcoal">Topluluktan Son Paylaşımlar</h2>
           </div>
-          <div className="space-y-3">
-            {userReceipts.slice(0, 6).map((r) => <UserReceiptCard key={r.id} r={r} />)}
+          <div className="border-t border-border">
+            {userReceipts.slice(0, 10).map((r) => <UserReceiptCard key={r.id} r={r} />)}
           </div>
         </section>
       )}
 
-      <section>
+      {/* Trending */}
+      <section className="px-4 mb-6">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-5 h-5 text-primary" />
           <h2 className="font-bold text-charcoal">Bu Hafta Popüler</h2>
@@ -238,7 +362,8 @@ export default function HomePage() {
         <Link href="/discover" className="block text-center text-sm text-primary font-semibold mt-3 py-2">Tüm restoranları gör →</Link>
       </section>
 
-      <section className="pb-4">
+      {/* Sample receipts */}
+      <section className="px-4 pb-24">
         <div className="flex items-center gap-2 mb-3">
           <Receipt className="w-5 h-5 text-muted" />
           <h2 className="font-bold text-charcoal">Örnek Adisyonlar</h2>

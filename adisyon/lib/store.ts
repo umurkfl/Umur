@@ -48,9 +48,15 @@ export interface WishlistItem {
   addedAt: string;
 }
 
+export interface ReceiptLike {
+  id: string;
+  userId: string;
+  receiptId: string;
+}
+
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist" };
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", receiptLikes: "adisyon_receipt_likes" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -248,6 +254,28 @@ export const store = {
       (w) => !(w.userId === userId && w.restaurantName.toLowerCase() === restaurantName.toLowerCase())
     );
     lsWrite(K.wishlist, all);
+  },
+
+  // Receipt likes (localStorage only)
+  getReceiptLikes(receiptId: string): ReceiptLike[] {
+    return lsRead<ReceiptLike[]>(K.receiptLikes, []).filter((l) => l.receiptId === receiptId);
+  },
+  isReceiptLiked(userId: string, receiptId: string): boolean {
+    return lsRead<ReceiptLike[]>(K.receiptLikes, []).some(
+      (l) => l.userId === userId && l.receiptId === receiptId
+    );
+  },
+  toggleReceiptLike(userId: string, receiptId: string): boolean {
+    const all = lsRead<ReceiptLike[]>(K.receiptLikes, []);
+    const idx = all.findIndex((l) => l.userId === userId && l.receiptId === receiptId);
+    if (idx >= 0) {
+      all.splice(idx, 1);
+      lsWrite(K.receiptLikes, all);
+      return false;
+    }
+    all.push({ id: crypto.randomUUID(), userId, receiptId });
+    lsWrite(K.receiptLikes, all);
+    return true;
   },
 };
 
