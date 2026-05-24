@@ -129,14 +129,14 @@ export function WishlistButton({ restaurantName, restaurantSlug = null, size = "
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-64 bg-surface rounded-2xl shadow-xl border border-border overflow-hidden z-50">
-          <div className="px-3 py-2.5 border-b border-border">
+        <div className="absolute right-0 top-full mt-1 w-64 bg-surface rounded-2xl shadow-xl border border-border overflow-hidden z-50 pointer-events-none">
+          <div className="px-3 py-2.5 border-b border-border select-none">
             <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">Listeye ekle</p>
             <p className="text-sm font-semibold text-charcoal truncate mt-0.5">{restaurantName}</p>
           </div>
 
           {lists.length > 0 && (
-            <div className="py-1 border-b border-border max-h-44 overflow-y-auto">
+            <div className="py-1 border-b border-border max-h-44 overflow-y-auto pointer-events-auto">
               {lists.map((list) => (
                 <button
                   key={list.id}
@@ -158,7 +158,7 @@ export function WishlistButton({ restaurantName, restaurantSlug = null, size = "
           )}
 
           {unusedSuggestions.length > 0 && (
-            <div className="px-3 py-2.5 border-b border-border">
+            <div className="px-3 py-2.5 border-b border-border pointer-events-auto">
               <p className="text-[11px] text-muted mb-2 font-medium">Hızlı ekle</p>
               <div className="flex flex-wrap gap-1.5">
                 {unusedSuggestions.slice(0, 6).map((s) => (
@@ -174,7 +174,7 @@ export function WishlistButton({ restaurantName, restaurantSlug = null, size = "
             </div>
           )}
 
-          <div className="p-2">
+          <div className="p-2 pointer-events-auto">
             {creating ? (
               <div className="flex items-center gap-1.5">
                 <input
