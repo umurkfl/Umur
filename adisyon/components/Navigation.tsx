@@ -103,9 +103,9 @@ export function Navigation() {
       <header className="sticky top-0 z-50 bg-surface border-b border-border">
         <div className="max-w-2xl mx-auto px-4 h-14 grid grid-cols-3 items-center">
 
-          {/* Sol: logo + kullanıcı adı */}
-          <div className="justify-self-start flex items-center gap-2 min-w-0">
-            <Link href="/" className="shrink-0">
+          {/* Sol: logo */}
+          <div className="justify-self-start">
+            <Link href="/">
               <svg width="30" height="30" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect width="36" height="36" rx="9" fill="#1D9E75" />
                 <text x="18" y="18" textAnchor="middle" dy="0.35em"
@@ -115,11 +115,6 @@ export function Navigation() {
                 <circle cx="28" cy="8" r="5" fill="#D85A30" />
               </svg>
             </Link>
-            {ready && user && (
-              <span className="text-sm font-semibold text-charcoal truncate max-w-[90px]">
-                {user.name.split(" ")[0]}
-              </span>
-            )}
           </div>
 
           {/* Orta: tıklanabilir wordmark */}
@@ -133,9 +128,12 @@ export function Navigation() {
               user ? (
                 <button
                   onClick={() => setDropdownOpen((v) => !v)}
-                  className="flex items-center gap-1 active:opacity-70 transition-opacity"
+                  className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
                   aria-label="Hesap menüsü"
                 >
+                  <span className="text-sm font-semibold text-charcoal">
+                    {user.name.split(" ")[0]}
+                  </span>
                   <div className="w-8 h-8 bg-primary-light rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-primary">
                     {user.avatar
                       ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
