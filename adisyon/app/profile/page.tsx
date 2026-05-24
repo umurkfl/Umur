@@ -3,6 +3,19 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { LogOut, Receipt, Star, Camera } from "lucide-react";
+
+const BADGE_GRADIENTS: Record<string, string> = {
+  newbie: "from-sky-400 to-blue-500", first: "from-emerald-400 to-green-600",
+  katkilci: "from-yellow-400 to-amber-500", aktif: "from-orange-400 to-orange-600",
+  sampiyion: "from-yellow-300 via-orange-400 to-red-500", gezgin: "from-teal-400 to-cyan-500",
+  gurme: "from-violet-400 to-purple-600", muhtar: "from-indigo-400 to-indigo-600",
+};
+const BADGE_GLOW: Record<string, string> = {
+  newbie: "rgba(56,189,248,0.45)", first: "rgba(52,211,153,0.45)",
+  katkilci: "rgba(251,191,36,0.45)", aktif: "rgba(251,146,60,0.45)",
+  sampiyion: "rgba(251,191,36,0.55)", gezgin: "rgba(45,212,191,0.45)",
+  gurme: "rgba(167,139,250,0.45)", muhtar: "rgba(129,140,248,0.45)",
+};
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -117,29 +130,44 @@ export default function ProfilePage() {
 
       {/* Badges preview */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-900">Rozetler</h2>
-          <Link href="/badges" className="text-xs text-orange-500 font-semibold">Tümünü Gör →</Link>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-bold text-gray-900">Rozetler</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{badges.length} / {8} kazanıldı</p>
+          </div>
+          <Link href="/badges" className="text-xs text-orange-500 font-semibold bg-orange-50 px-3 py-1.5 rounded-full">Tümünü Gör →</Link>
         </div>
-        {badges.length === 0 ? (
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 text-center">
-            <p className="text-3xl mb-2">🧾</p>
-            <p className="text-sm font-semibold text-gray-700">İlk adisyonunu paylaş</p>
-            <p className="text-xs text-gray-400 mt-1">Rozetler kazanmaya başla</p>
-            <Link href="/upload" className="inline-block mt-3 text-sm text-orange-600 font-bold">Adisyon Ekle →</Link>
-          </div>
-        ) : (
-          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-            {badges.map((b) => (
-              <Link key={b.id} href="/badges" className="shrink-0">
-                <div className={`${b.color} rounded-2xl p-3 w-28 text-center`}>
-                  <p className="text-3xl mb-1">{b.emoji}</p>
-                  <p className="font-bold text-gray-900 text-xs leading-tight truncate">{b.dynamicLabel ?? b.label}</p>
+        <div className="flex gap-5 overflow-x-auto pb-2 no-scrollbar">
+          {badges.map((b) => {
+            const grad = BADGE_GRADIENTS[b.id] ?? "from-gray-400 to-gray-500";
+            const glow = BADGE_GLOW[b.id] ?? "rgba(0,0,0,0.15)";
+            return (
+              <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
+                <div className="relative">
+                  <div className={`absolute -inset-1.5 rounded-full bg-gradient-to-br ${grad} blur-md opacity-30`} />
+                  <div
+                    className={`relative w-16 h-16 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center`}
+                    style={{ boxShadow: `0 6px 16px ${glow}` }}
+                  >
+                    <div className="absolute top-1.5 left-2 w-4 h-2 bg-white/30 rounded-full blur-sm rotate-[-20deg]" />
+                    <span className="text-3xl">{b.emoji}</span>
+                  </div>
                 </div>
+                <p className="text-[10px] font-bold text-gray-700 text-center w-16 leading-tight truncate">
+                  {b.dynamicLabel ?? b.label}
+                </p>
               </Link>
-            ))}
-          </div>
-        )}
+            );
+          })}
+          {badges.length === 0 && (
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-2xl opacity-30">🏅</span>
+              </div>
+              <p className="text-[10px] text-gray-400 text-center w-20">Adisyon paylaş</p>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Receipt history */}

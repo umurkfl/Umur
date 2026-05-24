@@ -2,8 +2,83 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { ALL_BADGES, BadgeDef, calcBadges, StoredReceipt, store } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+
+const GRADIENTS: Record<string, string> = {
+  newbie:    "from-sky-400 to-blue-500",
+  first:     "from-emerald-400 to-green-600",
+  katkilci:  "from-yellow-400 to-amber-500",
+  aktif:     "from-orange-400 to-orange-600",
+  sampiyion: "from-yellow-300 via-orange-400 to-red-500",
+  gezgin:    "from-teal-400 to-cyan-500",
+  gurme:     "from-violet-400 to-purple-600",
+  muhtar:    "from-indigo-400 to-indigo-600",
+};
+
+const GLOW: Record<string, string> = {
+  newbie:    "rgba(56,189,248,0.5)",
+  first:     "rgba(52,211,153,0.5)",
+  katkilci:  "rgba(251,191,36,0.5)",
+  aktif:     "rgba(251,146,60,0.5)",
+  sampiyion: "rgba(251,191,36,0.6)",
+  gezgin:    "rgba(45,212,191,0.5)",
+  gurme:     "rgba(167,139,250,0.5)",
+  muhtar:    "rgba(129,140,248,0.5)",
+};
+
+function BadgeCoin({ badge, earned, label }: { badge: BadgeDef; earned: boolean; label: string }) {
+  const grad = GRADIENTS[badge.id] ?? "from-gray-400 to-gray-500";
+  const glow = GLOW[badge.id] ?? "rgba(0,0,0,0.2)";
+
+  return (
+    <div className={`flex flex-col items-center gap-2 transition-all duration-300 ${earned ? "" : "opacity-40"}`}>
+      <div className="relative">
+        {/* Outer glow ring for earned */}
+        {earned && (
+          <div
+            className={`absolute -inset-1.5 rounded-full bg-gradient-to-br ${grad} blur-md opacity-40`}
+          />
+        )}
+
+        {/* Coin */}
+        <div
+          className={`relative w-20 h-20 rounded-full flex items-center justify-center ${
+            earned
+              ? `bg-gradient-to-br ${grad}`
+              : "bg-gray-200"
+          }`}
+          style={earned ? { boxShadow: `0 8px 20px ${glow}` } : undefined}
+        >
+          {/* Inner shine */}
+          {earned && (
+            <div className="absolute top-2 left-3 w-5 h-3 bg-white/30 rounded-full blur-sm rotate-[-20deg]" />
+          )}
+          <span className="text-4xl select-none">{badge.emoji}</span>
+
+          {/* Lock overlay for unearned */}
+          {!earned && (
+            <div className="absolute inset-0 rounded-full flex items-center justify-center bg-gray-100/60">
+              <Lock className="w-5 h-5 text-gray-400" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="text-center px-1">
+        <p className={`text-xs font-bold leading-tight ${earned ? "text-gray-800" : "text-gray-400"}`}>
+          {label}
+        </p>
+        {earned ? (
+          <p className="text-[10px] text-green-600 font-semibold mt-0.5">✓ Kazanıldı</p>
+        ) : (
+          <p className="text-[10px] text-gray-400 mt-0.5 leading-tight line-clamp-2">{badge.howTo}</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function BadgesPage() {
   const { user } = useAuth();
@@ -15,69 +90,57 @@ export default function BadgesPage() {
 
   const earned = calcBadges(receipts);
   const earnedIds = new Set(earned.map((b) => b.id));
+  const pct = Math.round((earnedIds.size / ALL_BADGES.length) * 100);
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-6 pb-10">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/profile" className="text-gray-400 text-xl leading-none">←</Link>
-        <h1 className="text-xl font-bold text-gray-900">Tüm Rozetler</h1>
+        <h1 className="text-xl font-bold text-gray-900">Rozetler</h1>
       </div>
 
-      <p className="text-sm text-gray-500">
-        {user
-          ? `${earnedIds.size} / ${ALL_BADGES.length} rozet kazandın`
-          : "Rozet kazanmak için giriş yap"}
-      </p>
-
-      {/* Progress bar */}
-      {user && (
-        <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+      {/* Progress card */}
+      <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-3xl p-5 text-white">
+        <div className="flex items-end justify-between mb-3">
+          <div>
+            <p className="text-orange-100 text-xs font-semibold uppercase tracking-wide">Toplam İlerleme</p>
+            <p className="text-3xl font-black mt-0.5">
+              {earnedIds.size}
+              <span className="text-lg font-semibold text-orange-200"> / {ALL_BADGES.length}</span>
+            </p>
+          </div>
+          <p className="text-4xl font-black text-white/20">{pct}%</p>
+        </div>
+        <div className="bg-white/20 rounded-full h-2.5 overflow-hidden">
           <div
-            className="bg-orange-500 h-2 rounded-full transition-all"
-            style={{ width: `${(earnedIds.size / ALL_BADGES.length) * 100}%` }}
+            className="bg-white h-full rounded-full transition-all duration-700"
+            style={{ width: `${pct}%` }}
           />
         </div>
-      )}
+        <p className="text-orange-100 text-xs mt-2">
+          {ALL_BADGES.length - earnedIds.size} rozet daha kazanabilirsin
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      {/* Badge grid */}
+      <div className="grid grid-cols-3 gap-x-4 gap-y-8">
         {ALL_BADGES.map((badge: BadgeDef) => {
           const isEarned = earnedIds.has(badge.id);
           const earnedBadge = earned.find((b) => b.id === badge.id);
-          const displayLabel = earnedBadge?.dynamicLabel ?? badge.label;
-
           return (
-            <div
+            <BadgeCoin
               key={badge.id}
-              className={`rounded-2xl p-4 border flex items-center gap-4 transition-all ${
-                isEarned
-                  ? `${badge.color} border-transparent shadow-sm`
-                  : "bg-white border-gray-100 opacity-50 grayscale"
-              }`}
-            >
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0 ${isEarned ? "bg-white/60" : "bg-gray-100"}`}>
-                {badge.emoji}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-gray-900">{displayLabel}</p>
-                  {isEarned && (
-                    <span className="text-xs bg-white/70 text-green-700 font-semibold px-2 py-0.5 rounded-full">
-                      ✓ Kazanıldı
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 mt-0.5">{badge.description}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {isEarned ? "Tebrikler!" : `Nasıl kazanılır: ${badge.howTo}`}
-                </p>
-              </div>
-            </div>
+              badge={badge}
+              earned={isEarned}
+              label={earnedBadge?.dynamicLabel ?? badge.label}
+            />
           );
         })}
       </div>
 
       {!user && (
-        <div className="text-center pt-4">
+        <div className="text-center">
           <Link href="/auth" className="bg-orange-500 text-white font-bold rounded-full px-6 py-3 text-sm">
             Giriş Yap
           </Link>
