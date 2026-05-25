@@ -103,20 +103,27 @@ export default function FriendsPage() {
   const [myReceipts, setMyReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  async function loadData() {
     if (!user) { setLoading(false); return; }
-    (async () => {
-      const [fs, myR] = await Promise.all([store.getFriendships(user.id), store.getUserReceipts(user.id)]);
-      setFriendships(fs);
-      setMyReceipts(myR);
-      const friendIds = fs.filter((f) => f.status === "accepted").map((f) => f.userId === user.id ? f.friendId : f.userId);
-      if (friendIds.length) {
-        const { receipts, checkIns } = await store.getFriendActivity(friendIds);
-        setFriendReceipts(receipts);
-        setFriendCheckIns(checkIns);
-      }
-      setLoading(false);
-    })();
+    const [fs, myR] = await Promise.all([store.getFriendships(user.id), store.getUserReceipts(user.id)]);
+    setFriendships(fs);
+    setMyReceipts(myR);
+    const friendIds = fs.filter((f) => f.status === "accepted").map((f) => f.userId === user.id ? f.friendId : f.userId);
+    if (friendIds.length) {
+      const { receipts, checkIns } = await store.getFriendActivity(friendIds);
+      setFriendReceipts(receipts);
+      setFriendCheckIns(checkIns);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadData();
+    const onFocus = () => loadData();
+    window.addEventListener("focus", onFocus);
+    const interval = setInterval(loadData, 30_000);
+    return () => { window.removeEventListener("focus", onFocus); clearInterval(interval); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   async function search(q: string) {

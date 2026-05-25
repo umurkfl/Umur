@@ -184,9 +184,18 @@ export function Navigation() {
 
   useEffect(() => {
     if (!user) { setPendingCount(0); return; }
-    store.getFriendships(user.id).then((fs) => {
-      setPendingCount(fs.filter((f) => f.status === "pending" && f.friendId === user.id).length);
-    });
+
+    function load() {
+      store.getFriendships(user!.id).then((fs) => {
+        setPendingCount(fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length);
+      });
+    }
+
+    load();
+    const interval = setInterval(load, 30_000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => { clearInterval(interval); window.removeEventListener("focus", onFocus); };
   }, [user]);
 
   const navItems = [

@@ -421,6 +421,7 @@ export const store = {
   async getFriendships(userId: string): Promise<StoredFriendship[]> {
     if (supabase) {
       const { data, error } = await supabase.from("friendships").select("*").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      if (error) console.error("[friendships] fetch error:", error.message, error.details);
       if (!error && data) {
         const remote = data.map(rowToFriendship);
         lsWrite(K.friendships, remote);
@@ -437,7 +438,8 @@ export const store = {
       lsWrite(K.friendships, all);
     }
     if (supabase) {
-      await supabase.from("friendships").insert({ id: friendship.id, user_id: friendship.userId, friend_id: friendship.friendId, user_name: friendship.userName, friend_name: friendship.friendName, status: "pending", created_at: friendship.createdAt });
+      const { error } = await supabase.from("friendships").insert({ id: friendship.id, user_id: friendship.userId, friend_id: friendship.friendId, user_name: friendship.userName, friend_name: friendship.friendName, status: "pending", created_at: friendship.createdAt });
+      if (error) console.error("[friendships] insert error:", error.message, error.details);
     }
   },
   async acceptFriendRequest(friendshipId: string): Promise<void> {
