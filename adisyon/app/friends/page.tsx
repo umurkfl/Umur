@@ -294,9 +294,9 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
   );
 }
 
-function ActivityCard({ type, userName, userId, restaurantName, detail, time }: {
+function ActivityCard({ type, userName, userId, restaurantName, detail, note, time }: {
   type: "receipt" | "checkin"; userName: string; userId: string;
-  restaurantName: string; detail?: string; time: string;
+  restaurantName: string; detail?: string; note?: string; time: string;
 }) {
   return (
     <div className="bg-surface rounded-2xl border border-border p-3.5">
@@ -313,6 +313,9 @@ function ActivityCard({ type, userName, userId, restaurantName, detail, time }: 
             }
           </p>
           {detail && <p className="text-xs text-muted mt-0.5">{detail}</p>}
+          {note && (
+            <p className="text-xs text-ink bg-background rounded-lg px-2 py-1 mt-1 italic">&ldquo;{note}&rdquo;</p>
+          )}
           <p className="text-[10px] text-muted mt-1">{timeAgo(time)}</p>
         </div>
         {type === "checkin"
@@ -497,7 +500,8 @@ export default function FriendsPage() {
               ) : (
                 <ActivityCard key={`c-${a.data.id}`} type="checkin" userName={a.data.userName} userId={a.data.userId}
                   restaurantName={a.data.restaurantName}
-                  detail={[[a.data.district, a.data.city].filter(Boolean).join(", "), a.data.message].filter(Boolean).join(" · ") || undefined}
+                  detail={[a.data.district, a.data.city].filter(Boolean).join(", ") || undefined}
+                  note={a.data.message || undefined}
                   time={a.data.createdAt} />
               )
             )
