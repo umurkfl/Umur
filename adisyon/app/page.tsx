@@ -71,6 +71,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
   const [comments, setComments] = useState<StoredComment[]>([]);
   const [text, setText] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => { store.getComments(receiptId).then(setComments); }, [receiptId]);
 
@@ -89,6 +90,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
   async function deleteComment(commentId: string) {
     await store.deleteComment(commentId);
     setComments((prev) => prev.filter((c) => c.id !== commentId));
+    setConfirmDeleteId(null);
   }
 
   const visible = showAll ? comments : comments.slice(-2);
@@ -117,9 +119,16 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
                 <span className="text-[10px] text-muted">{timeAgo(c.createdAt)}</span>
                 <ReactionBar commentId={c.id} />
                 {user?.id === c.userId && (
-                  <button onClick={() => deleteComment(c.id)} className="text-muted active:text-red-500">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  confirmDeleteId === c.id ? (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => deleteComment(c.id)} className="text-[10px] font-semibold text-red-500 active:opacity-70">Sil</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] text-muted active:opacity-70">İptal</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteId(c.id)} className="text-muted active:text-red-400 transition-colors">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -166,9 +175,16 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
               <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="text-xs font-semibold text-ink hover:underline">{c.userName}</Link>
               <p className="text-xs text-ink mt-0.5 pr-5">{c.text}</p>
               {user?.id === c.userId && (
-                <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-border active:text-red-500">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                confirmDeleteId === c.id ? (
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                    <button onClick={() => deleteComment(c.id)} className="text-[10px] font-semibold text-red-500 active:opacity-70">Sil</button>
+                    <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] text-muted active:opacity-70">İptal</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDeleteId(c.id)} className="absolute top-2 right-2 text-border active:text-red-400 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )
               )}
             </div>
             <ReactionBar commentId={c.id} />
