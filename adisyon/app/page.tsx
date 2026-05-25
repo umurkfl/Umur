@@ -410,18 +410,39 @@ export default function HomePage() {
   const { user, ready } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
   const [selected, setSelected] = useState<StoredReceipt | null>(null);
-  const [debugInfo, setDebugInfo] = useState<{ before: number; after: number; privateUsers: string[]; sbError: string } | null>(null);
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (!ready) return;
     (async () => {
+      const { supabase } = await import("@/lib/supabase");
       const all = await store.getReceipts();
+      const otherIds = [...new Set(all.map((r) => r.userId).filter((id) => id !== user?.id))];
+
+      // Check what's in user_settings
+      let sbRows: unknown[] = [];
+      let sbError = "";
+      if (supabase) {
+        const { data, error } = await supabase.from("user_settings").select("*");
+        sbRows = data ?? [];
+        sbError = error?.message ?? "ok";
+      }
+
+      // Check localStorage privacy map
+      let lsPrivacy: Record<string, string> = {};
+      try { lsPrivacy = JSON.parse(localStorage.getItem("adisyon_privacy") ?? "{}"); } catch { /* */ }
+
       const filtered = await store.getPrivacyFilteredReceipts(user?.id);
       setUserReceipts(filtered);
-      // Collect which users were filtered out
-      const filteredIds = new Set(filtered.map((r) => r.userId));
-      const removedUsers = [...new Set(all.filter((r) => !filteredIds.has(r.userId)).map((r) => r.userName))];
-      setDebugInfo({ before: all.length, after: filtered.length, privateUsers: removedUsers, sbError: "" });
+      setDebugInfo({
+        viewerId: user?.id ?? "guest",
+        otherIds,
+        sbAllRows: sbRows,
+        sbError,
+        lsPrivacy,
+        before: all.length,
+        after: filtered.length,
+      });
     })();
   }, [ready, user?.id]);
 
@@ -439,14 +460,14 @@ export default function HomePage() {
 
       {/* Temp debug panel */}
       {debugInfo && (
-        <div className="mx-4 mb-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-xs font-mono space-y-1">
-          <p className="font-bold text-yellow-800">🔍 Privacy Debug</p>
-          <p>Toplam adisyon: {debugInfo.before} → Gösterilen: {debugInfo.after}</p>
-          <p>Filtre kaldırdı: {debugInfo.before - debugInfo.after} adisyon</p>
-          {debugInfo.privateUsers.length > 0
-            ? <p className="text-green-700">✅ Gizlenen kullanıcılar: {debugInfo.privateUsers.join(", ")}</p>
-            : <p className="text-red-700">❌ Hiçbir adisyon gizlenmedi — filtre çalışmıyor</p>
-          }
+        <div className="mx-4 mb-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-[10px] font-mono space-y-1 break-all">
+          <p className="font-bold text-yellow-800 text-xs">🔍 Privacy Debug</p>
+          <p><b>viewerId:</b> {String(debugInfo.viewerId).slice(-8)}</p>
+          <p><b>otherIds ({(debugInfo.otherIds as string[]).length}):</b> {(debugInfo.otherIds as string[]).map((id) => id.slice(-8)).join(", ")}</p>
+          <p><b>supabase user_settings rows:</b> {JSON.stringify(debugInfo.sbAllRows)}</p>
+          <p><b>supabase error:</b> {String(debugInfo.sbError)}</p>
+          <p><b>localStorage privacy:</b> {JSON.stringify(debugInfo.lsPrivacy)}</p>
+          <p><b>Filtre: {String(debugInfo.before)} → {String(debugInfo.after)}</b></p>
         </div>
       )}
 
