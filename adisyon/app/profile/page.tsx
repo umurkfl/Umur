@@ -116,7 +116,7 @@ export default function ProfilePage() {
       map[key].totalPerPerson += r.perPerson;
       if (r.createdAt > map[key].lastVisit) map[key].lastVisit = r.createdAt;
     });
-    return Object.values(map).sort((a, b) => b.count - a.count);
+    return Object.values(map).sort((a, b) => b.lastVisit.localeCompare(a.lastVisit));
   }, [receipts]);
 
   if (!ready || !user) return null;
