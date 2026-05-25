@@ -314,7 +314,7 @@ function ActivityCard({ type, userName, userId, restaurantName, detail, note, ti
           </p>
           {detail && <p className="text-xs text-muted mt-0.5">{detail}</p>}
           {note && (
-            <p className="text-xs text-ink bg-background rounded-lg px-2 py-1 mt-1 italic">&ldquo;{note}&rdquo;</p>
+            <p className="text-xs text-ink bg-background rounded-lg px-2 py-1 mt-1">{note}</p>
           )}
           <p className="text-[10px] text-muted mt-1">{timeAgo(time)}</p>
         </div>
