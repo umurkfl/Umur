@@ -249,9 +249,11 @@ export default function FriendsPage() {
           ) : (
             accepted.map((f) => {
               const friendId = f.userId === user.id ? f.friendId : f.userId;
-              const friendName = f.userId === user.id ? f.friendName : f.userName;
+              const storedName = f.userId === user.id ? f.friendName : f.userName;
               const latestCheckIn = friendCheckIns.find((c) => c.userId === friendId);
               const latestReceipt = friendReceipts.find((r) => r.userId === friendId);
+              // Prefer real name from activity data (more reliable than friendship record)
+              const friendName = latestReceipt?.userName || latestCheckIn?.userName || storedName;
               return (
                 <Link key={f.id} href={`/users?id=${friendId}`} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5 active:scale-[0.98] transition-transform">
                   <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{friendName.charAt(0).toUpperCase()}</div>

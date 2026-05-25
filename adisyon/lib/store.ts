@@ -235,11 +235,12 @@ export const store = {
     // If Storage upload succeeded, r.photo is a CDN URL; otherwise use empty string.
     if (supabase) {
       const supabasePhoto = r.photo.startsWith("data:") ? "" : r.photo;
-      await supabase.from("receipts").insert({
+      const { error } = await supabase.from("receipts").insert({
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
         comment: r.comment, photo: supabasePhoto, created_at: r.createdAt,
       });
+      if (error) console.error("[receipts] insert error:", error.message, error.details);
     }
   },
   async getUserReceipts(userId: string): Promise<StoredReceipt[]> {
@@ -431,7 +432,18 @@ export const store = {
     return lsRead<StoredFriendship[]>(K.friendships, []).filter((f) => f.userId === userId || f.friendId === userId);
   },
   async sendFriendRequest(fromUserId: string, fromUserName: string, toUserId: string, toUserName: string): Promise<void> {
-    const friendship: StoredFriendship = { id: crypto.randomUUID(), userId: fromUserId, friendId: toUserId, userName: fromUserName, friendName: toUserName, status: "pending", createdAt: new Date().toISOString() };
+    // Prefer the name from receipts (more reliable than auth metadata)
+    let senderName = fromUserName;
+    if (supabase) {
+      const { data } = await supabase.from("receipts").select("user_name").eq("user_id", fromUserId).limit(1);
+      if (data?.[0]?.user_name) senderName = data[0].user_name as string;
+    }
+    let recipientName = toUserName;
+    if (supabase) {
+      const { data } = await supabase.from("receipts").select("user_name").eq("user_id", toUserId).limit(1);
+      if (data?.[0]?.user_name) recipientName = data[0].user_name as string;
+    }
+    const friendship: StoredFriendship = { id: crypto.randomUUID(), userId: fromUserId, friendId: toUserId, userName: senderName, friendName: recipientName, status: "pending", createdAt: new Date().toISOString() };
     const all = lsRead<StoredFriendship[]>(K.friendships, []);
     if (!all.some((f) => (f.userId === fromUserId && f.friendId === toUserId) || (f.userId === toUserId && f.friendId === fromUserId))) {
       all.push(friendship);
@@ -461,13 +473,24 @@ export const store = {
     if (!friendIds.length) return { receipts: [], checkIns: [] };
     const receipts: StoredReceipt[] = [];
     const checkIns: StoredCheckIn[] = [];
+    // Include receipts cached in localStorage for friends (works when on same device)
+    const localAll = lsRead<StoredReceipt[]>(K.receipts, []);
+    const localFriendReceipts = localAll.filter((r) => friendIds.includes(r.userId));
     if (supabase) {
       const [{ data: rData }, { data: cData }] = await Promise.all([
         supabase.from("receipts").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(30),
         supabase.from("check_ins").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(20),
       ]);
-      if (rData) receipts.push(...rData.map(rowToReceipt));
+      if (rData) {
+        const remote = rData.map(rowToReceipt);
+        const remoteIds = new Set(remote.map((r) => r.id));
+        receipts.push(...localFriendReceipts.filter((r) => !remoteIds.has(r.id)), ...remote);
+      } else {
+        receipts.push(...localFriendReceipts);
+      }
       if (cData) checkIns.push(...cData.map(rowToCheckIn));
+    } else {
+      receipts.push(...localFriendReceipts);
     }
     return { receipts, checkIns };
   },
