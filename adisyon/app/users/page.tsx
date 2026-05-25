@@ -3,8 +3,8 @@
 import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Star, Lock, MapPin, Receipt, Trophy, Users } from "lucide-react";
-import { store, StoredReceipt, StoredFriendship, deriveUsername, calcBadges } from "@/lib/store";
+import { ArrowLeft, Star, Lock, MapPin, Receipt, Trophy, Users, Trash2 } from "lucide-react";
+import { store, StoredReceipt, StoredFriendship, StoredCheckIn, deriveUsername, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { BADGE_ICONS } from "@/lib/badge-icons";
@@ -59,6 +59,13 @@ function ProfileContent() {
   const [privacy, setPrivacy] = useState<"public" | "friends">("public");
   const [showAllReceipts, setShowAllReceipts] = useState(false);
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [activeCheckIn, setActiveCheckIn] = useState<StoredCheckIn | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
@@ -66,10 +73,15 @@ function ProfileContent() {
       store.getUserReceipts(userId, nameHint || undefined),
       store.getUserPrivacy(userId),
       store.getPublicAvatar(userId),
-    ]).then(([r, p, av]) => {
+      store.getUserCheckIns(userId),
+    ]).then(([r, p, av, cis]) => {
       setReceipts(r);
       setPrivacy(p);
       setAvatar(av);
+      const fresh = (cis as StoredCheckIn[])
+        .filter((c) => Date.now() - new Date(c.createdAt).getTime() < 24 * 60 * 60 * 1000)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+      setActiveCheckIn(fresh);
       setLoading(false);
     });
   }, [userId]);
@@ -203,6 +215,31 @@ function ProfileContent() {
           </div>
         </div>
       </div>
+
+      {/* ── Aktif Check-in ── */}
+      {!stillLoadingAccess && (isOwnProfile || isMutualFriend) && activeCheckIn && (
+        <div className="bg-surface rounded-2xl border border-primary-light shadow-sm p-3.5 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+            <MapPin className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ink truncate">{activeCheckIn.restaurantName}</p>
+            <p className="text-xs text-muted truncate">
+              {[activeCheckIn.district, activeCheckIn.city].filter(Boolean).join(", ") || "Konum belirtilmedi"}
+              {activeCheckIn.message ? ` · ${activeCheckIn.message}` : ""}
+            </p>
+          </div>
+          <p className="text-xs text-muted shrink-0">{timeAgo(activeCheckIn.createdAt)}</p>
+          {isOwnProfile && (
+            <button
+              onClick={async () => { await store.deleteCheckIn(activeCheckIn.id); setActiveCheckIn(null); }}
+              className="text-border active:text-red-400 transition-colors shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Locked wall ── */}
       {!stillLoadingAccess && !canSeeReceipts && (
