@@ -523,12 +523,9 @@ export const store = {
     const all = await store.getReceipts();
     if (!all.length) return all;
 
-    // Collect unique uploader IDs (skip own receipts — always visible)
     const otherIds = [...new Set(all.map((r) => r.userId).filter((id) => id !== viewerId))];
     if (!otherIds.length) return all;
 
-    // Build privacy map: start from localStorage (always available on same device),
-    // then overlay with Supabase data when the table exists.
     const privacyMap: Record<string, "public" | "friends"> = {};
     const local = lsRead<Record<string, "public" | "friends">>(K.privacy, {});
     for (const id of otherIds) { if (local[id]) privacyMap[id] = local[id]; }
@@ -543,11 +540,14 @@ export const store = {
       }
     }
 
-    // If no one is private, skip friendship lookup
+    console.debug("[privacy-filter] viewerId:", viewerId);
+    console.debug("[privacy-filter] otherIds:", otherIds);
+    console.debug("[privacy-filter] privacyMap:", JSON.stringify(privacyMap));
+
     const privateIds = otherIds.filter((id) => privacyMap[id] === "friends");
+    console.debug("[privacy-filter] privateIds (should hide from non-friends):", privateIds);
     if (!privateIds.length) return all;
 
-    // Build set of mutual friends for the viewer
     const mutualSet = new Set<string>();
     if (viewerId) {
       const fs = await store.getFriendships(viewerId);
@@ -557,11 +557,12 @@ export const store = {
         mutualSet.add(otherId);
       }
     }
+    console.debug("[privacy-filter] mutualFriendIds:", [...mutualSet]);
 
     return all.filter((r) => {
-      if (r.userId === viewerId) return true;               // own receipt
-      if (privacyMap[r.userId] !== "friends") return true;  // public profile
-      return mutualSet.has(r.userId);                       // mutual friend
+      if (r.userId === viewerId) return true;
+      if (privacyMap[r.userId] !== "friends") return true;
+      return mutualSet.has(r.userId);
     });
   },
 
