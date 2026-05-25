@@ -93,6 +93,7 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<Theme>("system");
   const [privacy, setPrivacy] = useState<Privacy>("public");
   const [privacySaving, setPrivacySaving] = useState(false);
+  const [privacySaveMsg, setPrivacySaveMsg] = useState("");
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [passwordMsg, setPasswordMsg] = useState("");
@@ -113,7 +114,23 @@ export default function SettingsPage() {
     if (!user) return;
     setPrivacy(p);
     setPrivacySaving(true);
-    await store.setPrivacy(user.id, p);
+    setPrivacySaveMsg("");
+    try {
+      await store.setPrivacy(user.id, p);
+      // Verify it was actually saved to Supabase
+      const { supabase } = await import("@/lib/supabase");
+      if (supabase) {
+        const { data, error } = await supabase.from("user_settings").select("privacy").eq("user_id", user.id).single();
+        if (error || !data) {
+          setPrivacySaveMsg("⚠️ Supabase'e kaydedilemedi: " + (error?.message ?? "satır yok"));
+        } else {
+          setPrivacySaveMsg("✓ Kaydedildi (" + data.privacy + ")");
+          setTimeout(() => setPrivacySaveMsg(""), 3000);
+        }
+      }
+    } catch (e) {
+      setPrivacySaveMsg("⚠️ Hata: " + String(e));
+    }
     setPrivacySaving(false);
   }
 
@@ -285,7 +302,10 @@ export default function SettingsPage() {
                 }
               </p>
             </div>
-            {privacySaving && <span className="text-[10px] text-muted shrink-0">Kaydediliyor…</span>}
+            {privacySaving
+              ? <span className="text-[10px] text-muted shrink-0">Kaydediliyor…</span>
+              : privacySaveMsg && <span className={`text-[10px] shrink-0 ${privacySaveMsg.startsWith("⚠️") ? "text-red-500" : "text-primary"}`}>{privacySaveMsg}</span>
+            }
           </div>
           <div className="flex gap-2">
             <button

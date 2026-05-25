@@ -580,10 +580,19 @@ export const store = {
     all[userId] = privacy;
     lsWrite(K.privacy, all);
     if (supabase) {
-      await supabase.from("user_settings").upsert(
-        { user_id: userId, privacy, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" }
-      );
+      // Try update first, then insert (upsert can silently fail with some RLS configs)
+      const { data: existing } = await supabase
+        .from("user_settings").select("user_id").eq("user_id", userId).single();
+      if (existing) {
+        const { error } = await supabase
+          .from("user_settings").update({ privacy, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        if (error) console.error("[setPrivacy] update error:", error.message, error.details);
+      } else {
+        const { error } = await supabase
+          .from("user_settings").insert({ user_id: userId, privacy, updated_at: new Date().toISOString() });
+        if (error) console.error("[setPrivacy] insert error:", error.message, error.details);
+      }
     }
   },
   async updateDisplayName(userId: string, name: string): Promise<void> {
