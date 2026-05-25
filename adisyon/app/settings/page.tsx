@@ -115,22 +115,9 @@ export default function SettingsPage() {
     setPrivacy(p);
     setPrivacySaving(true);
     setPrivacySaveMsg("");
-    try {
-      await store.setPrivacy(user.id, p);
-      // Verify it was actually saved to Supabase
-      const { supabase } = await import("@/lib/supabase");
-      if (supabase) {
-        const { data, error } = await supabase.from("user_settings").select("privacy").eq("user_id", user.id).single();
-        if (error || !data) {
-          setPrivacySaveMsg("⚠️ Supabase'e kaydedilemedi: " + (error?.message ?? "satır yok"));
-        } else {
-          setPrivacySaveMsg("✓ Kaydedildi (" + data.privacy + ")");
-          setTimeout(() => setPrivacySaveMsg(""), 3000);
-        }
-      }
-    } catch (e) {
-      setPrivacySaveMsg("⚠️ Hata: " + String(e));
-    }
+    await store.setPrivacy(user.id, p);
+    setPrivacySaveMsg("✓ Kaydedildi");
+    setTimeout(() => setPrivacySaveMsg(""), 2000);
     setPrivacySaving(false);
   }
 

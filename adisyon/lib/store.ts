@@ -540,12 +540,7 @@ export const store = {
       }
     }
 
-    console.debug("[privacy-filter] viewerId:", viewerId);
-    console.debug("[privacy-filter] otherIds:", otherIds);
-    console.debug("[privacy-filter] privacyMap:", JSON.stringify(privacyMap));
-
     const privateIds = otherIds.filter((id) => privacyMap[id] === "friends");
-    console.debug("[privacy-filter] privateIds (should hide from non-friends):", privateIds);
     if (!privateIds.length) return all;
 
     const mutualSet = new Set<string>();
@@ -557,7 +552,6 @@ export const store = {
         mutualSet.add(otherId);
       }
     }
-    console.debug("[privacy-filter] mutualFriendIds:", [...mutualSet]);
 
     return all.filter((r) => {
       if (r.userId === viewerId) return true;
