@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
@@ -107,8 +107,8 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
                 <span className="text-[10px] text-muted">{timeAgo(c.createdAt)}</span>
                 <ReactionBar commentId={c.id} />
                 {user?.id === c.userId && (
-                  <button onClick={() => deleteComment(c.id)} className="text-[10px] text-muted active:text-red-500 opacity-0 group-active:opacity-100">
-                    sil
+                  <button onClick={() => deleteComment(c.id)} className="text-muted active:text-red-500">
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 )}
               </div>
@@ -233,9 +233,16 @@ function HelpfulButton({ receiptId }: { receiptId: string }) {
 
 // ─── Receipt detail sheet ────────────────────────────────────────────────────
 
-function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => void }) {
+function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () => void; onDelete?: () => void }) {
   const { user } = useAuth();
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleDelete() {
+    await store.deleteReceipt(r.id);
+    onClose();
+    onDelete?.();
+  }
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -272,11 +279,25 @@ function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => v
           </div>
         )}
 
-        <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-          <h2 className="font-bold text-charcoal text-lg">{r.restaurantName}</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-background text-muted shrink-0">
-            <X className="w-4 h-4" />
-          </button>
+        <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-2">
+          <h2 className="font-bold text-charcoal text-lg flex-1 min-w-0 truncate">{r.restaurantName}</h2>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {user?.id === r.userId && (
+              confirmDelete ? (
+                <>
+                  <button onClick={handleDelete} className="text-xs font-semibold text-red-500 px-2 py-1 rounded-lg active:bg-red-50">Sil</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted px-2 py-1 rounded-lg active:bg-background">İptal</button>
+                </>
+              ) : (
+                <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 flex items-center justify-center rounded-full bg-background text-muted active:bg-red-50 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )
+            )}
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-background text-muted shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
@@ -336,7 +357,15 @@ function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => v
 
 // ─── Receipt card ─────────────────────────────────────────────────────────────
 
-function UserReceiptCard({ r, onOpen }: { r: StoredReceipt; onOpen: () => void }) {
+function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: () => void; onDelete?: () => void }) {
+  const { user } = useAuth();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleDelete() {
+    await store.deleteReceipt(r.id);
+    onDelete?.();
+  }
+
   return (
     <article className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
       {/* Fiyat + meta */}
@@ -393,8 +422,20 @@ function UserReceiptCard({ r, onOpen }: { r: StoredReceipt; onOpen: () => void }
             📷 Fotoğraf
           </button>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
           <WishlistButton restaurantName={r.restaurantName} size="sm" />
+          {user?.id === r.userId && (
+            confirmDelete ? (
+              <>
+                <button onClick={handleDelete} className="text-xs font-semibold text-red-500 active:opacity-70">Sil</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted active:opacity-70">İptal</button>
+              </>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} className="w-7 h-7 flex items-center justify-center rounded-full active:bg-red-50 transition-colors">
+                <Trash2 className="w-3.5 h-3.5 text-muted" />
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -436,12 +477,24 @@ export default function HomePage() {
             <h2 className="font-bold text-charcoal">Akış</h2>
           </div>
           <div className="space-y-3 px-4">
-            {userReceipts.slice(0, 20).map((r) => <UserReceiptCard key={r.id} r={r} onOpen={() => setSelected(r)} />)}
+            {userReceipts.slice(0, 20).map((r) => (
+              <UserReceiptCard
+                key={r.id} r={r}
+                onOpen={() => setSelected(r)}
+                onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== r.id))}
+              />
+            ))}
           </div>
         </section>
       )}
 
-      {selected && <ReceiptDetailSheet r={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ReceiptDetailSheet
+          r={selected}
+          onClose={() => setSelected(null)}
+          onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== selected.id))}
+        />
+      )}
     </div>
   );
 }

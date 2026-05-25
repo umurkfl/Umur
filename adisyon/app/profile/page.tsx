@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   LogOut, Receipt, Star, Camera, Trophy, Bookmark,
   MapPin, TrendingUp, ChevronRight, Users, Calendar,
-  UserCheck, ClipboardList, Compass, Utensils, Home as HomeIcon,
+  UserCheck, ClipboardList, Compass, Utensils, Home as HomeIcon, Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
@@ -66,6 +66,7 @@ export default function ProfilePage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [showAllReceipts, setShowAllReceipts] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
@@ -74,6 +75,12 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) store.getUserReceipts(user.id).then(setReceipts);
   }, [user]);
+
+  async function deleteReceipt(receiptId: string) {
+    await store.deleteReceipt(receiptId);
+    setReceipts((prev) => prev.filter((r) => r.id !== receiptId));
+    setConfirmDeleteId(null);
+  }
 
   const visitedRestaurants = useMemo(() => {
     const map: Record<string, { name: string; count: number; lastVisit: string; totalPerPerson: number }> = {};
@@ -400,9 +407,19 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 flex flex-col items-end gap-1">
                   <p className="font-bold text-charcoal text-sm">{formatCurrency(r.total)}</p>
                   <p className="text-xs text-primary">{formatCurrency(r.perPerson)}/kişi</p>
+                  {confirmDeleteId === r.id ? (
+                    <div className="flex gap-1.5 mt-0.5">
+                      <button onClick={() => deleteReceipt(r.id)} className="text-[10px] font-semibold text-red-500 active:opacity-70">Sil</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] text-muted active:opacity-70">İptal</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteId(r.id)} className="text-muted active:text-red-500 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

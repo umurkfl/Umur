@@ -267,6 +267,13 @@ export const store = {
     }
     return lsRead<StoredReceipt[]>(K.receipts, []);
   },
+  async deleteReceipt(receiptId: string): Promise<void> {
+    if (supabase) {
+      await supabase.from("receipts").delete().eq("id", receiptId);
+    }
+    const all = lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.id !== receiptId);
+    lsWrite(K.receipts, all);
+  },
   async addReceipt(r: StoredReceipt): Promise<void> {
     // Always save locally so the uploader sees it immediately
     const all = lsRead<StoredReceipt[]>(K.receipts, []);
