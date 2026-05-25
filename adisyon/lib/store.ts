@@ -609,7 +609,7 @@ export const store = {
     if (supabase) {
       const [{ data: rData }, { data: cData }] = await Promise.all([
         supabase.from("receipts").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(30),
-        supabase.from("check_ins").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(20),
+        supabase.from("check_ins").select("*").in("user_id", friendIds).order("created_at", { ascending: false }).limit(50),
       ]);
       if (rData) {
         const remote = rData.map(rowToReceipt);
@@ -749,7 +749,7 @@ export const store = {
         const localOnly = all.filter((c) => c.userId === userId && !remoteIds.has(c.id));
         // Re-sync any local-only check-ins that failed to reach Supabase (e.g. network blip)
         for (const ci of localOnly) {
-          supabase.from("check_ins").insert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" }).then(() => {});
+          supabase.from("check_ins").upsert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" }).then(() => {});
         }
         const merged = [...localOnly, ...remote].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         lsWrite(K.checkIns, [...all.filter((c) => c.userId !== userId), ...merged.slice(0, 10)]);
@@ -767,12 +767,13 @@ export const store = {
   },
   async checkIn(userId: string, userName: string, restaurantName: string, message: string, city?: string, district?: string): Promise<void> {
     const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString(), city: city || undefined, district: district || undefined };
-    if (supabase) {
-      await supabase.from("check_ins").insert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" });
-    }
+    // Save to localStorage FIRST so re-sync picks it up even if Supabase fails
     const all = lsRead<StoredCheckIn[]>(K.checkIns, []);
     all.unshift(ci);
     lsWrite(K.checkIns, all.slice(0, 50));
+    if (supabase) {
+      await supabase.from("check_ins").upsert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" });
+    }
   },
 };
 
