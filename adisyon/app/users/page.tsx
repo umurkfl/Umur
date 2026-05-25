@@ -289,14 +289,17 @@ function ProfileContent() {
             <h3 className="font-bold text-charcoal text-sm">Rozetler</h3>
           </div>
           <div className="px-4 pb-4 flex gap-4 overflow-x-auto no-scrollbar">
-            {badges.map((b) => (
-              <div key={b.id} className="shrink-0 flex flex-col items-center gap-1.5">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-xl">
-                  {b.emoji}
+            {badges.map((b) => {
+              const Icon = BADGE_ICONS[b.id] ?? Star;
+              return (
+                <div key={b.id} className="shrink-0 flex flex-col items-center gap-1.5">
+                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
+                    <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[10px] font-bold text-ink text-center w-14 leading-tight truncate">{b.dynamicLabel ?? b.label}</p>
                 </div>
-                <p className="text-[10px] font-bold text-ink text-center w-12 leading-tight">{b.dynamicLabel ?? b.label}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
