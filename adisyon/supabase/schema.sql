@@ -111,6 +111,19 @@ create policy "public insert notifications" on notifications for insert with che
 create policy "public update notifications" on notifications for update using (true);
 create policy "public delete notifications" on notifications for delete using (true);
 
+-- User profiles (avatar, cross-device)
+create table if not exists user_profiles (
+  user_id    text primary key,
+  avatar     text not null default '',
+  updated_at text not null
+);
+
+alter table user_profiles enable row level security;
+
+create policy "public read user_profiles"   on user_profiles for select using (true);
+create policy "public insert user_profiles" on user_profiles for insert with check (true);
+create policy "public update user_profiles" on user_profiles for update using (true);
+
 -- User settings (privacy, etc.)
 create table if not exists user_settings (
   user_id    text primary key,

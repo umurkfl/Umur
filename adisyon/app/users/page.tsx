@@ -57,15 +57,18 @@ function ProfileContent() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [privacy, setPrivacy] = useState<"public" | "friends">("public");
   const [showAllReceipts, setShowAllReceipts] = useState(false);
+  const [avatar, setAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
     Promise.all([
       store.getUserReceipts(userId, nameHint || undefined),
       store.getUserPrivacy(userId),
-    ]).then(([r, p]) => {
+      store.getPublicAvatar(userId),
+    ]).then(([r, p, av]) => {
       setReceipts(r);
       setPrivacy(p);
+      setAvatar(av);
       setLoading(false);
     });
   }, [userId]);
@@ -152,8 +155,11 @@ function ProfileContent() {
         <div className="h-20 bg-gradient-to-br from-primary to-primary-dark" />
         <div className="px-5 pb-5">
           <div className="flex items-end justify-between -mt-9 mb-4">
-            <div className="w-18 h-18 rounded-full border-4 border-surface bg-primary-light flex items-center justify-center text-2xl font-bold text-primary shadow-sm" style={{ width: 72, height: 72 }}>
-              {stillLoadingAccess ? "?" : userName.charAt(0).toUpperCase()}
+            <div className="rounded-full border-4 border-surface bg-primary-light overflow-hidden flex items-center justify-center text-2xl font-bold text-primary shadow-sm shrink-0" style={{ width: 72, height: 72 }}>
+              {avatar
+                ? <img src={avatar} className="w-full h-full object-cover" alt={userName} />
+                : (stillLoadingAccess ? "?" : userName.charAt(0).toUpperCase())
+              }
             </div>
             {user && user.id !== userId && !stillLoadingAccess && (
               <div className="pb-1">

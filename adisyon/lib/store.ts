@@ -189,6 +189,35 @@ export const store = {
     lsWrite(K.users, all);
     const current = lsRead<StoredUser | null>(K.current, null);
     if (current?.id === userId) lsWrite(K.current, { ...current, avatar });
+    // Persist avatar to Supabase so other devices can see it
+    if (supabase) {
+      (async () => {
+        try {
+          const { data: existing } = await supabase!.from("user_profiles").select("user_id").eq("user_id", userId).maybeSingle();
+          if (existing) {
+            await supabase!.from("user_profiles").update({ avatar, updated_at: new Date().toISOString() }).eq("user_id", userId);
+          } else {
+            await supabase!.from("user_profiles").insert({ user_id: userId, avatar, updated_at: new Date().toISOString() });
+          }
+        } catch (e) { console.error("[avatar] save error:", e); }
+      })();
+    }
+  },
+  async getPublicAvatar(userId: string): Promise<string | null> {
+    // Try local first (fastest)
+    if (typeof window !== "undefined") {
+      const local = localStorage.getItem(`adisyon_avatar_${userId}`);
+      if (local) return local;
+    }
+    if (supabase) {
+      // Try user_profiles table
+      const { data } = await supabase.from("user_profiles").select("avatar").eq("user_id", userId).maybeSingle();
+      if (data?.avatar) return data.avatar as string;
+      // Fallback: latest comment by this user might have their avatar
+      const { data: c } = await supabase.from("comments").select("user_avatar").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (c?.user_avatar) return c.user_avatar as string;
+    }
+    return null;
   },
   setUsername: (userId: string, username: string): void => {
     if (typeof window === "undefined") return;

@@ -99,7 +99,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
             <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-xs leading-snug">
-                <span className="font-semibold text-charcoal">{c.userName}</span>
+                <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="font-semibold text-charcoal hover:underline">{c.userName}</Link>
                 {" "}
                 <span className="text-ink">{c.text}</span>
               </p>
@@ -151,7 +151,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
           <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
           <div className="flex-1 min-w-0">
             <div className="bg-background rounded-xl px-3 py-2 relative">
-              <p className="text-xs font-semibold text-ink">{c.userName}</p>
+              <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="text-xs font-semibold text-ink hover:underline">{c.userName}</Link>
               <p className="text-xs text-ink mt-0.5 pr-5">{c.text}</p>
               {user?.id === c.userId && (
                 <button onClick={() => deleteComment(c.id)} className="absolute top-2 right-2 text-border active:text-red-500">
