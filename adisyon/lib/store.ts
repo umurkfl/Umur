@@ -89,7 +89,7 @@ export interface StoredCheckIn {
 
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes", friendships: "adisyon_friendships", checkIns: "adisyon_check_ins" };
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes", friendships: "adisyon_friendships", checkIns: "adisyon_check_ins", privacy: "adisyon_privacy" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -517,6 +517,34 @@ export const store = {
     }
     return { receipts, checkIns };
   },
+  // Privacy settings
+  async getUserPrivacy(userId: string): Promise<"public" | "friends"> {
+    if (supabase) {
+      const { data } = await supabase.from("user_settings").select("privacy").eq("user_id", userId).single();
+      if (data?.privacy) return data.privacy as "public" | "friends";
+    }
+    const local = lsRead<Record<string, "public" | "friends">>(K.privacy, {});
+    return local[userId] ?? "public";
+  },
+  async setPrivacy(userId: string, privacy: "public" | "friends"): Promise<void> {
+    const all = lsRead<Record<string, "public" | "friends">>(K.privacy, {});
+    all[userId] = privacy;
+    lsWrite(K.privacy, all);
+    if (supabase) {
+      await supabase.from("user_settings").upsert(
+        { user_id: userId, privacy, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+    }
+  },
+  async updateDisplayName(userId: string, name: string): Promise<void> {
+    const all = lsRead<StoredUser[]>(K.users, []);
+    const idx = all.findIndex((u) => u.id === userId);
+    if (idx >= 0) { all[idx].name = name; lsWrite(K.users, all); }
+    const current = lsRead<StoredUser | null>(K.current, null);
+    if (current?.id === userId) lsWrite(K.current, { ...current, name });
+  },
+
   async checkIn(userId: string, userName: string, restaurantName: string, message: string): Promise<void> {
     const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString() };
     if (supabase) {

@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${inter.variable} ${nunito.variable} h-full`}>
+    <html lang="tr" className={`${inter.variable} ${nunito.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* Apply theme before paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('adisyon_theme')||'system';if(t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()` }} />
+      </head>
       <body className="min-h-full bg-background font-body text-ink">
         <Providers>
           <Navigation />

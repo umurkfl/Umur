@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, Lock } from "lucide-react";
 import { store, StoredReceipt, StoredFriendship, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
@@ -16,24 +16,32 @@ function ProfileContent() {
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
+  const [friendStatusLoading, setFriendStatusLoading] = useState(true);
   const [friendshipId, setFriendshipId] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [privacy, setPrivacy] = useState<"public" | "friends">("public");
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
-    store.getUserReceipts(userId, nameHint || undefined).then((r) => {
+    Promise.all([
+      store.getUserReceipts(userId, nameHint || undefined),
+      store.getUserPrivacy(userId),
+    ]).then(([r, p]) => {
       setReceipts(r);
+      setPrivacy(p);
       setLoading(false);
     });
   }, [userId]);
 
   useEffect(() => {
-    if (!user || !userId || user.id === userId) return;
+    if (!userId) { setFriendStatusLoading(false); return; }
+    if (!user || user.id === userId) { setFriendStatusLoading(false); return; }
     store.getFriendships(user.id).then((fs: StoredFriendship[]) => {
       const match = fs.find((f) => (f.userId === user.id && f.friendId === userId) || (f.userId === userId && f.friendId === user.id));
       if (!match) { setFriendStatus("none"); setFriendshipId(null); }
       else if (match.status === "accepted") { setFriendStatus("friend"); setFriendshipId(match.id); }
       else { setFriendStatus("pending"); setFriendshipId(match.id); }
+      setFriendStatusLoading(false);
     });
   }, [user, userId]);
 
@@ -52,8 +60,12 @@ function ProfileContent() {
     setConfirmRemove(false);
   }
 
-  const userName = receipts[0]?.userName ?? "Kullanıcı";
+  const userName = receipts[0]?.userName ?? nameHint ?? "Kullanıcı";
   const displayUsername = !loading && userId ? deriveUsername(userName, userId) : null;
+  const isOwnProfile = user?.id === userId;
+  const isMutualFriend = friendStatus === "friend";
+  const stillLoadingAccess = loading || friendStatusLoading;
+  const canSeeReceipts = isOwnProfile || privacy === "public" || isMutualFriend;
 
   if (!userId) {
     return (
@@ -75,20 +87,20 @@ function ProfileContent() {
 
       <div className="mx-4 mb-4 bg-surface rounded-2xl border border-border p-5 flex items-center gap-4">
         <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center text-2xl font-bold text-primary shrink-0">
-          {loading ? "?" : userName.charAt(0).toUpperCase()}
+          {stillLoadingAccess ? "?" : userName.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold text-charcoal">
-            {loading ? "Yükleniyor..." : userName}
+            {stillLoadingAccess ? "Yükleniyor..." : userName}
           </h2>
-          {!loading && displayUsername && (
+          {!stillLoadingAccess && displayUsername && (
             <p className="text-xs text-muted mt-0.5">{displayUsername}</p>
           )}
           <p className="text-sm text-muted mt-0.5">
-            {loading ? "" : `${receipts.length} adisyon paylaştı`}
+            {stillLoadingAccess ? "" : canSeeReceipts ? `${receipts.length} adisyon paylaştı` : "Gizli profil"}
           </p>
         </div>
-        {user && user.id !== userId && !loading && (
+        {user && user.id !== userId && !stillLoadingAccess && (
           friendStatus === "friend" ? (
             confirmRemove ? (
               <div className="flex gap-1.5 shrink-0">
@@ -119,8 +131,24 @@ function ProfileContent() {
         )}
       </div>
 
-      {loading ? (
+      {stillLoadingAccess ? (
         <div className="text-center text-muted py-12">Yükleniyor...</div>
+      ) : !canSeeReceipts ? (
+        <div className="mx-4 mt-2 bg-surface rounded-2xl border border-border p-8 flex flex-col items-center gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-border/40 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-muted" />
+          </div>
+          <p className="font-semibold text-charcoal">Gizli Profil</p>
+          <p className="text-sm text-muted max-w-xs">Bu hesabın adisyonlarını görmek için arkadaş olman gerekiyor.</p>
+          {friendStatus === "none" && user && (
+            <button onClick={addFriend} className="mt-1 bg-primary text-white text-sm font-semibold px-5 py-2 rounded-full active:scale-95 transition-transform">
+              + Arkadaş Ekle
+            </button>
+          )}
+          {friendStatus === "pending" && (
+            <p className="text-xs text-muted italic">Arkadaşlık isteği gönderildi, bekleniyor…</p>
+          )}
+        </div>
       ) : receipts.length === 0 ? (
         <div className="text-center text-muted py-12">Henüz adisyon paylaşılmamış.</div>
       ) : (

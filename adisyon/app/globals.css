@@ -40,3 +40,15 @@ body {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Dark mode overrides ── */
+.dark {
+  --color-background:    #1C1B18;
+  --color-surface:       #252421;
+  --color-border:        #3A3836;
+  --color-charcoal:      #F0EEE7;
+  --color-ink:           #C8C6BE;
+  --color-muted:         #7A7870;
+  --color-primary-light: #1A3A2D;
+  --color-dark:          #F0EEE7;
+}

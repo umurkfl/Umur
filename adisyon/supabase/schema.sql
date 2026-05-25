@@ -90,3 +90,16 @@ alter table check_ins enable row level security;
 create policy "public read check_ins"   on check_ins for select using (true);
 create policy "public insert check_ins" on check_ins for insert with check (true);
 create policy "public delete check_ins" on check_ins for delete using (true);
+
+-- User settings (privacy, etc.)
+create table if not exists user_settings (
+  user_id    text primary key,
+  privacy    text not null default 'public',
+  updated_at text not null
+);
+
+alter table user_settings enable row level security;
+
+create policy "public read user_settings"   on user_settings for select using (true);
+create policy "public insert user_settings" on user_settings for insert with check (true);
+create policy "public update user_settings" on user_settings for update using (true);
