@@ -40,7 +40,7 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
       <div className="bg-surface rounded-2xl p-4 shadow-sm border border-primary-light">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-            <p className="font-semibold text-charcoal">{r.name}</p>
+            <Link href={`/restaurants?name=${encodeURIComponent(r.name)}`} className="font-semibold text-charcoal hover:text-primary transition-colors">{r.name}</Link>
             <span className="text-xs bg-primary-light text-primary font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
           </div>
           <WishlistButton restaurantName={r.name} size="sm" />

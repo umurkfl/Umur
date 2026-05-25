@@ -342,7 +342,7 @@ function UserReceiptCard({ r, onOpen }: { r: StoredReceipt; onOpen: () => void }
       {/* Fiyat + meta */}
       <div className="px-4 pt-3.5 pb-1 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-charcoal text-base leading-tight truncate">{r.restaurantName}</p>
+          <Link href={`/restaurants?name=${encodeURIComponent(r.restaurantName)}`} onClick={(e) => e.stopPropagation()} className="font-bold text-charcoal text-base leading-tight truncate block hover:text-primary transition-colors">{r.restaurantName}</Link>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
