@@ -298,14 +298,19 @@ export const store = {
         receipt_id: c.receiptId, text: c.text, created_at: c.createdAt,
       });
       // Notify receipt owner (fire-and-forget)
-      supabase.from("receipts").select("user_id").eq("id", c.receiptId).single().then(({ data }) => {
-        if (!data || data.user_id === c.userId) return;
-        supabase!.from("notifications").insert({
-          id: crypto.randomUUID(), user_id: data.user_id, type: "comment",
-          actor_name: c.userName, receipt_id: c.receiptId, comment_id: c.id,
-          text: c.text.slice(0, 100), read: false, created_at: new Date().toISOString(),
-        });
-      });
+      (async () => {
+        try {
+          const { data: receipt, error: rErr } = await supabase!.from("receipts").select("user_id").eq("id", c.receiptId).maybeSingle();
+          if (rErr) { console.error("[notification] receipt lookup:", rErr.message); return; }
+          if (!receipt || receipt.user_id === c.userId) return;
+          const { error: nErr } = await supabase!.from("notifications").insert({
+            id: crypto.randomUUID(), user_id: receipt.user_id, type: "comment",
+            actor_name: c.userName, receipt_id: c.receiptId, comment_id: c.id,
+            text: c.text.slice(0, 100), read: false, created_at: new Date().toISOString(),
+          });
+          if (nErr) console.error("[notification] comment insert:", nErr.message);
+        } catch (e) { console.error("[notification] comment error:", e); }
+      })();
       return;
     }
     const all = lsRead<StoredComment[]>(K.comments, []);
@@ -336,22 +341,26 @@ export const store = {
       }, { onConflict: "user_id,comment_id" });
       // Notify comment owner once (skip if notification already exists for this actor+comment)
       if (actorName) {
-        supabase.from("comments").select("user_id").eq("id", reaction.commentId).single().then(({ data }) => {
-          if (!data || data.user_id === reaction.userId) return;
-          // Check if we already sent a reaction notif for this actor+comment so we don't spam
-          supabase!.from("notifications")
-            .select("id").eq("user_id", data.user_id).eq("type", "reaction")
-            .eq("comment_id", reaction.commentId).eq("actor_name", actorName)
-            .maybeSingle().then(({ data: existing }) => {
-              if (existing) return;
-              supabase!.from("notifications").insert({
-                id: crypto.randomUUID(), user_id: data.user_id, type: "reaction",
-                actor_name: actorName, receipt_id: "", comment_id: reaction.commentId,
-                text: reaction.reaction === "like" ? "👍" : "👎", read: false,
-                created_at: new Date().toISOString(),
-              });
+        (async () => {
+          try {
+            const { data: comment, error: cErr } = await supabase!.from("comments").select("user_id").eq("id", reaction.commentId).maybeSingle();
+            if (cErr) { console.error("[notification] comment lookup:", cErr.message); return; }
+            if (!comment || comment.user_id === reaction.userId) return;
+            const { data: existing, error: eErr } = await supabase!.from("notifications")
+              .select("id").eq("user_id", comment.user_id).eq("type", "reaction")
+              .eq("comment_id", reaction.commentId).eq("actor_name", actorName)
+              .maybeSingle();
+            if (eErr) { console.error("[notification] dedup check:", eErr.message); return; }
+            if (existing) return;
+            const { error: nErr } = await supabase!.from("notifications").insert({
+              id: crypto.randomUUID(), user_id: comment.user_id, type: "reaction",
+              actor_name: actorName, receipt_id: "", comment_id: reaction.commentId,
+              text: reaction.reaction === "like" ? "👍" : "👎", read: false,
+              created_at: new Date().toISOString(),
             });
-        });
+            if (nErr) console.error("[notification] reaction insert:", nErr.message);
+          } catch (e) { console.error("[notification] reaction error:", e); }
+        })();
       }
       return;
     }
