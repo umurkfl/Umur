@@ -41,6 +41,18 @@ export interface CommentReaction {
   reaction: "like" | "dislike";
 }
 
+export interface StoredNotification {
+  id: string;
+  userId: string;       // recipient
+  type: "comment" | "reaction";
+  actorName: string;
+  receiptId: string;
+  commentId: string;
+  text: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface WishlistItem {
   id: string;
   userId: string;
@@ -89,7 +101,7 @@ export interface StoredCheckIn {
 
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
-const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes", friendships: "adisyon_friendships", checkIns: "adisyon_check_ins", privacy: "adisyon_privacy" };
+const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes", friendships: "adisyon_friendships", checkIns: "adisyon_check_ins", privacy: "adisyon_privacy", notifications: "adisyon_notifications" };
 
 function lsRead<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -115,6 +127,9 @@ function rowToReaction(r: Row): CommentReaction {
 }
 function rowToFriendship(r: Row): StoredFriendship {
   return { id: r.id as string, userId: r.user_id as string, friendId: r.friend_id as string, userName: r.user_name as string, friendName: r.friend_name as string, status: r.status as "pending" | "accepted", createdAt: r.created_at as string };
+}
+function rowToNotification(r: Row): StoredNotification {
+  return { id: r.id as string, userId: r.user_id as string, type: r.type as "comment" | "reaction", actorName: r.actor_name as string, receiptId: (r.receipt_id as string) ?? "", commentId: (r.comment_id as string) ?? "", text: (r.text as string) ?? "", read: (r.read as boolean) ?? false, createdAt: r.created_at as string };
 }
 function rowToCheckIn(r: Row): StoredCheckIn {
   return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, message: (r.message as string) ?? "", createdAt: r.created_at as string };
@@ -282,6 +297,15 @@ export const store = {
         id: c.id, user_id: c.userId, user_name: c.userName, user_avatar: c.userAvatar,
         receipt_id: c.receiptId, text: c.text, created_at: c.createdAt,
       });
+      // Notify receipt owner (fire-and-forget)
+      supabase.from("receipts").select("user_id").eq("id", c.receiptId).single().then(({ data }) => {
+        if (!data || data.user_id === c.userId) return;
+        supabase!.from("notifications").insert({
+          id: crypto.randomUUID(), user_id: data.user_id, type: "comment",
+          actor_name: c.userName, receipt_id: c.receiptId, comment_id: c.id,
+          text: c.text.slice(0, 100), read: false, created_at: new Date().toISOString(),
+        });
+      });
       return;
     }
     const all = lsRead<StoredComment[]>(K.comments, []);
@@ -305,11 +329,30 @@ export const store = {
     }
     return lsRead<CommentReaction[]>(K.reactions, []).filter((r) => r.commentId === commentId);
   },
-  async setCommentReaction(reaction: CommentReaction): Promise<void> {
+  async setCommentReaction(reaction: CommentReaction, actorName?: string): Promise<void> {
     if (supabase) {
       await supabase.from("comment_reactions").upsert({
         id: reaction.id, user_id: reaction.userId, comment_id: reaction.commentId, reaction: reaction.reaction,
       }, { onConflict: "user_id,comment_id" });
+      // Notify comment owner once (skip if notification already exists for this actor+comment)
+      if (actorName) {
+        supabase.from("comments").select("user_id").eq("id", reaction.commentId).single().then(({ data }) => {
+          if (!data || data.user_id === reaction.userId) return;
+          // Check if we already sent a reaction notif for this actor+comment so we don't spam
+          supabase!.from("notifications")
+            .select("id").eq("user_id", data.user_id).eq("type", "reaction")
+            .eq("comment_id", reaction.commentId).eq("actor_name", actorName)
+            .maybeSingle().then(({ data: existing }) => {
+              if (existing) return;
+              supabase!.from("notifications").insert({
+                id: crypto.randomUUID(), user_id: data.user_id, type: "reaction",
+                actor_name: actorName, receipt_id: "", comment_id: reaction.commentId,
+                text: reaction.reaction === "like" ? "👍" : "👎", read: false,
+                created_at: new Date().toISOString(),
+              });
+            });
+        });
+      }
       return;
     }
     const all = lsRead<CommentReaction[]>(K.reactions, []);
@@ -595,6 +638,28 @@ export const store = {
     if (idx >= 0) { all[idx].name = name; lsWrite(K.users, all); }
     const current = lsRead<StoredUser | null>(K.current, null);
     if (current?.id === userId) lsWrite(K.current, { ...current, name });
+  },
+
+  async getNotifications(userId: string): Promise<StoredNotification[]> {
+    if (supabase) {
+      const { data } = await supabase.from("notifications")
+        .select("*").eq("user_id", userId)
+        .order("created_at", { ascending: false }).limit(30);
+      if (data) {
+        const notifs = data.map(rowToNotification);
+        lsWrite(K.notifications, notifs);
+        return notifs;
+      }
+    }
+    return lsRead<StoredNotification[]>(K.notifications, []).filter((n) => n.userId === userId);
+  },
+  async markNotificationsRead(userId: string): Promise<void> {
+    const all = lsRead<StoredNotification[]>(K.notifications, []);
+    const updated = all.map((n) => n.userId === userId ? { ...n, read: true } : n);
+    lsWrite(K.notifications, updated);
+    if (supabase) {
+      await supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false);
+    }
   },
 
   async checkIn(userId: string, userName: string, restaurantName: string, message: string): Promise<void> {

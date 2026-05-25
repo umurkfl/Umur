@@ -91,6 +91,26 @@ create policy "public read check_ins"   on check_ins for select using (true);
 create policy "public insert check_ins" on check_ins for insert with check (true);
 create policy "public delete check_ins" on check_ins for delete using (true);
 
+-- Notifications (comment on receipt, reaction on comment)
+create table if not exists notifications (
+  id          text primary key,
+  user_id     text not null,
+  type        text not null,        -- 'comment' | 'reaction'
+  actor_name  text not null,
+  receipt_id  text not null default '',
+  comment_id  text not null default '',
+  text        text not null default '',
+  read        boolean not null default false,
+  created_at  text not null
+);
+
+alter table notifications enable row level security;
+
+create policy "public read notifications"   on notifications for select using (true);
+create policy "public insert notifications" on notifications for insert with check (true);
+create policy "public update notifications" on notifications for update using (true);
+create policy "public delete notifications" on notifications for delete using (true);
+
 -- User settings (privacy, etc.)
 create table if not exists user_settings (
   user_id    text primary key,

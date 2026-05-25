@@ -39,7 +39,7 @@ function ReactionBar({ commentId }: { commentId: string }) {
       setReactions((prev) => prev.filter((r) => r.userId !== user.id));
     } else {
       const r: CommentReaction = { id: crypto.randomUUID(), userId: user.id, commentId, reaction: type };
-      await store.setCommentReaction(r);
+      await store.setCommentReaction(r, user.name);
       setReactions((prev) => [...prev.filter((r) => r.userId !== user.id), r]);
     }
   }

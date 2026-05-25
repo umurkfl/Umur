@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users, Bell, Check, X, Settings } from "lucide-react";
+import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users, Bell, Check, X, Settings, MessageCircle, ThumbsUp } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { store, StoredFriendship } from "@/lib/store";
+import { store, StoredFriendship, StoredNotification } from "@/lib/store";
 
 const MENU_ITEMS = [
   {
@@ -27,6 +27,7 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
   onCountChange: (n: number) => void;
 }) {
   const [requests, setRequests] = useState<StoredFriendship[]>([]);
+  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -39,10 +40,16 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
   }, [onClose]);
 
   useEffect(() => {
-    store.getFriendships(userId).then((fs) => {
-      const pending = fs.filter((f) => f.status === "pending" && f.friendId === userId);
-      setRequests(pending);
+    Promise.all([
+      store.getFriendships(userId),
+      store.getNotifications(userId),
+    ]).then(([fs, notifs]) => {
+      setRequests(fs.filter((f) => f.status === "pending" && f.friendId === userId));
+      setNotifications(notifs);
       setLoading(false);
+      // Mark all as read now that panel is open
+      store.markNotificationsRead(userId);
+      onCountChange(fs.filter((f) => f.status === "pending" && f.friendId === userId).length);
     });
   }, [userId]);
 
@@ -60,6 +67,8 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
     onCountChange(updated.length);
   }
 
+  const isEmpty = !loading && requests.length === 0 && notifications.length === 0;
+
   return (
     <div ref={ref} className="absolute top-full right-0 mt-2 w-80 bg-surface rounded-2xl shadow-xl border border-border overflow-hidden z-50">
       <div className="px-4 py-3 border-b border-border bg-background">
@@ -67,12 +76,13 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
       </div>
       {loading ? (
         <div className="px-4 py-6 text-center text-sm text-muted">Yükleniyor...</div>
-      ) : requests.length === 0 ? (
+      ) : isEmpty ? (
         <div className="px-4 py-6 text-center text-sm text-muted">Yeni bildirim yok</div>
       ) : (
-        <div className="py-1 max-h-80 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto">
+          {/* Friend requests */}
           {requests.map((f) => (
-            <div key={f.id} className="px-4 py-3 border-b border-border/50 last:border-0">
+            <div key={f.id} className="px-4 py-3 border-b border-border/50">
               <div className="flex items-center gap-2.5 mb-2.5">
                 <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
                   {f.userName.charAt(0).toUpperCase()}
@@ -83,18 +93,34 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => accept(f)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary text-white text-xs font-semibold rounded-xl active:scale-95 transition-transform"
-                >
+                <button onClick={() => accept(f)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary text-white text-xs font-semibold rounded-xl active:scale-95 transition-transform">
                   <Check className="w-3.5 h-3.5" /> Kabul Et
                 </button>
-                <button
-                  onClick={() => reject(f)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-background border border-border text-muted text-xs font-semibold rounded-xl active:scale-95 transition-transform"
-                >
+                <button onClick={() => reject(f)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-background border border-border text-muted text-xs font-semibold rounded-xl active:scale-95 transition-transform">
                   <X className="w-3.5 h-3.5" /> Reddet
                 </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Comment & reaction notifications */}
+          {notifications.map((n) => (
+            <div key={n.id} className={`px-4 py-3 border-b border-border/50 last:border-0 flex items-start gap-2.5 ${!n.read ? "bg-primary-light/30" : ""}`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${n.type === "comment" ? "bg-primary-light text-primary" : "bg-yellow-50 text-yellow-600"}`}>
+                {n.type === "comment"
+                  ? <MessageCircle className="w-4 h-4" />
+                  : <ThumbsUp className="w-4 h-4" />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-ink leading-snug">
+                  <span className="font-semibold">{n.actorName}</span>
+                  {n.type === "comment" ? " adisyonuna yorum yaptı" : " yorumunu beğendi"}
+                </p>
+                {n.type === "comment" && n.text && (
+                  <p className="text-xs text-muted mt-0.5 truncate">"{n.text}"</p>
+                )}
+                <p className="text-[10px] text-muted mt-1">{new Date(n.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
               </div>
             </div>
           ))}
@@ -187,8 +213,13 @@ export function Navigation() {
     if (!user) { setPendingCount(0); return; }
 
     function load() {
-      store.getFriendships(user!.id).then((fs) => {
-        setPendingCount(fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length);
+      Promise.all([
+        store.getFriendships(user!.id),
+        store.getNotifications(user!.id),
+      ]).then(([fs, notifs]) => {
+        const friendPending = fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length;
+        const unreadNotifs = notifs.filter((n) => !n.read).length;
+        setPendingCount(friendPending + unreadNotifs);
       });
     }
 
