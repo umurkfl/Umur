@@ -2,11 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight, MapPin } from "lucide-react";
+import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { WishlistButton } from "@/components/WishlistButton";
+
+function PinIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 8 10" className={className} fill="currentColor" aria-hidden>
+      <path d="M4 0C2.07 0 .5 1.57.5 3.5c0 2.63 3.5 6.5 3.5 6.5s3.5-3.87 3.5-6.5C7.5 1.57 5.93 0 4 0zm0 4.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/>
+    </svg>
+  );
+}
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 
@@ -387,11 +395,12 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
             <span className="text-xs text-muted">{timeAgo(r.createdAt)}</span>
             <span className="text-border text-xs">·</span>
             <span className="text-xs text-muted">{r.people} kişi</span>
-            {r.city && (
+            {(r.city || r.district) && (
               <>
                 <span className="text-border text-xs">·</span>
                 <span className="text-xs text-muted flex items-center gap-0.5">
-                  <MapPin className="w-2.5 h-2.5" />{r.city}
+                  <PinIcon className="w-2 h-2.5 shrink-0" />
+                  {[r.district, r.city].filter(Boolean).join(", ")}
                 </span>
               </>
             )}

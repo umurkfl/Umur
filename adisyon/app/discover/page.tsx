@@ -10,6 +10,14 @@ import { CommentSection } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 
+function PinIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 8 10" className={className} fill="currentColor" aria-hidden>
+      <path d="M4 0C2.07 0 .5 1.57.5 3.5c0 2.63 3.5 6.5 3.5 6.5s3.5-3.87 3.5-6.5C7.5 1.57 5.93 0 4 0zm0 4.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/>
+    </svg>
+  );
+}
+
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -54,7 +62,12 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
             <Link href={`/restaurants?name=${encodeURIComponent(r.name)}`} className="font-semibold text-charcoal hover:text-primary transition-colors">{r.name}</Link>
             <span className="text-xs bg-primary-light text-primary font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
-            {r.city && <span className="text-xs text-muted font-medium">📍 {r.city}</span>}
+            {(r.city || r.district) && (
+              <span className="text-xs text-muted font-medium flex items-center gap-0.5">
+                <PinIcon className="w-2 h-2.5 shrink-0" />
+                {[r.district, r.city].filter(Boolean).join(", ")}
+              </span>
+            )}
           </div>
           <WishlistButton restaurantName={r.name} size="sm" />
         </div>
@@ -143,7 +156,8 @@ export default function DiscoverPage() {
 
   useEffect(() => { setDistrict(""); }, [city]);
 
-  const hasActiveFilters = city !== "" || cuisine !== "" || price !== 0 || nearMe;
+  const hasActiveFilters = city !== "" || district !== "" || cuisine !== "" || price !== 0 || nearMe;
+  const activeFilterCount = [city !== "", district !== "", cuisine !== "", price !== 0, nearMe].filter(Boolean).length;
 
   function clearFilters() {
     setCity(""); setDistrict(""); setCuisine(""); setPrice(0); setNearMe(false);
@@ -249,99 +263,87 @@ export default function DiscoverPage() {
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input
           type="search"
-          placeholder="Restoran, mutfak veya şehir ara..."
+          placeholder="Restoran veya şehir ara..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
-      {/* Sort */}
-      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {SORTS.map((s) => (
-          <FilterPill key={s.value} label={s.label} active={sort === s.value} onClick={() => setSort(s.value)} />
-        ))}
+      {/* Sort + Filter — single row */}
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
+          {SORTS.map((s) => (
+            <FilterPill key={s.value} label={s.label} active={sort === s.value} onClick={() => setSort(s.value)} />
+          ))}
+        </div>
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className={`shrink-0 flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+            hasActiveFilters || filtersOpen
+              ? "bg-primary text-white border-primary"
+              : "bg-surface text-ink border-border"
+          }`}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          {activeFilterCount > 0 ? <span className="tabular-nums">{activeFilterCount}</span> : null}
+          {hasActiveFilters && (
+            <span
+              onClick={(e) => { e.stopPropagation(); clearFilters(); }}
+              className="p-0.5 rounded-full bg-white/20 transition-colors"
+            >
+              <X className="w-2.5 h-2.5" />
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Filter toggle */}
-      <button
-        onClick={() => setFiltersOpen((v) => !v)}
-        className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-          hasActiveFilters
-            ? "bg-primary text-white border-primary"
-            : "bg-surface text-ink border-border"
-        }`}
-      >
-        <SlidersHorizontal className="w-3.5 h-3.5" />
-        Filtrele
-        {hasActiveFilters && (
-          <span
-            onClick={(e) => { e.stopPropagation(); clearFilters(); }}
-            className="ml-0.5 p-0.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-          >
-            <X className="w-2.5 h-2.5" />
-          </span>
-        )}
-      </button>
-
+      {/* Compact filter panel */}
       {filtersOpen && (
-        <div className="bg-surface rounded-2xl border border-border p-4 space-y-3">
-          {/* Near me */}
-          <div>
-            <p className="text-xs font-semibold text-muted mb-2">Konum</p>
+        <div className="bg-surface rounded-2xl border border-border p-3 space-y-2.5">
+          {/* Near me + City + District in one compact area */}
+          <div className="flex flex-wrap gap-2 items-center">
             <FilterPill
-              label={geoLoading ? "Konum alınıyor..." : "📍 Yakınımda"}
+              label={geoLoading ? "Konum alınıyor..." : "Yakınımda"}
               active={nearMe}
               onClick={toggleNearMe}
             />
+            {availableCities.length > 0 && (
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="text-xs border border-border rounded-xl px-3 py-1.5 bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Tüm Şehirler</option>
+                {availableCities.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
+            {city && availableDistricts.length > 0 && (
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="text-xs border border-border rounded-xl px-3 py-1.5 bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Tüm İlçeler</option>
+                {availableDistricts.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            )}
           </div>
 
-          {/* City */}
-          {availableCities.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-muted mb-2">Şehir</p>
-              <div className="flex gap-2 flex-wrap">
-                <FilterPill label="Tümü" active={city === ""} onClick={() => setCity("")} />
-                {availableCities.map((c) => (
-                  <FilterPill key={c} label={c} active={city === c} onClick={() => setCity(city === c ? "" : c)} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* District — only shown when a city is active and districts exist */}
-          {city && availableDistricts.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-muted mb-2">İlçe</p>
-              <div className="flex gap-2 flex-wrap">
-                <FilterPill label="Tümü" active={district === ""} onClick={() => setDistrict("")} />
-                {availableDistricts.map((d) => (
-                  <FilterPill key={d} label={d} active={district === d} onClick={() => setDistrict(district === d ? "" : d)} />
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Cuisine */}
-          <div>
-            <p className="text-xs font-semibold text-muted mb-2">Mekan Türü</p>
-            <div className="flex gap-2 flex-wrap">
-              <FilterPill label="Tümü" active={cuisine === ""} onClick={() => setCuisine("")} />
-              {CUISINES.map((c) => (
-                <FilterPill key={c} label={c} active={cuisine === c} onClick={() => setCuisine(cuisine === c ? "" : c)} />
-              ))}
-            </div>
+          <div className="flex gap-1.5 flex-wrap">
+            <FilterPill label="Tüm Mutfaklar" active={cuisine === ""} onClick={() => setCuisine("")} />
+            {CUISINES.map((c) => (
+              <FilterPill key={c} label={c} active={cuisine === c} onClick={() => setCuisine(cuisine === c ? "" : c)} />
+            ))}
           </div>
 
           {/* Price */}
-          <div>
-            <p className="text-xs font-semibold text-muted mb-2">Fiyat Aralığı</p>
-            <div className="flex gap-2">
-              <FilterPill label="Tümü" active={price === 0} onClick={() => setPrice(0)} />
-              {[1, 2, 3].map((p) => (
-                <FilterPill key={p} label={"₺".repeat(p)} active={price === p} onClick={() => setPrice(price === p ? 0 : p)} />
-              ))}
-            </div>
+          <div className="flex gap-1.5">
+            <FilterPill label="Tüm Fiyatlar" active={price === 0} onClick={() => setPrice(0)} />
+            {[1, 2, 3].map((p) => (
+              <FilterPill key={p} label={"₺".repeat(p)} active={price === p} onClick={() => setPrice(price === p ? 0 : p)} />
+            ))}
           </div>
         </div>
       )}
