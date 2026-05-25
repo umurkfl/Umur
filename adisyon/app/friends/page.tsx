@@ -98,6 +98,22 @@ function formatDist(m: number): string {
   return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
 }
 
+function locSuffix(name: string): { loc: string; locPast: string } {
+  const s = name.toLowerCase();
+  const VOWELS = "aeıioöuü";
+  const BACK = new Set(["a", "ı", "o", "u"]);
+  const HARD = new Set(["ç", "f", "h", "k", "p", "s", "ş", "t"]);
+  let lastVowel = "a";
+  for (let i = s.length - 1; i >= 0; i--) {
+    if (VOWELS.includes(s[i])) { lastVowel = s[i]; break; }
+  }
+  const lastChar = s[s.length - 1];
+  const back = BACK.has(lastVowel);
+  const hard = HARD.has(lastChar);
+  const loc = back ? (hard ? "'ta" : "'da") : (hard ? "'te" : "'de");
+  return { loc, locPast: loc + (back ? "ydı" : "ydi") };
+}
+
 const PLACE_TYPE_TR: Record<string, string> = {
   restaurant: "Restoran", cafe: "Kafe", fast_food: "Fast Food", bar: "Bar",
   food_court: "Food Court", bakery: "Fırın", ice_cream: "Dondurma",
@@ -307,8 +323,13 @@ function ActivityCard({ type, userName, userId, restaurantName, detail, note, ti
         <div className="flex-1 min-w-0">
           <p className="text-sm leading-snug">
             <Link href={`/users?id=${userId}&n=${encodeURIComponent(userName)}`} className="font-semibold text-ink">{userName}</Link>
-            {type === "checkin"
-              ? <span className="text-muted"> şu an <span className="font-medium text-charcoal">{restaurantName}</span>&apos;da</span>
+            {type === "checkin" ? (() => {
+              const ageH = Math.floor((Date.now() - new Date(time).getTime()) / 3_600_000);
+              const { loc, locPast } = locSuffix(restaurantName);
+              return ageH < 1
+                ? <span className="text-muted"> şu an <span className="font-medium text-charcoal">{restaurantName}</span>{loc}</span>
+                : <span className="text-muted"> {ageH} saat önce <span className="font-medium text-charcoal">{restaurantName}</span>{locPast}</span>;
+            })()
               : <span className="text-muted"> adisyon paylaştı: <span className="font-medium text-charcoal">{restaurantName}</span></span>
             }
           </p>

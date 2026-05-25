@@ -75,10 +75,16 @@ export default function ProfilePage() {
   const [friends, setFriends] = useState<StoredFriendship[]>([]);
   const [showName, setShowNameState] = useState(true);
   const [activeCheckIn, setActiveCheckIn] = useState<StoredCheckIn | null>(null);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
   }, [ready, user, router]);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
