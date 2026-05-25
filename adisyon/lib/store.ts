@@ -241,6 +241,28 @@ export const store = {
     return !all.some((u) => u.username?.toLowerCase() === username.toLowerCase());
   },
 
+  getShowName: (userId: string): boolean => {
+    if (typeof window === "undefined") return true;
+    const val = localStorage.getItem(`adisyon_show_name_${userId}`);
+    return val === null ? true : val === "true";
+  },
+  setShowName: (userId: string, show: boolean): void => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`adisyon_show_name_${userId}`, String(show));
+    if (supabase) {
+      (async () => {
+        try {
+          const { data } = await supabase.from("user_settings").select("user_id").eq("user_id", userId).maybeSingle();
+          if (data) {
+            await supabase.from("user_settings").update({ show_name: show, updated_at: new Date().toISOString() }).eq("user_id", userId);
+          } else {
+            await supabase.from("user_settings").insert({ user_id: userId, show_name: show, updated_at: new Date().toISOString() });
+          }
+        } catch { /* ignore */ }
+      })();
+    }
+  },
+
   // Receipts
   async uploadReceiptPhoto(receiptId: string, base64: string): Promise<string> {
     if (!supabase || !base64) return base64;

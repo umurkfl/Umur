@@ -7,7 +7,7 @@ import {
   MapPin, TrendingUp, ChevronRight, Users, Calendar, Trash2,
 } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { store, StoredReceipt, StoredFriendship, calcBadges } from "@/lib/store";
+import { store, StoredReceipt, StoredFriendship, calcBadges, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
@@ -73,6 +73,7 @@ export default function ProfilePage() {
   const [showAllReceipts, setShowAllReceipts] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [friends, setFriends] = useState<StoredFriendship[]>([]);
+  const [showName, setShowNameState] = useState(true);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
@@ -84,6 +85,7 @@ export default function ProfilePage() {
     store.getFriendships(user.id).then((all) =>
       setFriends(all.filter((f) => f.status === "accepted"))
     );
+    setShowNameState(store.getShowName(user.id));
   }, [user]);
 
   async function deleteReceipt(receiptId: string) {
@@ -196,12 +198,16 @@ export default function ProfilePage() {
 
           {/* Name & meta */}
           <div className="mb-4">
-            <h1 className="text-xl font-bold text-charcoal">{user.name}</h1>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {user.email && <p className="text-xs text-muted">{user.email}</p>}
-              {user.provider === "google" && (
-                <span className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">Google</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-charcoal">
+                {showName ? user.name : (user.username ?? deriveUsername(user.name, user.id))}
+              </h1>
+              {!showName && (
+                <span className="text-[10px] bg-border/50 text-muted font-semibold px-2 py-0.5 rounded-full">Anonim</span>
               )}
+            </div>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <p className="text-xs text-muted font-medium">{user.username ?? deriveUsername(user.name, user.id)}</p>
               {memberSince && (
                 <span className="flex items-center gap-1 text-[11px] text-muted">
                   <Calendar className="w-3 h-3" /> {memberSince} üye

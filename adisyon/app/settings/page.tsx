@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Sun, Moon, Monitor, Globe, Users, ChevronRight, Check, LogOut, KeyRound, AtSign, User } from "lucide-react";
+import { ArrowLeft, Sun, Moon, Monitor, Globe, Users, ChevronRight, Check, LogOut, KeyRound, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { store, deriveUsername } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
@@ -94,6 +94,7 @@ export default function SettingsPage() {
   const [privacy, setPrivacy] = useState<Privacy>("public");
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacySaveMsg, setPrivacySaveMsg] = useState("");
+  const [showName, setShowNameState] = useState(true);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [passwordMsg, setPasswordMsg] = useState("");
@@ -102,6 +103,7 @@ export default function SettingsPage() {
     try { setTheme((localStorage.getItem("adisyon_theme") as Theme) || "system"); } catch { /* ignore */ }
     if (user) {
       store.getUserPrivacy(user.id).then(setPrivacy);
+      setShowNameState(store.getShowName(user.id));
     }
   }, [user]);
 
@@ -119,6 +121,13 @@ export default function SettingsPage() {
     setPrivacySaveMsg("✓ Kaydedildi");
     setTimeout(() => setPrivacySaveMsg(""), 2000);
     setPrivacySaving(false);
+  }
+
+  function toggleShowName() {
+    if (!user) return;
+    const next = !showName;
+    setShowNameState(next);
+    store.setShowName(user.id, next);
   }
 
   async function saveName(name: string) {
@@ -182,9 +191,8 @@ export default function SettingsPage() {
           {user.name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-charcoal">{user.name}</p>
+          <p className="font-bold text-charcoal">{showName ? user.name : displayUsername}</p>
           <p className="text-xs text-muted">{displayUsername}</p>
-          <p className="text-xs text-muted">{user.email}</p>
         </div>
       </div>
 
@@ -203,11 +211,6 @@ export default function SettingsPage() {
           onSave={saveUsername}
           placeholder="kullanici_adi"
         />
-        <div className="flex items-center gap-3 px-4 py-3.5 bg-surface border-b border-border/50">
-          <span className="text-xs text-muted w-28 shrink-0">E-posta</span>
-          <span className="flex-1 text-sm text-muted truncate">{user.email}</span>
-        </div>
-
         {/* Password change — email users only */}
         {user.provider === "email" && (
           <div>
@@ -312,6 +315,21 @@ export default function SettingsPage() {
               <Users className="w-4 h-4" /> Sadece Arkadaşlar
             </button>
           </div>
+        </div>
+
+        {/* Anonymity toggle */}
+        <div className="border-t border-border/50 px-4 py-3.5 flex items-center gap-3">
+          <EyeOff className="w-5 h-5 text-muted shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm text-ink font-medium">Anonim Mod</p>
+            <p className="text-xs text-muted mt-0.5">Gerçek ismin yerine kullanıcı adın görünsün</p>
+          </div>
+          <button
+            onClick={toggleShowName}
+            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${!showName ? "bg-primary" : "bg-border"}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${!showName ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
+          </button>
         </div>
       </div>
 
