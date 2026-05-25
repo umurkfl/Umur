@@ -15,6 +15,8 @@ function ProfileContent() {
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
+  const [friendshipId, setFriendshipId] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
@@ -28,9 +30,9 @@ function ProfileContent() {
     if (!user || !userId || user.id === userId) return;
     store.getFriendships(user.id).then((fs: StoredFriendship[]) => {
       const match = fs.find((f) => (f.userId === user.id && f.friendId === userId) || (f.userId === userId && f.friendId === user.id));
-      if (!match) setFriendStatus("none");
-      else if (match.status === "accepted") setFriendStatus("friend");
-      else setFriendStatus("pending");
+      if (!match) { setFriendStatus("none"); setFriendshipId(null); }
+      else if (match.status === "accepted") { setFriendStatus("friend"); setFriendshipId(match.id); }
+      else { setFriendStatus("pending"); setFriendshipId(match.id); }
     });
   }, [user, userId]);
 
@@ -39,6 +41,14 @@ function ProfileContent() {
     const targetName = receipts[0]?.userName ?? "Kullanıcı";
     await store.sendFriendRequest(user.id, user.name, userId, targetName);
     setFriendStatus("pending");
+  }
+
+  async function removeFriend() {
+    if (!friendshipId) return;
+    await store.removeFriendship(friendshipId);
+    setFriendStatus("none");
+    setFriendshipId(null);
+    setConfirmRemove(false);
   }
 
   const userName = receipts[0]?.userName ?? "Kullanıcı";
@@ -78,17 +88,33 @@ function ProfileContent() {
           </p>
         </div>
         {user && user.id !== userId && !loading && (
-          <button
-            onClick={addFriend}
-            disabled={friendStatus !== "none"}
-            className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
-              friendStatus === "friend" ? "bg-primary-light text-primary" :
-              friendStatus === "pending" ? "bg-background border border-border text-muted" :
-              "bg-primary text-white active:scale-95"
-            }`}
-          >
-            {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
-          </button>
+          friendStatus === "friend" ? (
+            confirmRemove ? (
+              <div className="flex gap-1.5 shrink-0">
+                <button onClick={removeFriend} className="text-xs font-semibold text-red-500 border border-red-200 bg-red-50 px-2.5 py-1.5 rounded-full active:scale-95 transition-transform">
+                  Evet, çıkar
+                </button>
+                <button onClick={() => setConfirmRemove(false)} className="text-xs font-semibold text-muted border border-border bg-background px-2.5 py-1.5 rounded-full active:scale-95 transition-transform">
+                  İptal
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmRemove(true)} className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-light text-primary active:scale-95 transition-transform">
+                Arkadaş ✓
+              </button>
+            )
+          ) : (
+            <button
+              onClick={addFriend}
+              disabled={friendStatus === "pending"}
+              className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+                friendStatus === "pending" ? "bg-background border border-border text-muted" :
+                "bg-primary text-white active:scale-95"
+              }`}
+            >
+              {friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
+            </button>
+          )
         )}
       </div>
 

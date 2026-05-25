@@ -1,19 +1,90 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Users, Search, MapPin, ChevronRight, UserPlus, Clock, Receipt, Check, X } from "lucide-react";
+import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus } from "lucide-react";
 import { store, StoredFriendship, StoredCheckIn, StoredReceipt, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
 type Tab = "akis" | "arkadaslar" | "kesfet";
 
+interface PlaceSuggestion {
+  label: string;
+  sub: string;
+  key: string;
+}
+
 function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; recentRestaurants: string[] }) {
   const { user } = useAuth();
   const [restaurantName, setRestaurantName] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [locStatus, setLocStatus] = useState<"idle" | "loading" | "ok" | "denied">("idle");
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    if (!navigator.geolocation) { setLocStatus("denied"); return; }
+    setLocStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (p) => { setCoords({ lat: p.coords.latitude, lon: p.coords.longitude }); setLocStatus("ok"); },
+      () => setLocStatus("denied"),
+      { timeout: 6000 }
+    );
+  }, []);
+
+  function onInput(val: string) {
+    setRestaurantName(val);
+    clearTimeout(timerRef.current);
+    setSuggestions([]);
+    if (!val.trim() || val.length < 2) return;
+    setPlacesLoading(true);
+    timerRef.current = setTimeout(async () => {
+      try {
+        const p = new URLSearchParams({
+          q: val,
+          format: "json",
+          limit: "8",
+          addressdetails: "1",
+          "accept-language": "tr,en",
+        });
+        if (coords) {
+          const d = 0.12; // ~12 km bias radius
+          p.set("viewbox", `${coords.lon - d},${coords.lat + d},${coords.lon + d},${coords.lat - d}`);
+          p.set("bounded", "0");
+        }
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?${p}`);
+        const data = (await res.json()) as Array<Record<string, unknown>>;
+        const seen = new Set<string>();
+        const items: PlaceSuggestion[] = [];
+        for (const r of data) {
+          const addr = r.address as Record<string, string> | undefined;
+          const name = ((r.name as string) || (r.display_name as string).split(",")[0]).trim();
+          if (!name) continue;
+          const parts = [addr?.neighbourhood, addr?.suburb, addr?.town ?? addr?.city ?? addr?.county]
+            .filter(Boolean) as string[];
+          const sub = parts.slice(0, 2).join(", ");
+          const dedupeKey = `${name.toLowerCase()}|${sub.toLowerCase()}`;
+          if (seen.has(dedupeKey)) continue;
+          seen.add(dedupeKey);
+          items.push({ label: name, sub, key: `${items.length}-${dedupeKey}` });
+          if (items.length >= 6) break;
+        }
+        setSuggestions(items);
+      } catch {
+        setSuggestions([]);
+      }
+      setPlacesLoading(false);
+    }, 450);
+  }
+
+  function pick(s: PlaceSuggestion) {
+    setRestaurantName(s.sub ? `${s.label}, ${s.sub}` : s.label);
+    setSuggestions([]);
+  }
 
   async function submit() {
     if (!user || !restaurantName.trim()) return;
@@ -25,30 +96,82 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl p-5">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
         <div className="flex justify-center mb-4"><div className="w-10 h-1 bg-border rounded-full" /></div>
-        <h2 className="text-lg font-bold text-charcoal mb-4">📍 Şu an neredeyim?</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-lg font-bold text-charcoal">📍 Şu an neredeyim?</h2>
+          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+            locStatus === "ok" ? "bg-green-100 text-green-700" :
+            locStatus === "loading" ? "bg-yellow-100 text-yellow-700" :
+            locStatus === "denied" ? "bg-red-100 text-red-600" : ""
+          }`}>
+            {locStatus === "ok" ? "Konum aktif" : locStatus === "loading" ? "Konum alınıyor..." : locStatus === "denied" ? "Konum izni yok" : ""}
+          </span>
+        </div>
         {done ? (
           <div className="text-center py-4 text-primary font-semibold">Check-in yapıldı! ✓</div>
         ) : (
           <>
             <div className="space-y-3">
-              <input type="text" value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)}
-                placeholder="Restoran adı..." autoFocus
-                className="w-full px-4 py-3 rounded-2xl border border-border bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary text-sm" />
-              {recentRestaurants.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {recentRestaurants.slice(0, 5).map((r) => (
-                    <button key={r} onClick={() => setRestaurantName(r)} className="px-3 py-1 bg-primary-light text-primary rounded-full text-xs font-medium">{r}</button>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+                <input
+                  type="text"
+                  value={restaurantName}
+                  onChange={(e) => onInput(e.target.value)}
+                  placeholder="Mekan adını yaz..."
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                />
+                {placesLoading && (
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-muted">Aranıyor…</span>
+                )}
+              </div>
+
+              {/* Location autocomplete suggestions */}
+              {suggestions.length > 0 && (
+                <div className="rounded-2xl border border-border bg-background overflow-hidden shadow-sm">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.key}
+                      onClick={() => pick(s)}
+                      className="w-full flex flex-col items-start px-4 py-2.5 border-b border-border/50 last:border-0 active:bg-primary-light text-left"
+                    >
+                      <span className="text-sm font-medium text-ink">{s.label}</span>
+                      {s.sub && <span className="text-xs text-muted">{s.sub}</span>}
+                    </button>
                   ))}
                 </div>
               )}
-              <input type="text" value={message} onChange={(e) => setMessage(e.target.value)}
-                placeholder="Bir not ekle (opsiyonel)..."
-                className="w-full px-4 py-3 rounded-2xl border border-border bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary text-sm" />
+
+              {/* Recent places (show when no suggestions) */}
+              {recentRestaurants.length > 0 && suggestions.length === 0 && !placesLoading && (
+                <div>
+                  <p className="text-[10px] text-muted font-semibold mb-1.5 px-1">Son mekanlarım</p>
+                  <div className="flex flex-wrap gap-2">
+                    {recentRestaurants.slice(0, 5).map((r) => (
+                      <button key={r} onClick={() => setRestaurantName(r)}
+                        className="px-3 py-1 bg-primary-light text-primary rounded-full text-xs font-medium">
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Bir not ekle (opsiyonel)…"
+                className="w-full px-4 py-3 rounded-2xl border border-border bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
             </div>
-            <button onClick={submit} disabled={!restaurantName.trim()}
-              className="w-full mt-4 py-3 bg-primary text-white font-bold rounded-2xl text-sm disabled:opacity-50">
+            <button
+              onClick={submit}
+              disabled={!restaurantName.trim()}
+              className="w-full mt-4 py-3 bg-primary text-white font-bold rounded-2xl text-sm disabled:opacity-50"
+            >
               Check-in Yap
             </button>
           </>
@@ -102,6 +225,7 @@ export default function FriendsPage() {
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [myReceipts, setMyReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null); // friendshipId
 
   async function loadData() {
     if (!user) { setLoading(false); return; }
@@ -154,6 +278,7 @@ export default function FriendsPage() {
   async function rejectRequest(friendshipId: string) {
     await store.removeFriendship(friendshipId);
     setFriendships((prev) => prev.filter((f) => f.id !== friendshipId));
+    setConfirmRemove(null);
   }
 
   const pendingIncoming = friendships.filter((f) => f.status === "pending" && f.friendId === user?.id);
@@ -252,18 +377,43 @@ export default function FriendsPage() {
               const storedName = f.userId === user.id ? f.friendName : f.userName;
               const latestCheckIn = friendCheckIns.find((c) => c.userId === friendId);
               const latestReceipt = friendReceipts.find((r) => r.userId === friendId);
-              // Prefer real name from activity data (more reliable than friendship record)
               const friendName = latestReceipt?.userName || latestCheckIn?.userName || storedName;
+              const isConfirming = confirmRemove === f.id;
               return (
-                <Link key={f.id} href={`/users?id=${friendId}`} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5 active:scale-[0.98] transition-transform">
-                  <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{friendName.charAt(0).toUpperCase()}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-ink">{friendName}</p>
-                    {latestCheckIn && <p className="text-xs text-muted truncate">📍 {latestCheckIn.restaurantName} · {timeAgo(latestCheckIn.createdAt)}</p>}
-                    {!latestCheckIn && latestReceipt && <p className="text-xs text-muted truncate">🧾 {latestReceipt.restaurantName} · {timeAgo(latestReceipt.createdAt)}</p>}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-                </Link>
+                <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
+                  <Link href={`/users?id=${friendId}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{friendName.charAt(0).toUpperCase()}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-ink">{friendName}</p>
+                      {latestCheckIn && <p className="text-xs text-muted truncate">📍 {latestCheckIn.restaurantName} · {timeAgo(latestCheckIn.createdAt)}</p>}
+                      {!latestCheckIn && latestReceipt && <p className="text-xs text-muted truncate">🧾 {latestReceipt.restaurantName} · {timeAgo(latestReceipt.createdAt)}</p>}
+                    </div>
+                  </Link>
+                  {isConfirming ? (
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        onClick={() => rejectRequest(f.id)}
+                        className="text-xs font-semibold text-red-500 border border-red-200 bg-red-50 px-2.5 py-1.5 rounded-full active:scale-95 transition-transform"
+                      >
+                        Evet, çıkar
+                      </button>
+                      <button
+                        onClick={() => setConfirmRemove(null)}
+                        className="text-xs font-semibold text-muted border border-border bg-background px-2.5 py-1.5 rounded-full active:scale-95 transition-transform"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmRemove(f.id)}
+                      className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted active:bg-background transition-colors"
+                      title="Arkadaşlıktan çıkar"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               );
             })
           )}
