@@ -497,7 +497,7 @@ export default function FriendsPage() {
               ) : (
                 <ActivityCard key={`c-${a.data.id}`} type="checkin" userName={a.data.userName} userId={a.data.userId}
                   restaurantName={a.data.restaurantName}
-                  detail={[a.data.district, a.data.city].filter(Boolean).join(", ") || a.data.message || undefined}
+                  detail={[[a.data.district, a.data.city].filter(Boolean).join(", "), a.data.message].filter(Boolean).join(" · ") || undefined}
                   time={a.data.createdAt} />
               )
             )
