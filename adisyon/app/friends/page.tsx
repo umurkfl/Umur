@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus } from "lucide-react";
 import { store, StoredFriendship, StoredCheckIn, StoredReceipt, deriveUsername } from "@/lib/store";
+import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
@@ -108,6 +109,8 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
   const { user } = useAuth();
   const [restaurantName, setRestaurantName] = useState("");
   const [message, setMessage] = useState("");
+  const [city, setCity] = useState("");
+  const [district, setDistrict] = useState("");
   const [done, setDone] = useState(false);
   const [locStatus, setLocStatus] = useState<"idle" | "loading" | "ok" | "denied">("idle");
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
@@ -122,8 +125,13 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
         setLocStatus("ok");
         setNearbyLoading(true);
         try {
-          const places = await fetchNearbyPlaces(pos.coords.latitude, pos.coords.longitude);
+          const [places, geo] = await Promise.all([
+            fetchNearbyPlaces(pos.coords.latitude, pos.coords.longitude),
+            reverseGeocodeCity(pos.coords.latitude, pos.coords.longitude),
+          ]);
           setNearbyPlaces(places);
+          if (geo.city) setCity(geo.city);
+          if (geo.district) setDistrict(geo.district);
         } catch { /* silent */ }
         setNearbyLoading(false);
       },
@@ -131,6 +139,9 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
       { timeout: 7000, maximumAge: 60_000 }
     );
   }, []);
+
+  // reset district when city changes
+  useEffect(() => { setDistrict(""); }, [city]);
 
   function onInput(val: string) {
     setRestaurantName(val);
@@ -158,15 +169,17 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
 
   async function submit() {
     if (!user || !restaurantName.trim()) return;
-    await store.checkIn(user.id, user.name, restaurantName.trim(), message.trim());
+    await store.checkIn(user.id, user.name, restaurantName.trim(), message.trim(), city || undefined, district || undefined);
     setDone(true);
     setTimeout(onClose, 1200);
   }
 
+  const districts = city ? TR_DISTRICTS[city] ?? [] : [];
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-center mb-4"><div className="w-10 h-1 bg-border rounded-full" /></div>
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-lg font-bold text-charcoal">📍 Şu an neredeyim?</h2>
@@ -187,6 +200,7 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
         ) : (
           <>
             <div className="space-y-3">
+              {/* Restaurant name */}
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
                 <input
@@ -235,6 +249,29 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
                 </div>
               )}
 
+              {/* City + District */}
+              <div className="flex gap-2">
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="flex-1 text-sm border border-border rounded-2xl px-3 py-3 bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">İl seç…</option>
+                  {TR_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {city && (
+                  <select
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    className="flex-1 text-sm border border-border rounded-2xl px-3 py-3 bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">İlçe seç…</option>
+                    {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                )}
+              </div>
+
+              {/* Note */}
               <input
                 type="text"
                 value={message}
@@ -442,7 +479,9 @@ export default function FriendsPage() {
                   restaurantName={a.data.restaurantName} detail={`${a.data.people} kişi · ${formatCurrency(a.data.perPerson)} kişi başı`} time={a.data.createdAt} />
               ) : (
                 <ActivityCard key={`c-${a.data.id}`} type="checkin" userName={a.data.userName} userId={a.data.userId}
-                  restaurantName={a.data.restaurantName} detail={a.data.message || undefined} time={a.data.createdAt} />
+                  restaurantName={a.data.restaurantName}
+                  detail={[a.data.district, a.data.city].filter(Boolean).join(", ") || a.data.message || undefined}
+                  time={a.data.createdAt} />
               )
             )
           )}
@@ -471,7 +510,7 @@ export default function FriendsPage() {
                     <UserAvatar userId={friendId} name={friendName} />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-ink">{friendName}</p>
-                      {latestCheckIn && <p className="text-xs text-muted truncate">📍 {latestCheckIn.restaurantName} · {timeAgo(latestCheckIn.createdAt)}</p>}
+                      {latestCheckIn && <p className="text-xs text-muted truncate">📍 {latestCheckIn.restaurantName}{latestCheckIn.district ? `, ${latestCheckIn.district}` : latestCheckIn.city ? `, ${latestCheckIn.city}` : ""} · {timeAgo(latestCheckIn.createdAt)}</p>}
                       {!latestCheckIn && latestReceipt && <p className="text-xs text-muted truncate">🧾 {latestReceipt.restaurantName} · {timeAgo(latestReceipt.createdAt)}</p>}
                     </div>
                   </Link>

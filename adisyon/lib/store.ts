@@ -101,6 +101,8 @@ export interface StoredCheckIn {
   restaurantName: string;
   message: string;
   createdAt: string;
+  city?: string;
+  district?: string;
 }
 
 // ─── localStorage helpers ────────────────────────────────────────────────────
@@ -136,7 +138,7 @@ function rowToNotification(r: Row): StoredNotification {
   return { id: r.id as string, userId: r.user_id as string, type: r.type as "comment" | "reaction", actorName: r.actor_name as string, receiptId: (r.receipt_id as string) ?? "", commentId: (r.comment_id as string) ?? "", text: (r.text as string) ?? "", read: (r.read as boolean) ?? false, createdAt: r.created_at as string };
 }
 function rowToCheckIn(r: Row): StoredCheckIn {
-  return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, message: (r.message as string) ?? "", createdAt: r.created_at as string };
+  return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, message: (r.message as string) ?? "", createdAt: r.created_at as string, city: (r.city as string) || undefined, district: (r.district as string) || undefined };
 }
 
 // ─── Image compression ───────────────────────────────────────────────────────
@@ -737,10 +739,10 @@ export const store = {
     }
   },
 
-  async checkIn(userId: string, userName: string, restaurantName: string, message: string): Promise<void> {
-    const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString() };
+  async checkIn(userId: string, userName: string, restaurantName: string, message: string, city?: string, district?: string): Promise<void> {
+    const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString(), city: city || undefined, district: district || undefined };
     if (supabase) {
-      await supabase.from("check_ins").insert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt });
+      await supabase.from("check_ins").insert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" });
     }
     const all = lsRead<StoredCheckIn[]>(K.checkIns, []);
     all.unshift(ci);
