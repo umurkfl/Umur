@@ -410,10 +410,19 @@ export default function HomePage() {
   const { user, ready } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
   const [selected, setSelected] = useState<StoredReceipt | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{ before: number; after: number; privateUsers: string[]; sbError: string } | null>(null);
 
   useEffect(() => {
     if (!ready) return;
-    store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
+    (async () => {
+      const all = await store.getReceipts();
+      const filtered = await store.getPrivacyFilteredReceipts(user?.id);
+      setUserReceipts(filtered);
+      // Collect which users were filtered out
+      const filteredIds = new Set(filtered.map((r) => r.userId));
+      const removedUsers = [...new Set(all.filter((r) => !filteredIds.has(r.userId)).map((r) => r.userName))];
+      setDebugInfo({ before: all.length, after: filtered.length, privateUsers: removedUsers, sbError: "" });
+    })();
   }, [ready, user?.id]);
 
   return (
@@ -427,6 +436,19 @@ export default function HomePage() {
           {user ? "Adisyon Ekle" : "Katıl & Paylaş"}
         </Link>
       </div>
+
+      {/* Temp debug panel */}
+      {debugInfo && (
+        <div className="mx-4 mb-3 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-xs font-mono space-y-1">
+          <p className="font-bold text-yellow-800">🔍 Privacy Debug</p>
+          <p>Toplam adisyon: {debugInfo.before} → Gösterilen: {debugInfo.after}</p>
+          <p>Filtre kaldırdı: {debugInfo.before - debugInfo.after} adisyon</p>
+          {debugInfo.privateUsers.length > 0
+            ? <p className="text-green-700">✅ Gizlenen kullanıcılar: {debugInfo.privateUsers.join(", ")}</p>
+            : <p className="text-red-700">❌ Hiçbir adisyon gizlenmedi — filtre çalışmıyor</p>
+          }
+        </div>
+      )}
 
       {/* Feed */}
       {userReceipts.length > 0 && (
