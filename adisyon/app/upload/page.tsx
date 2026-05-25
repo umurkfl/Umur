@@ -12,34 +12,53 @@ interface Suggestion {
   key: string;
   name: string;
   address: string;
+  city?: string;
+  district?: string;
+  lat?: number;
+  lng?: number;
 }
 
-async function searchNominatim(q: string): Promise<Suggestion[]> {
+async function searchNominatim(q: string, near?: { lat: number; lng: number }): Promise<Suggestion[]> {
   const params = new URLSearchParams({
     q,
     format: "json",
     countrycodes: "tr",
-    limit: "7",
+    limit: "8",
     addressdetails: "1",
   });
+  if (near) {
+    const d = 0.5;
+    params.set("viewbox", `${near.lng - d},${near.lat + d},${near.lng + d},${near.lat - d}`);
+    params.set("bounded", "0");
+  }
   const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
     headers: { "Accept-Language": "tr,en;q=0.9" },
   });
   const data: Array<{
-    place_id: number;
-    name: string;
-    display_name: string;
-    address?: { road?: string; suburb?: string; city?: string; town?: string; village?: string };
+    place_id: number; name: string; display_name: string;
+    lat: string; lon: string;
+    address?: {
+      road?: string; suburb?: string; neighbourhood?: string;
+      city?: string; town?: string; village?: string;
+      county?: string; city_district?: string;
+      province?: string; state?: string;
+    };
   }> = await res.json();
   return data
     .filter((p) => p.name)
     .map((p) => {
-      const a = p.address;
-      const parts = [a?.road, a?.suburb, a?.city || a?.town || a?.village].filter(Boolean);
+      const a = p.address ?? {};
+      const city = a.province || a.state || a.city || a.town || a.village || "";
+      const district = a.county || a.city_district || a.suburb || "";
+      const parts = [a.road, district, city].filter(Boolean);
       return {
         key: String(p.place_id),
         name: p.name,
-        address: parts.length ? parts.join(", ") : p.display_name.split(",").slice(0, 2).join(","),
+        address: parts.length ? parts.join(", ") : p.display_name.split(",").slice(0, 3).join(", "),
+        city: city || undefined,
+        district: district || undefined,
+        lat: p.lat ? parseFloat(p.lat) : undefined,
+        lng: p.lon ? parseFloat(p.lon) : undefined,
       };
     });
 }
@@ -69,7 +88,23 @@ export default function UploadPage() {
   const [comment, setComment] = useState("");
 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedLat, setSelectedLat] = useState<number | undefined>();
+  const [selectedLng, setSelectedLng] = useState<number | undefined>();
+  const [userGeo, setUserGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
   const perPerson = calcPerPerson(total, people);
+
+  function requestGeo() {
+    if (!navigator.geolocation) return;
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setUserGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoLoading(false); },
+      () => setGeoLoading(false),
+      { timeout: 8000 }
+    );
+  }
 
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -104,7 +139,7 @@ export default function UploadPage() {
     setSearching(true);
 
     try {
-      const remote = await searchNominatim(q);
+      const remote = await searchNominatim(q, userGeo ?? undefined);
       const merged = [...local];
       for (const r of remote) {
         if (!merged.some((m) => m.name.toLowerCase() === r.name.toLowerCase())) {
@@ -134,6 +169,10 @@ export default function UploadPage() {
 
   function selectSuggestion(s: Suggestion) {
     setName(s.name);
+    setSelectedCity(s.city ?? "");
+    setSelectedDistrict(s.district ?? "");
+    setSelectedLat(s.lat);
+    setSelectedLng(s.lng);
     setSuggestions([]);
     setShowSugg(false);
   }
@@ -156,6 +195,10 @@ export default function UploadPage() {
       comment: comment.trim(),
       photo,
       createdAt: new Date().toISOString(),
+      city: selectedCity || undefined,
+      district: selectedDistrict || undefined,
+      lat: selectedLat,
+      lng: selectedLng,
     });
     setStep("done");
   }
@@ -234,6 +277,23 @@ export default function UploadPage() {
             <label className="block text-xs text-muted mb-1.5 font-semibold uppercase tracking-wide">
               Mekan Adı
             </label>
+            {/* Geo assist */}
+            {!userGeo && (
+              <button
+                type="button"
+                onClick={requestGeo}
+                disabled={geoLoading}
+                className="flex items-center gap-1.5 text-xs text-primary font-semibold mb-2"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {geoLoading ? "Konum alınıyor..." : "Yakınımdaki restoranları göster"}
+              </button>
+            )}
+            {userGeo && (
+              <p className="text-xs text-primary font-semibold flex items-center gap-1 mb-2">
+                <MapPin className="w-3.5 h-3.5" /> Konum aktif — yakın restoranlar önceliklendiriliyor
+              </p>
+            )}
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
               <input
@@ -269,6 +329,12 @@ export default function UploadPage() {
                   </button>
                 ))}
               </div>
+            )}
+            {selectedCity && !showSugg && (
+              <p className="text-xs text-muted mt-1 flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {[selectedDistrict, selectedCity].filter(Boolean).join(", ")}
+              </p>
             )}
           </div>
 

@@ -136,3 +136,9 @@ alter table user_settings enable row level security;
 create policy "public read user_settings"   on user_settings for select using (true);
 create policy "public insert user_settings" on user_settings for insert with check (true);
 create policy "public update user_settings" on user_settings for update using (true);
+
+-- Location columns on receipts (run if table already exists)
+alter table receipts add column if not exists city     text not null default '';
+alter table receipts add column if not exists district text not null default '';
+alter table receipts add column if not exists lat      numeric;
+alter table receipts add column if not exists lng      numeric;

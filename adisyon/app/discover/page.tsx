@@ -10,6 +10,14 @@ import { CommentSection } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const SORTS = [
   { label: "En Popüler", value: "count" },
   { label: "En Yüksek Puan", value: "rating" },
@@ -29,6 +37,10 @@ interface UserRestaurant {
   receiptCount: number;
   latestAt: string;
   receipts: StoredReceipt[];
+  city?: string;
+  district?: string;
+  lat?: number;
+  lng?: number;
 }
 
 function UserRestaurantCard({ r }: { r: UserRestaurant }) {
@@ -42,6 +54,7 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
             <Link href={`/restaurants?name=${encodeURIComponent(r.name)}`} className="font-semibold text-charcoal hover:text-primary transition-colors">{r.name}</Link>
             <span className="text-xs bg-primary-light text-primary font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
+            {r.city && <span className="text-xs text-muted font-medium">📍 {r.city}</span>}
           </div>
           <WishlistButton restaurantName={r.name} size="sm" />
         </div>
@@ -114,8 +127,12 @@ export default function DiscoverPage() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("count");
   const [city, setCity] = useState("");
+  const [district, setDistrict] = useState("");
   const [cuisine, setCuisine] = useState("");
   const [price, setPrice] = useState(0);
+  const [nearMe, setNearMe] = useState(false);
+  const [userGeo, setUserGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
 
@@ -124,12 +141,27 @@ export default function DiscoverPage() {
     store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
   }, [ready, user?.id]);
 
-  const hasActiveFilters = city !== "" || cuisine !== "" || price !== 0;
+  useEffect(() => { setDistrict(""); }, [city]);
+
+  const hasActiveFilters = city !== "" || cuisine !== "" || price !== 0 || nearMe;
 
   function clearFilters() {
-    setCity("");
-    setCuisine("");
-    setPrice(0);
+    setCity(""); setDistrict(""); setCuisine(""); setPrice(0); setNearMe(false);
+  }
+
+  function toggleNearMe() {
+    if (nearMe) { setNearMe(false); return; }
+    if (userGeo) { setNearMe(true); return; }
+    setGeoLoading(true);
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        setUserGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setNearMe(true);
+        setGeoLoading(false);
+      },
+      () => setGeoLoading(false),
+      { timeout: 8000 }
+    );
   }
 
   const userRestaurants = useMemo<UserRestaurant[]>(() => {
@@ -150,9 +182,24 @@ export default function DiscoverPage() {
         receiptCount: receipts.length,
         latestAt: sorted[0]?.createdAt ?? "",
         receipts,
+        city: receipts[0].city,
+        district: receipts[0].district,
+        lat: receipts[0].lat,
+        lng: receipts[0].lng,
       };
     });
   }, [userReceipts]);
+
+  const availableCities = useMemo(
+    () => [...new Set(userRestaurants.map((r) => r.city).filter(Boolean) as string[])].sort(),
+    [userRestaurants]
+  );
+  const availableDistricts = useMemo(
+    () => city
+      ? [...new Set(userRestaurants.filter((r) => r.city === city).map((r) => r.district).filter(Boolean) as string[])].sort()
+      : [],
+    [userRestaurants, city]
+  );
 
   const mockResults = RESTAURANTS
     .filter((r) => {
@@ -173,10 +220,16 @@ export default function DiscoverPage() {
     });
 
   const filteredUser = userRestaurants
-    .filter((r) =>
-      (!q || r.name.toLowerCase().includes(q.toLowerCase())) &&
-      !RESTAURANTS.some((m) => m.name.toLowerCase() === r.name.toLowerCase())
-    )
+    .filter((r) => {
+      if (q && !r.name.toLowerCase().includes(q.toLowerCase())) return false;
+      if (city && r.city !== city) return false;
+      if (district && r.district !== district) return false;
+      if (nearMe && userGeo) {
+        if (!r.lat || !r.lng) return false;
+        if (haversine(userGeo.lat, userGeo.lng, r.lat, r.lng) > 5) return false;
+      }
+      return !RESTAURANTS.some((m) => m.name.toLowerCase() === r.name.toLowerCase());
+    })
     .sort((a, b) => {
       if (sort === "rating") return b.avgRating - a.avgRating;
       if (sort === "price-asc") return a.avgSpendPerPerson - b.avgSpendPerPerson;

@@ -22,6 +22,10 @@ export interface StoredReceipt {
   comment: string;
   photo: string; // base64 compressed image, empty string if none
   createdAt: string;
+  city?: string;
+  district?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface StoredComment {
@@ -117,7 +121,7 @@ function lsWrite<T>(key: string, value: T) {
 type Row = Record<string, unknown>;
 
 function rowToReceipt(r: Row): StoredReceipt {
-  return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, total: r.total as number, people: r.people as number, perPerson: r.per_person as number, rating: r.rating as number, comment: r.comment as string, photo: (r.photo as string) ?? "", createdAt: r.created_at as string };
+  return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, total: r.total as number, people: r.people as number, perPerson: r.per_person as number, rating: r.rating as number, comment: r.comment as string, photo: (r.photo as string) ?? "", createdAt: r.created_at as string, city: (r.city as string) || undefined, district: (r.district as string) || undefined, lat: r.lat != null ? Number(r.lat) : undefined, lng: r.lng != null ? Number(r.lng) : undefined };
 }
 function rowToComment(c: Row): StoredComment {
   return { id: c.id as string, userId: c.user_id as string, userName: c.user_name as string, userAvatar: (c.user_avatar as string) ?? "", receiptId: c.receipt_id as string, text: c.text as string, createdAt: c.created_at as string };
@@ -290,6 +294,10 @@ export const store = {
         id: r.id, user_id: r.userId, user_name: r.userName, restaurant_name: r.restaurantName,
         total: r.total, people: r.people, per_person: r.perPerson, rating: r.rating,
         comment: r.comment, photo: supabasePhoto, created_at: r.createdAt,
+        city: r.city ?? null,
+        district: r.district ?? null,
+        lat: r.lat ?? null,
+        lng: r.lng ?? null,
       });
       if (error) console.error("[receipts] insert error:", error.message, error.details);
     }
