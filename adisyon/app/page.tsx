@@ -96,7 +96,9 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
         )}
         {visible.map((c) => (
           <div key={c.id} className="flex gap-2 items-start group">
-            <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+            <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="shrink-0">
+              <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+            </Link>
             <div className="flex-1 min-w-0">
               <p className="text-xs leading-snug">
                 <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="font-semibold text-charcoal hover:underline">{c.userName}</Link>
@@ -148,7 +150,9 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
     <div className="mt-3 border-t border-border pt-3 space-y-2">
       {visible.map((c) => (
         <div key={c.id} className="flex gap-2">
-          <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+          <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="shrink-0">
+            <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+          </Link>
           <div className="flex-1 min-w-0">
             <div className="bg-background rounded-xl px-3 py-2 relative">
               <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="text-xs font-semibold text-ink hover:underline">{c.userName}</Link>
