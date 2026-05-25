@@ -747,9 +747,12 @@ export const store = {
         const all = lsRead<StoredCheckIn[]>(K.checkIns, []);
         const remoteIds = new Set(remote.map((c) => c.id));
         const localOnly = all.filter((c) => c.userId === userId && !remoteIds.has(c.id));
-        // Re-sync any local-only check-ins that failed to reach Supabase (e.g. network blip)
+        // Re-sync any local-only check-ins that failed to reach Supabase (e.g. missing columns)
         for (const ci of localOnly) {
-          supabase.from("check_ins").upsert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" }).then(() => {});
+          const row = { id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" };
+          supabase.from("check_ins").upsert(row).then(({ error }) => {
+            if (error) supabase!.from("check_ins").upsert({ id: row.id, user_id: row.user_id, user_name: row.user_name, restaurant_name: row.restaurant_name, message: row.message, created_at: row.created_at }).then(() => {});
+          });
         }
         const merged = [...localOnly, ...remote].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         lsWrite(K.checkIns, [...all.filter((c) => c.userId !== userId), ...merged.slice(0, 10)]);
@@ -772,7 +775,12 @@ export const store = {
     all.unshift(ci);
     lsWrite(K.checkIns, all.slice(0, 50));
     if (supabase) {
-      await supabase.from("check_ins").upsert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" });
+      const row = { id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" };
+      const { error } = await supabase.from("check_ins").upsert(row);
+      if (error) {
+        // city/district columns may not exist in the table yet — retry without them
+        await supabase.from("check_ins").upsert({ id: row.id, user_id: row.user_id, user_name: row.user_name, restaurant_name: row.restaurant_name, message: row.message, created_at: row.created_at });
+      }
     }
   },
 };
