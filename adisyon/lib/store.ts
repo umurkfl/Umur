@@ -746,7 +746,12 @@ export const store = {
         const remote = data.map(rowToCheckIn);
         const all = lsRead<StoredCheckIn[]>(K.checkIns, []);
         const remoteIds = new Set(remote.map((c) => c.id));
-        const merged = [...all.filter((c) => c.userId === userId && !remoteIds.has(c.id)), ...remote];
+        const localOnly = all.filter((c) => c.userId === userId && !remoteIds.has(c.id));
+        // Re-sync any local-only check-ins that failed to reach Supabase (e.g. network blip)
+        for (const ci of localOnly) {
+          supabase.from("check_ins").insert({ id: ci.id, user_id: ci.userId, user_name: ci.userName, restaurant_name: ci.restaurantName, message: ci.message, created_at: ci.createdAt, city: ci.city ?? "", district: ci.district ?? "" }).then(() => {});
+        }
+        const merged = [...localOnly, ...remote].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         lsWrite(K.checkIns, [...all.filter((c) => c.userId !== userId), ...merged.slice(0, 10)]);
         return merged;
       }
