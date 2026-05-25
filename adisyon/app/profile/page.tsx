@@ -4,20 +4,14 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   LogOut, Receipt, Star, Camera, Trophy, Bookmark,
-  MapPin, TrendingUp, ChevronRight, Users, Calendar,
-  UserCheck, ClipboardList, Compass, Utensils, Home as HomeIcon, Trash2,
-  type LucideIcon,
+  MapPin, TrendingUp, ChevronRight, Users, Calendar, Trash2,
 } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
-
-const BADGE_ICONS: Record<string, LucideIcon> = {
-  newbie: UserCheck, first: Receipt, katkilci: ClipboardList,
-  aktif: Star, sampiyion: Trophy, gezgin: Compass, gurme: Utensils, muhtar: HomeIcon,
-};
+import { BADGE_ICONS } from "@/lib/badge-icons";
 
 // Sofra Pusulası — özel ikonlar
 function IconBill() {

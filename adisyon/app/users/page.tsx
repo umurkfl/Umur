@@ -7,6 +7,7 @@ import { ArrowLeft, Star, Lock, MapPin, Receipt, Trophy, Users } from "lucide-re
 import { store, StoredReceipt, StoredFriendship, deriveUsername, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
+import { BADGE_ICONS } from "@/lib/badge-icons";
 
 // ── Mini stat icons (same as profile page) ────────────────────────────────────
 function IconBill() {
