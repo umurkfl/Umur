@@ -9,6 +9,18 @@ import { formatCurrency, timeAgo } from "@/lib/mock";
 
 type Tab = "akis" | "arkadaslar" | "kesfet";
 
+function UserAvatar({ userId, name, size = "md" }: { userId: string; name: string; size?: "sm" | "md" }) {
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const dim = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
+  useEffect(() => { store.getPublicAvatar(userId).then(setAvatar); }, [userId]);
+  if (avatar) return <img src={avatar} className={`${dim} rounded-full object-cover shrink-0`} alt={name} />;
+  return (
+    <div className={`${dim} bg-primary-light rounded-full flex items-center justify-center font-bold text-primary shrink-0`}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 interface NearbyPlace {
   id: string;
   name: string;
@@ -253,9 +265,7 @@ function ActivityCard({ type, userName, userId, restaurantName, detail, time }: 
     <div className="bg-surface rounded-2xl border border-border p-3.5">
       <div className="flex items-start gap-3">
         <Link href={`/users?id=${userId}&n=${encodeURIComponent(userName)}`}>
-          <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
-            {userName.charAt(0).toUpperCase()}
-          </div>
+          <UserAvatar userId={userId} name={userName} />
         </Link>
         <div className="flex-1 min-w-0">
           <p className="text-sm leading-snug">
@@ -396,7 +406,7 @@ export default function FriendsPage() {
           <div className="space-y-2">
             {pendingIncoming.map((f) => (
               <div key={f.id} className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0">{f.userName.charAt(0).toUpperCase()}</div>
+                <UserAvatar userId={f.userId} name={f.userName} size="sm" />
                 <span className="flex-1 text-sm font-medium text-ink">{f.userName}</span>
                 <button onClick={() => acceptRequest(f)} className="w-8 h-8 bg-primary rounded-full flex items-center justify-center"><Check className="w-4 h-4 text-white" /></button>
                 <button onClick={() => rejectRequest(f.id)} className="w-8 h-8 bg-background border border-border rounded-full flex items-center justify-center"><X className="w-4 h-4 text-muted" /></button>
@@ -458,7 +468,7 @@ export default function FriendsPage() {
               return (
                 <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
                   <Link href={`/users?id=${friendId}&n=${encodeURIComponent(friendName)}`} className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{friendName.charAt(0).toUpperCase()}</div>
+                    <UserAvatar userId={friendId} name={friendName} />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-ink">{friendName}</p>
                       {latestCheckIn && <p className="text-xs text-muted truncate">📍 {latestCheckIn.restaurantName} · {timeAgo(latestCheckIn.createdAt)}</p>}
@@ -498,7 +508,7 @@ export default function FriendsPage() {
               <p className="text-xs font-semibold text-muted mb-2 px-1">Bekleyen İstekler</p>
               {pendingOutgoing.map((f) => (
                 <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5 mb-2">
-                  <div className="w-10 h-10 bg-border rounded-full flex items-center justify-center text-sm font-bold text-muted shrink-0">{f.friendName.charAt(0).toUpperCase()}</div>
+                  <UserAvatar userId={f.friendId} name={f.friendName} />
                   <div className="flex-1 min-w-0"><p className="font-semibold text-ink">{f.friendName}</p><p className="text-xs text-muted">İstek gönderildi</p></div>
                   <button
                     onClick={() => rejectRequest(f.id)}
@@ -530,7 +540,7 @@ export default function FriendsPage() {
               return (
                 <div key={u.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
                   <Link href={`/users?id=${u.id}&n=${encodeURIComponent(u.name)}`}>
-                    <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{u.name.charAt(0).toUpperCase()}</div>
+                    <UserAvatar userId={u.id} name={u.name} />
                   </Link>
                   <div className="flex-1 min-w-0">
                     <Link href={`/users?id=${u.id}&n=${encodeURIComponent(u.name)}`}><p className="font-semibold text-ink">{u.name}</p></Link>
