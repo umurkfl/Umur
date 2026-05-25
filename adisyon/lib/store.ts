@@ -753,6 +753,13 @@ export const store = {
     }
     return lsRead<StoredCheckIn[]>(K.checkIns, []).filter((c) => c.userId === userId);
   },
+  async deleteCheckIn(checkInId: string): Promise<void> {
+    const all = lsRead<StoredCheckIn[]>(K.checkIns, []).filter((c) => c.id !== checkInId);
+    lsWrite(K.checkIns, all);
+    if (supabase) {
+      await supabase.from("check_ins").delete().eq("id", checkInId);
+    }
+  },
   async checkIn(userId: string, userName: string, restaurantName: string, message: string, city?: string, district?: string): Promise<void> {
     const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString(), city: city || undefined, district: district || undefined };
     if (supabase) {

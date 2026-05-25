@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus } from "lucide-react";
+import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus, Trash2 } from "lucide-react";
 import { store, StoredFriendship, StoredCheckIn, StoredReceipt, deriveUsername } from "@/lib/store";
 import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
 import { useAuth } from "@/lib/auth";
@@ -310,10 +310,21 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
   );
 }
 
-function ActivityCard({ type, userName, userId, restaurantName, detail, note, time }: {
+function ActivityCard({ type, userName, userId, restaurantName, detail, note, time, checkInId, currentUserId, onDelete }: {
   type: "receipt" | "checkin"; userName: string; userId: string;
   restaurantName: string; detail?: string; note?: string; time: string;
+  checkInId?: string; currentUserId?: string; onDelete?: (id: string) => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleDelete() {
+    if (!checkInId) return;
+    await store.deleteCheckIn(checkInId);
+    onDelete?.(checkInId);
+  }
+
+  const isOwn = type === "checkin" && currentUserId === userId;
+
   return (
     <div className="bg-surface rounded-2xl border border-border p-3.5">
       <div className="flex items-start gap-3">
@@ -339,10 +350,23 @@ function ActivityCard({ type, userName, userId, restaurantName, detail, note, ti
           )}
           <p className="text-[10px] text-muted mt-1">{timeAgo(time)}</p>
         </div>
-        {type === "checkin"
-          ? <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          : <Receipt className="w-4 h-4 text-muted shrink-0 mt-0.5" />
-        }
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {type === "checkin"
+            ? <MapPin className="w-4 h-4 text-primary mt-0.5" />
+            : <Receipt className="w-4 h-4 text-muted mt-0.5" />
+          }
+          {isOwn && !confirmDelete && (
+            <button onClick={() => setConfirmDelete(true)} className="text-border active:text-red-400 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {isOwn && confirmDelete && (
+            <div className="flex gap-1.5 items-center">
+              <button onClick={handleDelete} className="text-[10px] font-semibold text-red-500 active:opacity-70">Sil</button>
+              <button onClick={() => setConfirmDelete(false)} className="text-[10px] text-muted active:opacity-70">İptal</button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -523,7 +547,10 @@ export default function FriendsPage() {
                   restaurantName={a.data.restaurantName}
                   detail={[a.data.district, a.data.city].filter(Boolean).join(", ") || undefined}
                   note={a.data.message || undefined}
-                  time={a.data.createdAt} />
+                  time={a.data.createdAt}
+                  checkInId={a.data.id}
+                  currentUserId={user?.id}
+                  onDelete={(id) => setMyCheckIns((prev) => prev.filter((c) => c.id !== id))} />
               )
             )
           )}

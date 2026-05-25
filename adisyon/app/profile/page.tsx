@@ -259,6 +259,12 @@ export default function ProfilePage() {
             </p>
           </div>
           <p className="text-xs text-muted shrink-0">{timeAgo(activeCheckIn.createdAt)}</p>
+          <button
+            onClick={async () => { await store.deleteCheckIn(activeCheckIn.id); setActiveCheckIn(null); }}
+            className="text-border active:text-red-400 transition-colors shrink-0"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
