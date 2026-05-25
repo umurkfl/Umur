@@ -11,6 +11,7 @@ import { formatCurrency, timeAgo } from "@/lib/mock";
 function ProfileContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("id") ?? "";
+  const nameHint = searchParams.get("n") ?? "";
   const { user } = useAuth();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ function ProfileContent() {
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
-    store.getUserReceipts(userId).then((r) => {
+    store.getUserReceipts(userId, nameHint || undefined).then((r) => {
       setReceipts(r);
       setLoading(false);
     });

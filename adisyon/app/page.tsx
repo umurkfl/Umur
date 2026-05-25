@@ -280,7 +280,7 @@ function ReceiptDetailSheet({ r, onClose }: { r: StoredReceipt; onClose: () => v
         </div>
 
         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
-          <Link href={`/users?id=${r.userId}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
+          <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
               {r.userName.charAt(0).toUpperCase()}
             </div>
@@ -344,7 +344,7 @@ function UserReceiptCard({ r, onOpen }: { r: StoredReceipt; onOpen: () => void }
         <div className="flex-1 min-w-0">
           <p className="font-bold text-charcoal text-base leading-tight truncate">{r.restaurantName}</p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Link href={`/users?id=${r.userId}`} className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                 {r.userName.charAt(0).toUpperCase()}
               </div>

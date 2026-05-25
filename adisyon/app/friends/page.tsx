@@ -252,14 +252,14 @@ function ActivityCard({ type, userName, userId, restaurantName, detail, time }: 
   return (
     <div className="bg-surface rounded-2xl border border-border p-3.5">
       <div className="flex items-start gap-3">
-        <Link href={`/users?id=${userId}`}>
+        <Link href={`/users?id=${userId}&n=${encodeURIComponent(userName)}`}>
           <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
             {userName.charAt(0).toUpperCase()}
           </div>
         </Link>
         <div className="flex-1 min-w-0">
           <p className="text-sm leading-snug">
-            <Link href={`/users?id=${userId}`} className="font-semibold text-ink">{userName}</Link>
+            <Link href={`/users?id=${userId}&n=${encodeURIComponent(userName)}`} className="font-semibold text-ink">{userName}</Link>
             {type === "checkin"
               ? <span className="text-muted"> şu an <span className="font-medium text-charcoal">{restaurantName}</span>&apos;da</span>
               : <span className="text-muted"> adisyon paylaştı: <span className="font-medium text-charcoal">{restaurantName}</span></span>
@@ -296,9 +296,15 @@ export default function FriendsPage() {
     const [fs, myR] = await Promise.all([store.getFriendships(user.id), store.getUserReceipts(user.id)]);
     setFriendships(fs);
     setMyReceipts(myR);
-    const friendIds = fs.filter((f) => f.status === "accepted").map((f) => f.userId === user.id ? f.friendId : f.userId);
+    const acceptedFs = fs.filter((f) => f.status === "accepted");
+    const friendIds = acceptedFs.map((f) => f.userId === user.id ? f.friendId : f.userId);
     if (friendIds.length) {
-      const { receipts, checkIns } = await store.getFriendActivity(friendIds);
+      const nameMap = new Map(acceptedFs.map((f) => {
+        const id = f.userId === user.id ? f.friendId : f.userId;
+        const name = f.userId === user.id ? f.friendName : f.userName;
+        return [id, name];
+      }));
+      const { receipts, checkIns } = await store.getFriendActivity(friendIds, nameMap);
       setFriendReceipts(receipts);
       setFriendCheckIns(checkIns);
     }
@@ -333,8 +339,14 @@ export default function FriendsPage() {
     await store.acceptFriendRequest(f.id);
     const updated = friendships.map((x) => x.id === f.id ? { ...x, status: "accepted" as const } : x);
     setFriendships(updated);
-    const friendIds = updated.filter((x) => x.status === "accepted").map((x) => x.userId === user!.id ? x.friendId : x.userId);
-    const { receipts, checkIns } = await store.getFriendActivity(friendIds);
+    const acceptedFs = updated.filter((x) => x.status === "accepted");
+    const friendIds = acceptedFs.map((x) => x.userId === user!.id ? x.friendId : x.userId);
+    const nameMap = new Map(acceptedFs.map((x) => {
+      const id = x.userId === user!.id ? x.friendId : x.userId;
+      const name = x.userId === user!.id ? x.friendName : x.userName;
+      return [id, name];
+    }));
+    const { receipts, checkIns } = await store.getFriendActivity(friendIds, nameMap);
     setFriendReceipts(receipts);
     setFriendCheckIns(checkIns);
   }
@@ -445,7 +457,7 @@ export default function FriendsPage() {
               const isConfirming = confirmRemove === f.id;
               return (
                 <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
-                  <Link href={`/users?id=${friendId}`} className="flex items-center gap-3 flex-1 min-w-0">
+                  <Link href={`/users?id=${friendId}&n=${encodeURIComponent(friendName)}`} className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{friendName.charAt(0).toUpperCase()}</div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-ink">{friendName}</p>
@@ -517,11 +529,11 @@ export default function FriendsPage() {
               const isPending = friendships.some((f) => f.userId === user.id && f.friendId === u.id && f.status === "pending");
               return (
                 <div key={u.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
-                  <Link href={`/users?id=${u.id}`}>
+                  <Link href={`/users?id=${u.id}&n=${encodeURIComponent(u.name)}`}>
                     <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{u.name.charAt(0).toUpperCase()}</div>
                   </Link>
                   <div className="flex-1 min-w-0">
-                    <Link href={`/users?id=${u.id}`}><p className="font-semibold text-ink">{u.name}</p></Link>
+                    <Link href={`/users?id=${u.id}&n=${encodeURIComponent(u.name)}`}><p className="font-semibold text-ink">{u.name}</p></Link>
                     <p className="text-xs text-muted">{deriveUsername(u.name, u.id)} · {u.receiptCount} adisyon</p>
                   </div>
                   {isFriend ? (

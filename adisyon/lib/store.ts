@@ -243,7 +243,7 @@ export const store = {
       if (error) console.error("[receipts] insert error:", error.message, error.details);
     }
   },
-  async getUserReceipts(userId: string): Promise<StoredReceipt[]> {
+  async getUserReceipts(userId: string, fallbackName?: string): Promise<StoredReceipt[]> {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       if (!error && data) {
@@ -251,10 +251,21 @@ export const store = {
         const local = lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.userId === userId);
         const remoteIds = new Set(remote.map((r) => r.id));
         const extras = local.filter((r) => !remoteIds.has(r.id));
-        return extras.length ? [...extras, ...remote] : remote;
+        const result = extras.length ? [...extras, ...remote] : remote;
+        if (result.length === 0 && fallbackName && fallbackName !== "Kullanıcı") {
+          // Auth user_id may differ from receipt user_id — fallback to name search
+          const { data: byName } = await supabase.from("receipts").select("*")
+            .ilike("user_name", fallbackName).order("created_at", { ascending: false });
+          if (byName?.length) return byName.map(rowToReceipt);
+        }
+        return result;
       }
     }
-    return lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.userId === userId);
+    const byId = lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.userId === userId);
+    if (byId.length === 0 && fallbackName && fallbackName !== "Kullanıcı") {
+      return lsRead<StoredReceipt[]>(K.receipts, []).filter((r) => r.userName.toLowerCase() === fallbackName.toLowerCase());
+    }
+    return byId;
   },
 
   // Comments
@@ -469,11 +480,10 @@ export const store = {
       await supabase.from("friendships").delete().eq("id", friendshipId);
     }
   },
-  async getFriendActivity(friendIds: string[]): Promise<{ receipts: StoredReceipt[]; checkIns: StoredCheckIn[] }> {
+  async getFriendActivity(friendIds: string[], nameMap?: Map<string, string>): Promise<{ receipts: StoredReceipt[]; checkIns: StoredCheckIn[] }> {
     if (!friendIds.length) return { receipts: [], checkIns: [] };
     const receipts: StoredReceipt[] = [];
     const checkIns: StoredCheckIn[] = [];
-    // Include receipts cached in localStorage for friends (works when on same device)
     const localAll = lsRead<StoredReceipt[]>(K.receipts, []);
     const localFriendReceipts = localAll.filter((r) => friendIds.includes(r.userId));
     if (supabase) {
@@ -489,6 +499,19 @@ export const store = {
         receipts.push(...localFriendReceipts);
       }
       if (cData) checkIns.push(...cData.map(rowToCheckIn));
+      // For friends with 0 receipts found, fallback to name-based lookup
+      if (nameMap) {
+        const foundIds = new Set(receipts.map((r) => r.userId));
+        const missingIds = friendIds.filter((id) => !foundIds.has(id));
+        for (const id of missingIds) {
+          const name = nameMap.get(id);
+          if (name && name !== "Kullanıcı") {
+            const { data: byName } = await supabase.from("receipts").select("*")
+              .ilike("user_name", name).order("created_at", { ascending: false }).limit(10);
+            if (byName?.length) receipts.push(...byName.map(rowToReceipt));
+          }
+        }
+      }
     } else {
       receipts.push(...localFriendReceipts);
     }
