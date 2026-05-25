@@ -520,21 +520,27 @@ export const store = {
   // Returns receipts filtered by privacy: private-profile receipts are excluded
   // unless the viewer is the owner or a mutual friend.
   async getPrivacyFilteredReceipts(viewerId?: string): Promise<StoredReceipt[]> {
-    const all = await this.getReceipts();
+    const all = await store.getReceipts();
     if (!all.length) return all;
 
     // Collect unique uploader IDs (skip own receipts — always visible)
     const otherIds = [...new Set(all.map((r) => r.userId).filter((id) => id !== viewerId))];
     if (!otherIds.length) return all;
 
-    // Batch-fetch privacy settings
+    // Build privacy map: start from localStorage (always available on same device),
+    // then overlay with Supabase data when the table exists.
     const privacyMap: Record<string, "public" | "friends"> = {};
+    const local = lsRead<Record<string, "public" | "friends">>(K.privacy, {});
+    for (const id of otherIds) { if (local[id]) privacyMap[id] = local[id]; }
+
     if (supabase) {
-      const { data } = await supabase.from("user_settings").select("user_id,privacy").in("user_id", otherIds);
-      for (const row of data ?? []) privacyMap[row.user_id] = row.privacy;
-    } else {
-      const local = lsRead<Record<string, "public" | "friends">>(K.privacy, {});
-      for (const id of otherIds) { if (local[id]) privacyMap[id] = local[id]; }
+      const { data, error } = await supabase
+        .from("user_settings").select("user_id,privacy").in("user_id", otherIds);
+      if (error) {
+        console.error("[privacy] user_settings query failed:", error.message);
+      } else {
+        for (const row of data ?? []) privacyMap[row.user_id] = row.privacy as "public" | "friends";
+      }
     }
 
     // If no one is private, skip friendship lookup
@@ -544,7 +550,7 @@ export const store = {
     // Build set of mutual friends for the viewer
     const mutualSet = new Set<string>();
     if (viewerId) {
-      const fs = await this.getFriendships(viewerId);
+      const fs = await store.getFriendships(viewerId);
       for (const f of fs) {
         if (f.status !== "accepted") continue;
         const otherId = f.userId === viewerId ? f.friendId : f.userId;
@@ -553,9 +559,9 @@ export const store = {
     }
 
     return all.filter((r) => {
-      if (r.userId === viewerId) return true;          // own receipt
-      if (privacyMap[r.userId] !== "friends") return true; // public profile
-      return mutualSet.has(r.userId);                  // mutual friend
+      if (r.userId === viewerId) return true;               // own receipt
+      if (privacyMap[r.userId] !== "friends") return true;  // public profile
+      return mutualSet.has(r.userId);                       // mutual friend
     });
   },
 

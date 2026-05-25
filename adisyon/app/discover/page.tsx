@@ -8,6 +8,7 @@ import { store, StoredReceipt } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CommentSection } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
+import { useAuth } from "@/lib/auth";
 
 const SORTS = [
   { label: "En Popüler", value: "count" },
@@ -109,6 +110,7 @@ function FilterPill({
 }
 
 export default function DiscoverPage() {
+  const { user, ready } = useAuth();
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("count");
   const [city, setCity] = useState("");
@@ -117,7 +119,10 @@ export default function DiscoverPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
 
-  useEffect(() => { store.getReceipts().then(setUserReceipts); }, []);
+  useEffect(() => {
+    if (!ready) return;
+    store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
+  }, [ready, user?.id]);
 
   const hasActiveFilters = city !== "" || cuisine !== "" || price !== 0;
 
