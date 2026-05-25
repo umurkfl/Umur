@@ -7,7 +7,7 @@ import {
   MapPin, TrendingUp, ChevronRight, Users, Calendar, Trash2,
 } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { store, StoredReceipt, calcBadges } from "@/lib/store";
+import { store, StoredReceipt, StoredFriendship, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
@@ -53,6 +53,17 @@ function IconCompass() {
   );
 }
 
+function FriendAvatar({ userId, name }: { userId: string; name: string }) {
+  const [avatar, setAvatar] = useState<string | null>(null);
+  useEffect(() => { store.getPublicAvatar(userId).then(setAvatar); }, [userId]);
+  if (avatar) return <img src={avatar} className="w-14 h-14 rounded-full object-cover shrink-0" alt={name} />;
+  return (
+    <div className="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center font-bold text-primary text-lg shrink-0">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user, login, logout, ready } = useAuth();
   const router = useRouter();
@@ -61,13 +72,18 @@ export default function ProfilePage() {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [showAllReceipts, setShowAllReceipts] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [friends, setFriends] = useState<StoredFriendship[]>([]);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
   }, [ready, user, router]);
 
   useEffect(() => {
-    if (user) store.getUserReceipts(user.id).then(setReceipts);
+    if (!user) return;
+    store.getUserReceipts(user.id).then(setReceipts);
+    store.getFriendships(user.id).then((all) =>
+      setFriends(all.filter((f) => f.status === "accepted"))
+    );
   }, [user]);
 
   async function deleteReceipt(receiptId: string) {
@@ -197,18 +213,13 @@ export default function ProfilePage() {
           {/* Social stats */}
           <div className="grid grid-cols-3 border border-border rounded-xl overflow-hidden">
             {[
-              { label: "Arkadaş", value: "—", tag: "Yakında" },
-              { label: "Restoran", value: visitedRestaurants.length > 0 ? String(visitedRestaurants.length) : "0" },
+              { label: "Arkadaş", value: String(friends.length) },
+              { label: "Restoran", value: String(visitedRestaurants.length) },
               { label: "Adisyon", value: String(receipts.length) },
-            ].map(({ label, value, tag }, i) => (
-              <div key={label} className={`py-3 text-center relative ${i > 0 ? "border-l border-border" : ""}`}>
+            ].map(({ label, value }, i) => (
+              <div key={label} className={`py-3 text-center ${i > 0 ? "border-l border-border" : ""}`}>
                 <p className="text-xl font-bold text-charcoal">{value}</p>
                 <p className="text-[11px] text-muted mt-0.5">{label}</p>
-                {tag && (
-                  <span className="absolute top-1.5 right-1.5 text-[8px] bg-primary-light text-primary font-bold px-1 py-0.5 rounded-full leading-none">
-                    {tag}
-                  </span>
-                )}
               </div>
             ))}
           </div>
@@ -288,30 +299,38 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* ── Arkadaşlar (yakında) ── */}
+      {/* ── Arkadaşlarım ── */}
       <div className="bg-surface rounded-2xl border border-border shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
             <h2 className="font-bold text-charcoal text-sm">Arkadaşlarım</h2>
           </div>
-          <span className="text-[10px] bg-primary-light text-primary font-bold px-2 py-0.5 rounded-full">Yakında</span>
+          <Link href="/friends" className="text-xs text-primary font-semibold flex items-center gap-0.5">
+            Tümü <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
-        <div className="bg-background rounded-xl p-4 text-center">
-          <div className="flex justify-center gap-2 mb-2">
-            {["A","B","C"].map((l) => (
-              <div key={l} className="w-9 h-9 rounded-full bg-border flex items-center justify-center text-sm font-bold text-muted">
-                {l}
-              </div>
-            ))}
-            <div className="w-9 h-9 rounded-full border-2 border-dashed border-border flex items-center justify-center text-muted text-xl">
-              +
-            </div>
+        {friends.length === 0 ? (
+          <div className="bg-background rounded-xl px-4 py-5 text-center">
+            <p className="text-xs text-muted">Henüz arkadaşın yok.</p>
+            <Link href="/friends" className="mt-2 inline-block text-xs text-primary font-semibold">
+              Arkadaş bul →
+            </Link>
           </div>
-          <p className="text-xs text-muted leading-relaxed">
-            Arkadaşlarını ekle, onların gittiği yerleri gör, harcamalarını karşılaştır.
-          </p>
-        </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+            {friends.map((f) => {
+              const friendId = f.userId === user!.id ? f.friendId : f.userId;
+              const friendName = f.userId === user!.id ? f.friendName : f.userName;
+              return (
+                <Link key={f.id} href={`/users?id=${friendId}&n=${encodeURIComponent(friendName)}`} className="shrink-0 flex flex-col items-center gap-1.5">
+                  <FriendAvatar userId={friendId} name={friendName} />
+                  <p className="text-[10px] text-ink text-center w-14 truncate">{friendName.split(" ")[0]}</p>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Rozetlerim ── */}

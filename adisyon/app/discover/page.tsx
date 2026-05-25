@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Search, Star, SlidersHorizontal, X } from "lucide-react";
-import { RESTAURANTS, formatCurrency, priceLabel, priceColors } from "@/lib/mock";
+import { formatCurrency } from "@/lib/mock";
 import { store, StoredReceipt } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { CommentSection } from "@/app/page";
@@ -34,9 +34,6 @@ const SORTS = [
   { label: "En Yeni", value: "newest" },
 ];
 
-const CITIES = Array.from(new Set(RESTAURANTS.map((r) => r.city)));
-const CUISINES = Array.from(new Set(RESTAURANTS.map((r) => r.cuisine)));
-
 interface UserRestaurant {
   id: string;
   name: string;
@@ -61,7 +58,6 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
             <Link href={`/restaurants?name=${encodeURIComponent(r.name)}`} className="font-semibold text-charcoal hover:text-primary transition-colors">{r.name}</Link>
-            <span className="text-xs bg-primary-light text-primary font-semibold px-2 py-0.5 rounded-full">Topluluk</span>
             {(r.city || r.district) && (
               <span className="text-xs text-muted font-medium flex items-center gap-0.5">
                 <PinIcon className="w-2 h-2.5 shrink-0" />
@@ -141,8 +137,6 @@ export default function DiscoverPage() {
   const [sort, setSort] = useState("count");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
-  const [cuisine, setCuisine] = useState("");
-  const [price, setPrice] = useState(0);
   const [nearMe, setNearMe] = useState(false);
   const [userGeo, setUserGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -156,11 +150,11 @@ export default function DiscoverPage() {
 
   useEffect(() => { setDistrict(""); }, [city]);
 
-  const hasActiveFilters = city !== "" || district !== "" || cuisine !== "" || price !== 0 || nearMe;
-  const activeFilterCount = [city !== "", district !== "", cuisine !== "", price !== 0, nearMe].filter(Boolean).length;
+  const hasActiveFilters = city !== "" || district !== "" || nearMe;
+  const activeFilterCount = [city !== "", district !== "", nearMe].filter(Boolean).length;
 
   function clearFilters() {
-    setCity(""); setDistrict(""); setCuisine(""); setPrice(0); setNearMe(false);
+    setCity(""); setDistrict(""); setNearMe(false);
   }
 
   function toggleNearMe() {
@@ -215,24 +209,6 @@ export default function DiscoverPage() {
     [userRestaurants, city]
   );
 
-  const mockResults = RESTAURANTS
-    .filter((r) => {
-      const matchQ = !q || r.name.toLowerCase().includes(q.toLowerCase()) ||
-        r.cuisine.toLowerCase().includes(q.toLowerCase()) ||
-        r.city.toLowerCase().includes(q.toLowerCase());
-      return matchQ &&
-        (price === 0 || r.priceRange === price) &&
-        (!city || r.city === city) &&
-        (!cuisine || r.cuisine === cuisine);
-    })
-    .sort((a, b) => {
-      if (sort === "rating") return b.avgRating - a.avgRating;
-      if (sort === "price-asc") return a.avgSpendPerPerson - b.avgSpendPerPerson;
-      if (sort === "price-desc") return b.avgSpendPerPerson - a.avgSpendPerPerson;
-      if (sort === "newest") return parseInt(b.id) - parseInt(a.id);
-      return b.receiptCount - a.receiptCount;
-    });
-
   const filteredUser = userRestaurants
     .filter((r) => {
       if (q && !r.name.toLowerCase().includes(q.toLowerCase())) return false;
@@ -242,7 +218,7 @@ export default function DiscoverPage() {
         if (!r.lat || !r.lng) return false;
         if (haversine(userGeo.lat, userGeo.lng, r.lat, r.lng) > 5) return false;
       }
-      return !RESTAURANTS.some((m) => m.name.toLowerCase() === r.name.toLowerCase());
+      return true;
     })
     .sort((a, b) => {
       if (sort === "rating") return b.avgRating - a.avgRating;
@@ -252,7 +228,7 @@ export default function DiscoverPage() {
       return b.receiptCount - a.receiptCount;
     });
 
-  const hasResults = mockResults.length > 0 || filteredUser.length > 0;
+  const hasResults = filteredUser.length > 0;
 
   return (
     <div className="space-y-3">
@@ -330,21 +306,6 @@ export default function DiscoverPage() {
             )}
           </div>
 
-          {/* Cuisine */}
-          <div className="flex gap-1.5 flex-wrap">
-            <FilterPill label="Tüm Mutfaklar" active={cuisine === ""} onClick={() => setCuisine("")} />
-            {CUISINES.map((c) => (
-              <FilterPill key={c} label={c} active={cuisine === c} onClick={() => setCuisine(cuisine === c ? "" : c)} />
-            ))}
-          </div>
-
-          {/* Price */}
-          <div className="flex gap-1.5">
-            <FilterPill label="Tüm Fiyatlar" active={price === 0} onClick={() => setPrice(0)} />
-            {[1, 2, 3].map((p) => (
-              <FilterPill key={p} label={"₺".repeat(p)} active={price === p} onClick={() => setPrice(price === p ? 0 : p)} />
-            ))}
-          </div>
         </div>
       )}
 
@@ -362,30 +323,6 @@ export default function DiscoverPage() {
       ) : (
         <div className="space-y-3 pb-4">
           {filteredUser.map((r) => <UserRestaurantCard key={r.id} r={r} />)}
-          {mockResults.map((r) => {
-            const c = priceColors(r.priceRange);
-            return (
-              <Link key={r.id} href={`/restaurants/${r.slug}`} className="block">
-                <div className="bg-surface rounded-2xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-charcoal">{r.name}</p>
-                      <p className="text-xs text-muted mt-0.5">{r.cuisine} · {r.city}</p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className={`px-2 py-1 rounded-full text-sm font-bold ${c.bg} ${c.text}`}>{priceLabel(r.priceRange)}</span>
-                      <WishlistButton restaurantName={r.name} restaurantSlug={r.slug} size="sm" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-muted">Kişi başı <span className="font-semibold text-ink">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
-                    <span className="text-yellow-500 font-semibold">★ {r.avgRating.toFixed(1)}</span>
-                    <span className="text-muted ml-auto text-xs">{r.receiptCount} adisyon</span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
         </div>
       )}
     </div>
