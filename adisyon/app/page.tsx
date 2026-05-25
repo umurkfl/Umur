@@ -494,6 +494,27 @@ export default function HomePage() {
     store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
   }, [ready, user?.id]);
 
+  // Open a specific receipt when navigating from a notification
+  useEffect(() => {
+    if (!userReceipts.length) return;
+    const id = sessionStorage.getItem("adisyon_open_receipt");
+    if (id) {
+      sessionStorage.removeItem("adisyon_open_receipt");
+      const r = userReceipts.find((x) => x.id === id);
+      if (r) setSelected(r);
+    }
+  }, [userReceipts]);
+
+  useEffect(() => {
+    function handler(e: Event) {
+      const id = (e as CustomEvent<string>).detail;
+      const r = userReceipts.find((x) => x.id === id);
+      if (r) setSelected(r);
+    }
+    window.addEventListener("adisyon:open-receipt", handler);
+    return () => window.removeEventListener("adisyon:open-receipt", handler);
+  }, [userReceipts]);
+
   return (
     <div className="space-y-0">
       {/* Hero CTA */}

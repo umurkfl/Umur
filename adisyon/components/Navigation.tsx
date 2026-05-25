@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users, Bell, Check, X, Settings, MessageCircle, ThumbsUp } from "lucide-react";
@@ -26,10 +26,23 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
   onClose: () => void;
   onCountChange: (n: number) => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [requests, setRequests] = useState<StoredFriendship[]>([]);
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
+
+  const openReceipt = useCallback((receiptId: string) => {
+    if (!receiptId) { onClose(); return; }
+    onClose();
+    if (pathname === "/") {
+      window.dispatchEvent(new CustomEvent("adisyon:open-receipt", { detail: receiptId }));
+    } else {
+      sessionStorage.setItem("adisyon_open_receipt", receiptId);
+      router.push("/");
+    }
+  }, [pathname, router, onClose]);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -105,7 +118,11 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
 
           {/* Comment & reaction notifications */}
           {notifications.map((n) => (
-            <div key={n.id} className={`px-4 py-3 border-b border-border/50 last:border-0 flex items-start gap-2.5 ${!n.read ? "bg-primary-light/30" : ""}`}>
+            <button
+              key={n.id}
+              onClick={() => openReceipt(n.receiptId)}
+              className={`w-full text-left px-4 py-3 border-b border-border/50 last:border-0 flex items-start gap-2.5 active:bg-primary-light/50 transition-colors ${!n.read ? "bg-primary-light/30" : ""}`}
+            >
               <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${n.type === "comment" ? "bg-primary-light text-primary" : "bg-yellow-50 text-yellow-600"}`}>
                 {n.type === "comment"
                   ? <MessageCircle className="w-4 h-4" />
@@ -122,7 +139,7 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
                 )}
                 <p className="text-[10px] text-muted mt-1">{new Date(n.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
