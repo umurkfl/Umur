@@ -517,6 +517,48 @@ export const store = {
     }
     return { receipts, checkIns };
   },
+  // Returns receipts filtered by privacy: private-profile receipts are excluded
+  // unless the viewer is the owner or a mutual friend.
+  async getPrivacyFilteredReceipts(viewerId?: string): Promise<StoredReceipt[]> {
+    const all = await this.getReceipts();
+    if (!all.length) return all;
+
+    // Collect unique uploader IDs (skip own receipts — always visible)
+    const otherIds = [...new Set(all.map((r) => r.userId).filter((id) => id !== viewerId))];
+    if (!otherIds.length) return all;
+
+    // Batch-fetch privacy settings
+    const privacyMap: Record<string, "public" | "friends"> = {};
+    if (supabase) {
+      const { data } = await supabase.from("user_settings").select("user_id,privacy").in("user_id", otherIds);
+      for (const row of data ?? []) privacyMap[row.user_id] = row.privacy;
+    } else {
+      const local = lsRead<Record<string, "public" | "friends">>(K.privacy, {});
+      for (const id of otherIds) { if (local[id]) privacyMap[id] = local[id]; }
+    }
+
+    // If no one is private, skip friendship lookup
+    const privateIds = otherIds.filter((id) => privacyMap[id] === "friends");
+    if (!privateIds.length) return all;
+
+    // Build set of mutual friends for the viewer
+    const mutualSet = new Set<string>();
+    if (viewerId) {
+      const fs = await this.getFriendships(viewerId);
+      for (const f of fs) {
+        if (f.status !== "accepted") continue;
+        const otherId = f.userId === viewerId ? f.friendId : f.userId;
+        mutualSet.add(otherId);
+      }
+    }
+
+    return all.filter((r) => {
+      if (r.userId === viewerId) return true;          // own receipt
+      if (privacyMap[r.userId] !== "friends") return true; // public profile
+      return mutualSet.has(r.userId);                  // mutual friend
+    });
+  },
+
   // Privacy settings
   async getUserPrivacy(userId: string): Promise<"public" | "friends"> {
     if (supabase) {

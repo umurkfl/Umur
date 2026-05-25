@@ -407,13 +407,14 @@ function UserReceiptCard({ r, onOpen }: { r: StoredReceipt; onOpen: () => void }
 // ─── Home page ────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
   const [selected, setSelected] = useState<StoredReceipt | null>(null);
 
   useEffect(() => {
-    store.getReceipts().then(setUserReceipts);
-  }, []);
+    if (!ready) return;
+    store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
+  }, [ready, user?.id]);
 
   return (
     <div className="space-y-0">
