@@ -330,6 +330,7 @@ export default function FriendsPage() {
   const [friendships, setFriendships] = useState<StoredFriendship[]>([]);
   const [friendReceipts, setFriendReceipts] = useState<StoredReceipt[]>([]);
   const [friendCheckIns, setFriendCheckIns] = useState<StoredCheckIn[]>([]);
+  const [myCheckIns, setMyCheckIns] = useState<StoredCheckIn[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; receiptCount: number }>>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -340,9 +341,14 @@ export default function FriendsPage() {
 
   async function loadData() {
     if (!user) { setLoading(false); return; }
-    const [fs, myR] = await Promise.all([store.getFriendships(user.id), store.getUserReceipts(user.id)]);
+    const [fs, myR, myCI] = await Promise.all([
+      store.getFriendships(user.id),
+      store.getUserReceipts(user.id),
+      store.getUserCheckIns(user.id),
+    ]);
     setFriendships(fs);
     setMyReceipts(myR);
+    setMyCheckIns(myCI);
     const acceptedFs = fs.filter((f) => f.status === "accepted");
     const friendIds = acceptedFs.map((f) => f.userId === user.id ? f.friendId : f.userId);
     if (friendIds.length) {
@@ -409,10 +415,21 @@ export default function FriendsPage() {
   const accepted = friendships.filter((f) => f.status === "accepted");
   const friendIdSet = new Set(accepted.map((f) => f.userId === user?.id ? f.friendId : f.userId));
 
+  const HOURS_24 = 24 * 60 * 60 * 1000;
+  function within24h(createdAt: string) { return Date.now() - new Date(createdAt).getTime() < HOURS_24; }
+
+  // Merge own + friend check-ins, keep only within-24h, only latest per user
+  const allCheckIns = [...myCheckIns, ...friendCheckIns].filter((c) => within24h(c.createdAt));
+  const latestPerUser = new Map<string, StoredCheckIn>();
+  for (const c of allCheckIns.sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+    if (!latestPerUser.has(c.userId)) latestPerUser.set(c.userId, c);
+  }
+  const activeCheckIns = [...latestPerUser.values()];
+
   type AItem = { time: string; kind: "receipt"; data: StoredReceipt } | { time: string; kind: "checkin"; data: StoredCheckIn };
   const activity: AItem[] = [
     ...friendReceipts.map((r) => ({ kind: "receipt" as const, time: r.createdAt, data: r })),
-    ...friendCheckIns.map((c) => ({ kind: "checkin" as const, time: c.createdAt, data: c })),
+    ...activeCheckIns.map((c) => ({ kind: "checkin" as const, time: c.createdAt, data: c })),
   ].sort((a, b) => b.time.localeCompare(a.time)).slice(0, 30);
 
   const recentRestaurants = [...new Set(myReceipts.map((r) => r.restaurantName))];
@@ -500,7 +517,7 @@ export default function FriendsPage() {
             accepted.map((f) => {
               const friendId = f.userId === user.id ? f.friendId : f.userId;
               const storedName = f.userId === user.id ? f.friendName : f.userName;
-              const latestCheckIn = friendCheckIns.find((c) => c.userId === friendId);
+              const latestCheckIn = friendCheckIns.find((c) => c.userId === friendId && within24h(c.createdAt));
               const latestReceipt = friendReceipts.find((r) => r.userId === friendId);
               const friendName = latestReceipt?.userName || latestCheckIn?.userName || storedName;
               const isConfirming = confirmRemove === f.id;

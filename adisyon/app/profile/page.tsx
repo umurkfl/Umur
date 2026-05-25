@@ -7,7 +7,7 @@ import {
   MapPin, TrendingUp, ChevronRight, Users, Calendar, Trash2,
 } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { store, StoredReceipt, StoredFriendship, calcBadges, deriveUsername } from "@/lib/store";
+import { store, StoredReceipt, StoredFriendship, StoredCheckIn, calcBadges, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
@@ -74,6 +74,7 @@ export default function ProfilePage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [friends, setFriends] = useState<StoredFriendship[]>([]);
   const [showName, setShowNameState] = useState(true);
+  const [activeCheckIn, setActiveCheckIn] = useState<StoredCheckIn | null>(null);
 
   useEffect(() => {
     if (ready && !user) router.push("/auth");
@@ -86,6 +87,12 @@ export default function ProfilePage() {
       setFriends(all.filter((f) => f.status === "accepted"))
     );
     setShowNameState(store.getShowName(user.id));
+    store.getUserCheckIns(user.id).then((all) => {
+      const fresh = all
+        .filter((c) => Date.now() - new Date(c.createdAt).getTime() < 24 * 60 * 60 * 1000)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
+      setActiveCheckIn(fresh);
+    });
   }, [user]);
 
   async function deleteReceipt(receiptId: string) {
@@ -231,6 +238,23 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Aktif Check-in ── */}
+      {activeCheckIn && (
+        <div className="bg-surface rounded-2xl border border-primary-light shadow-sm p-3.5 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center shrink-0">
+            <MapPin className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ink truncate">{activeCheckIn.restaurantName}</p>
+            <p className="text-xs text-muted truncate">
+              {[activeCheckIn.district, activeCheckIn.city].filter(Boolean).join(", ") || "Konum belirtilmedi"}
+              {activeCheckIn.message ? ` · ${activeCheckIn.message}` : ""}
+            </p>
+          </div>
+          <p className="text-xs text-muted shrink-0">{timeAgo(activeCheckIn.createdAt)}</p>
+        </div>
+      )}
 
       {/* ── Sofra Pusulası ── */}
       {receipts.length > 0 && (

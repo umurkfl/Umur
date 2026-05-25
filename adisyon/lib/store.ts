@@ -739,6 +739,20 @@ export const store = {
     }
   },
 
+  async getUserCheckIns(userId: string): Promise<StoredCheckIn[]> {
+    if (supabase) {
+      const { data } = await supabase.from("check_ins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(10);
+      if (data) {
+        const remote = data.map(rowToCheckIn);
+        const all = lsRead<StoredCheckIn[]>(K.checkIns, []);
+        const remoteIds = new Set(remote.map((c) => c.id));
+        const merged = [...all.filter((c) => c.userId === userId && !remoteIds.has(c.id)), ...remote];
+        lsWrite(K.checkIns, [...all.filter((c) => c.userId !== userId), ...merged.slice(0, 10)]);
+        return merged;
+      }
+    }
+    return lsRead<StoredCheckIn[]>(K.checkIns, []).filter((c) => c.userId === userId);
+  },
   async checkIn(userId: string, userName: string, restaurantName: string, message: string, city?: string, district?: string): Promise<void> {
     const ci: StoredCheckIn = { id: crypto.randomUUID(), userId, userName, restaurantName, message, createdAt: new Date().toISOString(), city: city || undefined, district: district || undefined };
     if (supabase) {
