@@ -9,80 +9,138 @@ import { formatCurrency, timeAgo } from "@/lib/mock";
 
 type Tab = "akis" | "arkadaslar" | "kesfet";
 
+interface NearbyPlace {
+  id: string;
+  name: string;
+  type: string;
+  distanceM: number;
+}
+
 interface PlaceSuggestion {
   label: string;
   sub: string;
   key: string;
 }
 
+function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function fetchNearbyPlaces(lat: number, lon: number, radiusM = 1500): Promise<NearbyPlace[]> {
+  const query = `[out:json][timeout:12];(
+node["amenity"]["name"](around:${radiusM},${lat},${lon});
+node["shop"]["name"](around:${radiusM},${lat},${lon});
+node["leisure"]["name"](around:${radiusM},${lat},${lon});
+way["amenity"]["name"](around:${radiusM},${lat},${lon});
+way["shop"]["name"](around:${radiusM},${lat},${lon});
+);out center 100;`;
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "data=" + encodeURIComponent(query),
+  });
+  const data = (await res.json()) as { elements: Array<Record<string, unknown>> };
+  return data.elements
+    .map((el) => {
+      const tags = el.tags as Record<string, string> | undefined;
+      const elLat = (el.lat ?? (el.center as Record<string, number> | undefined)?.lat) as number;
+      const elLon = (el.lon ?? (el.center as Record<string, number> | undefined)?.lon) as number;
+      return {
+        id: String(el.id),
+        name: tags?.name ?? "",
+        type: tags?.amenity ?? tags?.shop ?? tags?.leisure ?? "",
+        distanceM: haversineM(lat, lon, elLat, elLon),
+      };
+    })
+    .filter((p) => p.name.length > 0)
+    .sort((a, b) => a.distanceM - b.distanceM)
+    .slice(0, 100);
+}
+
+function fuzzyScore(query: string, placeName: string): number {
+  const q = query.toLowerCase().trim();
+  const p = placeName.toLowerCase();
+  if (!q) return 0;
+  if (p === q) return 100;
+  if (p.includes(q)) return 90;
+  const qWords = q.split(/\s+/).filter((w) => w.length >= 2);
+  if (!qWords.length) return 0;
+  const matched = qWords.filter((w) => p.includes(w));
+  if (matched.length === qWords.length) return 70;
+  if (matched.length > 0) return 30 + matched.length * 12;
+  // partial: first 3 chars of a query word match start of a place word
+  const hasPartial = qWords.some((w) =>
+    p.split(/[\s,.()\-]+/).some((pw) => pw.length >= 3 && w.length >= 3 && pw.startsWith(w.slice(0, 3)))
+  );
+  return hasPartial ? 15 : 0;
+}
+
+function formatDist(m: number): string {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
+}
+
+const PLACE_TYPE_TR: Record<string, string> = {
+  restaurant: "Restoran", cafe: "Kafe", fast_food: "Fast Food", bar: "Bar",
+  food_court: "Food Court", bakery: "Fırın", ice_cream: "Dondurma",
+  supermarket: "Market", convenience: "Market", hotel: "Otel",
+  cinema: "Sinema", gym: "Spor Salonu", pharmacy: "Eczane",
+};
+
 function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; recentRestaurants: string[] }) {
   const { user } = useAuth();
   const [restaurantName, setRestaurantName] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [locStatus, setLocStatus] = useState<"idle" | "loading" | "ok" | "denied">("idle");
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
-  const [placesLoading, setPlacesLoading] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!navigator.geolocation) { setLocStatus("denied"); return; }
     setLocStatus("loading");
     navigator.geolocation.getCurrentPosition(
-      (p) => { setCoords({ lat: p.coords.latitude, lon: p.coords.longitude }); setLocStatus("ok"); },
+      async (pos) => {
+        setLocStatus("ok");
+        setNearbyLoading(true);
+        try {
+          const places = await fetchNearbyPlaces(pos.coords.latitude, pos.coords.longitude);
+          setNearbyPlaces(places);
+        } catch { /* silent */ }
+        setNearbyLoading(false);
+      },
       () => setLocStatus("denied"),
-      { timeout: 6000 }
+      { timeout: 7000, maximumAge: 60_000 }
     );
   }, []);
 
   function onInput(val: string) {
     setRestaurantName(val);
-    clearTimeout(timerRef.current);
-    setSuggestions([]);
-    if (!val.trim() || val.length < 2) return;
-    setPlacesLoading(true);
-    timerRef.current = setTimeout(async () => {
-      try {
-        const p = new URLSearchParams({
-          q: val,
-          format: "json",
-          limit: "8",
-          addressdetails: "1",
-          "accept-language": "tr,en",
-        });
-        if (coords) {
-          const d = 0.12; // ~12 km bias radius
-          p.set("viewbox", `${coords.lon - d},${coords.lat + d},${coords.lon + d},${coords.lat - d}`);
-          p.set("bounded", "0");
-        }
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?${p}`);
-        const data = (await res.json()) as Array<Record<string, unknown>>;
-        const seen = new Set<string>();
-        const items: PlaceSuggestion[] = [];
-        for (const r of data) {
-          const addr = r.address as Record<string, string> | undefined;
-          const name = ((r.name as string) || (r.display_name as string).split(",")[0]).trim();
-          if (!name) continue;
-          const parts = [addr?.neighbourhood, addr?.suburb, addr?.town ?? addr?.city ?? addr?.county]
-            .filter(Boolean) as string[];
-          const sub = parts.slice(0, 2).join(", ");
-          const dedupeKey = `${name.toLowerCase()}|${sub.toLowerCase()}`;
-          if (seen.has(dedupeKey)) continue;
-          seen.add(dedupeKey);
-          items.push({ label: name, sub, key: `${items.length}-${dedupeKey}` });
-          if (items.length >= 6) break;
-        }
-        setSuggestions(items);
-      } catch {
-        setSuggestions([]);
-      }
-      setPlacesLoading(false);
-    }, 450);
+    if (!val.trim() || val.length < 2) { setSuggestions([]); return; }
+    const scored = nearbyPlaces
+      .map((p) => ({ p, score: fuzzyScore(val, p.name) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || a.p.distanceM - b.p.distanceM)
+      .slice(0, 6);
+    setSuggestions(
+      scored.map((x) => ({
+        label: x.p.name,
+        sub: [PLACE_TYPE_TR[x.p.type] ?? x.p.type, formatDist(x.p.distanceM)]
+          .filter(Boolean)
+          .join(" · "),
+        key: x.p.id,
+      }))
+    );
   }
 
   function pick(s: PlaceSuggestion) {
-    setRestaurantName(s.sub ? `${s.label}, ${s.sub}` : s.label);
+    setRestaurantName(s.label);
     setSuggestions([]);
   }
 
@@ -101,11 +159,15 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-lg font-bold text-charcoal">📍 Şu an neredeyim?</h2>
           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-            locStatus === "ok" ? "bg-green-100 text-green-700" :
+            locStatus === "ok" && !nearbyLoading ? "bg-green-100 text-green-700" :
+            locStatus === "ok" && nearbyLoading ? "bg-yellow-100 text-yellow-700" :
             locStatus === "loading" ? "bg-yellow-100 text-yellow-700" :
             locStatus === "denied" ? "bg-red-100 text-red-600" : ""
           }`}>
-            {locStatus === "ok" ? "Konum aktif" : locStatus === "loading" ? "Konum alınıyor..." : locStatus === "denied" ? "Konum izni yok" : ""}
+            {locStatus === "loading" ? "Konum alınıyor…" :
+             locStatus === "ok" && nearbyLoading ? "Yakın mekanlar yükleniyor…" :
+             locStatus === "ok" ? `${nearbyPlaces.length} mekan yüklendi` :
+             "Konum izni yok"}
           </span>
         </div>
         {done ? (
@@ -119,33 +181,35 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
                   type="text"
                   value={restaurantName}
                   onChange={(e) => onInput(e.target.value)}
-                  placeholder="Mekan adını yaz..."
+                  placeholder="Mekan adını yaz…"
                   autoFocus
                   className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 />
-                {placesLoading && (
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-muted">Aranıyor…</span>
-                )}
               </div>
 
-              {/* Location autocomplete suggestions */}
+              {/* Fuzzy-matched nearby suggestions */}
               {suggestions.length > 0 && (
                 <div className="rounded-2xl border border-border bg-background overflow-hidden shadow-sm">
                   {suggestions.map((s) => (
                     <button
                       key={s.key}
                       onClick={() => pick(s)}
-                      className="w-full flex flex-col items-start px-4 py-2.5 border-b border-border/50 last:border-0 active:bg-primary-light text-left"
+                      className="w-full flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border/50 last:border-0 active:bg-primary-light text-left"
                     >
-                      <span className="text-sm font-medium text-ink">{s.label}</span>
-                      {s.sub && <span className="text-xs text-muted">{s.sub}</span>}
+                      <span className="text-sm font-medium text-ink truncate">{s.label}</span>
+                      {s.sub && <span className="text-[10px] text-muted whitespace-nowrap">{s.sub}</span>}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Recent places (show when no suggestions) */}
-              {recentRestaurants.length > 0 && suggestions.length === 0 && !placesLoading && (
+              {/* No nearby results hint */}
+              {locStatus === "ok" && !nearbyLoading && restaurantName.length >= 2 && suggestions.length === 0 && (
+                <p className="text-xs text-muted px-1">Yakında eşleşen mekan bulunamadı, istediğini yazabilirsin.</p>
+              )}
+
+              {/* Recent places (show when input is empty) */}
+              {recentRestaurants.length > 0 && !restaurantName && (
                 <div>
                   <p className="text-[10px] text-muted font-semibold mb-1.5 px-1">Son mekanlarım</p>
                   <div className="flex flex-wrap gap-2">
