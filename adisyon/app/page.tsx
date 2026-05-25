@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
+import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight, MapPin } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -387,6 +387,14 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
             <span className="text-xs text-muted">{timeAgo(r.createdAt)}</span>
             <span className="text-border text-xs">·</span>
             <span className="text-xs text-muted">{r.people} kişi</span>
+            {r.city && (
+              <>
+                <span className="text-border text-xs">·</span>
+                <span className="text-xs text-muted flex items-center gap-0.5">
+                  <MapPin className="w-2.5 h-2.5" />{r.city}
+                </span>
+              </>
+            )}
           </div>
         </div>
         {/* Fiyat etiketi */}

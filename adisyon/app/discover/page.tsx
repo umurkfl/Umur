@@ -286,20 +286,43 @@ export default function DiscoverPage() {
 
       {filtersOpen && (
         <div className="bg-surface rounded-2xl border border-border p-4 space-y-3">
-          {/* City filter */}
-          {CITIES.length > 1 && (
+          {/* Near me */}
+          <div>
+            <p className="text-xs font-semibold text-muted mb-2">Konum</p>
+            <FilterPill
+              label={geoLoading ? "Konum alınıyor..." : "📍 Yakınımda"}
+              active={nearMe}
+              onClick={toggleNearMe}
+            />
+          </div>
+
+          {/* City */}
+          {availableCities.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-muted mb-2">Şehir</p>
               <div className="flex gap-2 flex-wrap">
                 <FilterPill label="Tümü" active={city === ""} onClick={() => setCity("")} />
-                {CITIES.map((c) => (
+                {availableCities.map((c) => (
                   <FilterPill key={c} label={c} active={city === c} onClick={() => setCity(city === c ? "" : c)} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Cuisine filter */}
+          {/* District — only shown when a city is active and districts exist */}
+          {city && availableDistricts.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted mb-2">İlçe</p>
+              <div className="flex gap-2 flex-wrap">
+                <FilterPill label="Tümü" active={district === ""} onClick={() => setDistrict("")} />
+                {availableDistricts.map((d) => (
+                  <FilterPill key={d} label={d} active={district === d} onClick={() => setDistrict(district === d ? "" : d)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cuisine */}
           <div>
             <p className="text-xs font-semibold text-muted mb-2">Mekan Türü</p>
             <div className="flex gap-2 flex-wrap">
@@ -310,7 +333,7 @@ export default function DiscoverPage() {
             </div>
           </div>
 
-          {/* Price range filter */}
+          {/* Price */}
           <div>
             <p className="text-xs font-semibold text-muted mb-2">Fiyat Aralığı</p>
             <div className="flex gap-2">
