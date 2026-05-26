@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Star, SlidersHorizontal, X } from "lucide-react";
@@ -132,7 +132,7 @@ function FilterPill({
   );
 }
 
-export default function DiscoverPage() {
+function DiscoverPageInner() {
   const { user, ready } = useAuth();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(() => searchParams.get("q") ?? "");
@@ -328,5 +328,13 @@ export default function DiscoverPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DiscoverPage() {
+  return (
+    <Suspense>
+      <DiscoverPageInner />
+    </Suspense>
   );
 }
