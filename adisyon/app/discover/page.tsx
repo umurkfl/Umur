@@ -67,10 +67,10 @@ function SwipeCard({
     }
 
     const progress = Math.min(1, Math.abs(dx) / 110);
-    if (dx < -20) {
+    if (dx > 20) {
       if (saveOverlayRef.current) saveOverlayRef.current.style.opacity = String(progress);
       if (passOverlayRef.current) passOverlayRef.current.style.opacity = "0";
-    } else if (dx > 20) {
+    } else if (dx < -20) {
       if (passOverlayRef.current) passOverlayRef.current.style.opacity = String(progress);
       if (saveOverlayRef.current) saveOverlayRef.current.style.opacity = "0";
     } else {
@@ -118,24 +118,24 @@ function SwipeCard({
         touchAction: "pan-y",
       }}
     >
-      {/* KAYDET overlay (sola kaydırma) */}
+      {/* KAYDET overlay (sağa kaydırma) */}
       <div
         ref={saveOverlayRef}
-        className="absolute inset-0 z-20 rounded-3xl pointer-events-none opacity-0 flex items-start justify-end p-5"
+        className="absolute inset-0 z-20 rounded-3xl pointer-events-none opacity-0 flex items-start justify-start p-5"
         style={{ background: "rgba(29,158,117,0.18)" }}
       >
-        <div className="border-[3px] border-primary rounded-2xl px-4 py-2 -rotate-12">
+        <div className="border-[3px] border-primary rounded-2xl px-4 py-2 rotate-12">
           <p className="text-primary font-black text-xl tracking-wide">KAYDET</p>
         </div>
       </div>
 
-      {/* GEÇ overlay (sağa kaydırma) */}
+      {/* GEÇ overlay (sola kaydırma) */}
       <div
         ref={passOverlayRef}
-        className="absolute inset-0 z-20 rounded-3xl pointer-events-none opacity-0 flex items-start justify-start p-5"
+        className="absolute inset-0 z-20 rounded-3xl pointer-events-none opacity-0 flex items-start justify-end p-5"
         style={{ background: "rgba(239,68,68,0.15)" }}
       >
-        <div className="border-[3px] border-red-400 rounded-2xl px-4 py-2 rotate-12">
+        <div className="border-[3px] border-red-400 rounded-2xl px-4 py-2 -rotate-12">
           <p className="text-red-400 font-black text-xl tracking-wide">GEÇ</p>
         </div>
       </div>
@@ -278,11 +278,11 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
       {/* Hint bar */}
       <div className="flex items-center justify-between px-2 mb-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
-          <span className="text-base">→</span> GEÇ
+          <span className="text-base">←</span> GEÇ
         </div>
         <span className="text-xs text-muted tabular-nums">{index + 1} / {receipts.length}</span>
         <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-          KAYDET <span className="text-base">←</span>
+          KAYDET <span className="text-base">→</span>
         </div>
       </div>
 
@@ -296,8 +296,8 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
             key={current.id}
             receipt={current}
             isTop
-            onSwipeLeft={handleSwipeLeft}
-            onSwipeRight={handleSwipeRight}
+            onSwipeLeft={handleSwipeRight}
+            onSwipeRight={handleSwipeLeft}
           />
         )}
       </div>
