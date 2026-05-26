@@ -395,7 +395,7 @@ function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () 
                   src={r.photo}
                   alt={r.restaurantName}
                   className="w-full object-cover"
-                  style={{ maxHeight: 220 }}
+                  style={{ maxHeight: 280 }}
                 />
               </button>
               {/* gradient overlay */}
@@ -733,7 +733,7 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
       {/* Fotoğraf önizlemesi */}
       {r.photo && (
         <div className="relative" onClick={onOpen}>
-          <img src={r.photo} alt={r.restaurantName} className="w-full max-h-48 object-cover" />
+          <img src={r.photo} alt={r.restaurantName} className="w-full object-cover" style={{ maxHeight: 120 }} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
           <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
             <p className="text-white font-bold text-base drop-shadow leading-tight truncate">{r.restaurantName}</p>
@@ -829,8 +829,7 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
 export default function HomePage() {
   const { user, ready } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
-  const [selected, setSelected] = useState<StoredReceipt | null>(null);   // bildirimden açılan → full-screen
-  const [popupReceipt, setPopupReceipt] = useState<StoredReceipt | null>(null); // kart tıklanınca → popup
+  const [popupReceipt, setPopupReceipt] = useState<StoredReceipt | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -844,23 +843,22 @@ export default function HomePage() {
     sessionStorage.removeItem("adisyon_open_receipt");
     try {
       const { receipt } = JSON.parse(raw) as { id: string; receipt: StoredReceipt | null };
-      if (receipt) { setSelected(receipt); return; }
+      if (receipt) { setPopupReceipt(receipt); return; }
     } catch { /* plain string fallback */ }
-    // fallback: search feed or fetch
     const id = (() => { try { return (JSON.parse(raw) as { id: string }).id; } catch { return raw; } })();
     const cached = userReceipts.find((x) => x.id === id);
-    if (cached) { setSelected(cached); return; }
-    store.getReceiptById(id).then((r) => { if (r) setSelected(r); });
+    if (cached) { setPopupReceipt(cached); return; }
+    store.getReceiptById(id).then((r) => { if (r) setPopupReceipt(r); });
   }, [userReceipts]);
 
   useEffect(() => {
     function handler(e: Event) {
       const { id, receipt } = (e as CustomEvent<{ id: string; receipt: StoredReceipt | null }>).detail;
       sessionStorage.removeItem("adisyon_open_receipt");
-      if (receipt) { setSelected(receipt); return; }
+      if (receipt) { setPopupReceipt(receipt); return; }
       const cached = userReceipts.find((x) => x.id === id);
-      if (cached) { setSelected(cached); return; }
-      store.getReceiptById(id).then((r) => { if (r) setSelected(r); });
+      if (cached) { setPopupReceipt(cached); return; }
+      store.getReceiptById(id).then((r) => { if (r) setPopupReceipt(r); });
     }
     window.addEventListener("adisyon:open-receipt", handler);
     return () => window.removeEventListener("adisyon:open-receipt", handler);
@@ -897,21 +895,11 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Feed card popup */}
       {popupReceipt && (
         <ReceiptPopup
           r={popupReceipt}
           onClose={() => setPopupReceipt(null)}
           onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== popupReceipt.id))}
-        />
-      )}
-
-      {/* Notification full-screen sheet */}
-      {selected && (
-        <ReceiptDetailSheet
-          r={selected}
-          onClose={() => setSelected(null)}
-          onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== selected.id))}
         />
       )}
     </div>
