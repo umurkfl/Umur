@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
@@ -259,63 +259,54 @@ function HelpfulButton({ receiptId }: { receiptId: string }) {
   );
 }
 
+// ─── Photo lightbox ──────────────────────────────────────────────────────────
+
+function PhotoLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    function handler(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <button
+        className="absolute top-4 right-4 w-9 h-9 bg-white/10 rounded-full flex items-center justify-center active:bg-white/20"
+        onClick={onClose}
+        aria-label="Kapat"
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-full max-h-full object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
 // ─── Receipt detail sheet ────────────────────────────────────────────────────
 
 function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () => void; onDelete?: () => void }) {
   const { user } = useAuth();
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const startYRef = useRef(0);
-  const isDismissRef = useRef(false);
-  const dragRef = useRef(0);
-
-  function onTouchStart(e: React.TouchEvent) {
-    startYRef.current = e.touches[0].clientY;
-    isDismissRef.current = (sheetRef.current?.scrollTop ?? 0) === 0;
-    dragRef.current = 0;
-    if (sheetRef.current) sheetRef.current.style.transition = "none";
-  }
-  function onTouchMove(e: React.TouchEvent) {
-    if (!isDismissRef.current) return;
-    const delta = e.touches[0].clientY - startYRef.current;
-    if (delta > 0) {
-      dragRef.current = delta;
-      if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`;
-    } else {
-      isDismissRef.current = false;
-    }
-  }
-  function onTouchEnd() {
-    const drag = dragRef.current;
-    dragRef.current = 0;
-    isDismissRef.current = false;
-    if (!sheetRef.current) return;
-    if (drag > 120) {
-      sheetRef.current.style.transition = "transform 0.22s ease";
-      sheetRef.current.style.transform = "translateY(100%)";
-      setTimeout(onClose, 220);
-    } else {
-      sheetRef.current.style.transition = "transform 0.22s ease";
-      sheetRef.current.style.transform = "translateY(0)";
-    }
-  }
-
-  async function handleDelete() {
-    await store.deleteReceipt(r.id);
-    onClose();
-    onDelete?.();
-  }
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    // Entry animation: slide up from off-screen
-    const el = sheetRef.current;
+    const el = pageRef.current;
     if (el) {
       el.style.transform = "translateY(100%)";
       el.style.transition = "none";
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        el.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
+        el.style.transition = "transform 0.28s cubic-bezier(0.32,0.72,0,1)";
         el.style.transform = "translateY(0)";
       }));
     }
@@ -332,104 +323,134 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
     });
   }, [user, r.userId]);
 
+  async function handleDelete() {
+    await store.deleteReceipt(r.id);
+    onClose();
+    onDelete?.();
+  }
+
   async function addFriend() {
     if (!user) return;
     await store.sendFriendRequest(user.id, user.name, r.userId, r.userName);
     setFriendStatus("pending");
   }
 
+  function handleClose() {
+    const el = pageRef.current;
+    if (el) {
+      el.style.transition = "transform 0.24s cubic-bezier(0.32,0.72,0,1)";
+      el.style.transform = "translateY(100%)";
+      setTimeout(onClose, 240);
+    } else {
+      onClose();
+    }
+  }
+
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
       <div
-        ref={sheetRef}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] min-h-[40vh] overflow-y-auto"
+        ref={pageRef}
+        className="fixed inset-0 z-50 bg-surface flex flex-col"
       >
-        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
-          <div className="w-10 h-1 bg-border rounded-full" />
-        </div>
-
-        {r.photo && (
-          <div className="bg-dark">
-            <img src={r.photo} alt={r.restaurantName} className="w-full max-h-72 object-contain" />
-          </div>
-        )}
-
-        <div className="px-4 pt-3 pb-1 flex items-center justify-between gap-2">
-          <h2 className="font-bold text-charcoal text-lg flex-1 min-w-0 truncate">{r.restaurantName}</h2>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {user?.id === r.userId && (
-              confirmDelete ? (
-                <>
-                  <button onClick={handleDelete} className="text-xs font-semibold text-red-500 px-2 py-1 rounded-lg active:bg-red-50">Sil</button>
-                  <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted px-2 py-1 rounded-lg active:bg-background">İptal</button>
-                </>
-              ) : (
-                <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 flex items-center justify-center rounded-full bg-background text-muted active:bg-red-50 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )
-            )}
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-background text-muted shrink-0">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
-          <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
-              {r.userName.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-ink">{r.userName}</p>
-              <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-          </Link>
-          {user && user.id !== r.userId && (
-            <button
-              onClick={addFriend}
-              disabled={friendStatus !== "none"}
-              className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
-                friendStatus === "friend" ? "bg-primary-light text-primary" :
-                friendStatus === "pending" ? "bg-background border border-border text-muted" :
-                "bg-primary text-white active:scale-95"
-              }`}
-            >
-              {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
-            </button>
+        {/* Header */}
+        <div className="flex items-center gap-2 px-3 h-14 border-b border-border bg-surface shrink-0">
+          <button
+            onClick={handleClose}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-background text-muted active:bg-border transition-colors shrink-0"
+            aria-label="Geri"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <h2 className="flex-1 font-bold text-charcoal text-base truncate">{r.restaurantName}</h2>
+          {user?.id === r.userId && (
+            confirmDelete ? (
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={handleDelete} className="text-xs font-semibold text-red-500 px-2 py-1 rounded-lg active:bg-red-50">Sil</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted px-2 py-1 rounded-lg active:bg-background">İptal</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-background text-muted active:bg-red-50 transition-colors shrink-0"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )
           )}
         </div>
 
-        <div className="px-4 py-3 flex items-center gap-4 border-b border-border/40">
-          <div className="bg-primary-light rounded-xl px-4 py-2">
-            <p className="text-xl font-bold text-primary leading-none">{formatCurrency(r.perPerson)}</p>
-            <p className="text-[10px] text-primary/70 mt-0.5">kişi başı</p>
-          </div>
-          <p className="text-sm text-muted">Toplam: <span className="font-semibold text-ink">{formatCurrency(r.total)}</span></p>
-        </div>
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Photo */}
+          {r.photo && (
+            <button
+              onClick={() => setPhotoOpen(true)}
+              className="block w-full bg-black"
+              aria-label="Fotoğrafı büyüt"
+            >
+              <img src={r.photo} alt={r.restaurantName} className="w-full max-h-72 object-contain" />
+            </button>
+          )}
 
-        {(r.rating > 0 || r.comment) && (
-          <div className="px-4 py-3 border-b border-border/40 space-y-1.5">
-            {r.rating > 0 && (
-              <div className="flex gap-0.5">
-                {[1,2,3,4,5].map((s) => (
-                  <Star key={s} className={`w-4 h-4 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
-                ))}
+          {/* User row */}
+          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
+            <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} onClick={handleClose} className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                {r.userName.charAt(0).toUpperCase()}
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-ink">{r.userName}</p>
+                <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+            </Link>
+            {user && user.id !== r.userId && (
+              <button
+                onClick={addFriend}
+                disabled={friendStatus !== "none"}
+                className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+                  friendStatus === "friend" ? "bg-primary-light text-primary" :
+                  friendStatus === "pending" ? "bg-background border border-border text-muted" :
+                  "bg-primary text-white active:scale-95"
+                }`}
+              >
+                {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
+              </button>
             )}
-            {r.comment && <p className="text-sm text-ink">{r.comment}</p>}
           </div>
-        )}
 
-        <div className="pb-8">
-          <CommentSection receiptId={r.id} inline />
+          {/* Price */}
+          <div className="px-4 py-3 flex items-center gap-4 border-b border-border/40">
+            <div className="bg-primary-light rounded-xl px-4 py-2">
+              <p className="text-xl font-bold text-primary leading-none">{formatCurrency(r.perPerson)}</p>
+              <p className="text-[10px] text-primary/70 mt-0.5">kişi başı</p>
+            </div>
+            <p className="text-sm text-muted">Toplam: <span className="font-semibold text-ink">{formatCurrency(r.total)}</span></p>
+          </div>
+
+          {/* Rating + comment */}
+          {(r.rating > 0 || r.comment) && (
+            <div className="px-4 py-3 border-b border-border/40 space-y-1.5">
+              {r.rating > 0 && (
+                <div className="flex gap-0.5">
+                  {[1,2,3,4,5].map((s) => (
+                    <Star key={s} className={`w-4 h-4 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+                  ))}
+                </div>
+              )}
+              {r.comment && <p className="text-sm text-ink">{r.comment}</p>}
+            </div>
+          )}
+
+          <div className="pb-8">
+            <CommentSection receiptId={r.id} inline />
+          </div>
         </div>
       </div>
+
+      {photoOpen && r.photo && (
+        <PhotoLightbox src={r.photo} alt={r.restaurantName} onClose={() => setPhotoOpen(false)} />
+      )}
     </>
   );
 }
