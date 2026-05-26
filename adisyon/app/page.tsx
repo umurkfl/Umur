@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
+import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight, MessageCircle } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -66,14 +66,19 @@ function ReactionBar({ commentId }: { commentId: string }) {
 
 // ─── Comment section ─────────────────────────────────────────────────────────
 
-export function CommentSection({ receiptId, inline = false }: { receiptId: string; inline?: boolean }) {
+export function CommentSection({ receiptId, inline = false, autoFocus = false }: { receiptId: string; inline?: boolean; autoFocus?: boolean }) {
   const { user } = useAuth();
   const [comments, setComments] = useState<StoredComment[]>([]);
   const [text, setText] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { store.getComments(receiptId).then(setComments); }, [receiptId]);
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current) inputRef.current.focus();
+  }, [autoFocus]);
 
   async function send() {
     if (!user || !text.trim()) return;
@@ -141,6 +146,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
             <Avatar name={user.name} photo={user.avatar} size="sm" />
             <div className="flex-1 flex gap-2 bg-background rounded-full px-3 py-1.5 border border-border">
               <input
+                ref={inputRef}
                 type="text" value={text} onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
                 placeholder="Yorum ekle..."
@@ -287,6 +293,254 @@ function PhotoLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
         onClick={(e) => e.stopPropagation()}
       />
     </div>
+  );
+}
+
+// ─── Receipt popup (feed card) ───────────────────────────────────────────────
+
+function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () => void; onDelete?: () => void }) {
+  const { user } = useAuth();
+  const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [focusComment, setFocusComment] = useState(false);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    const card = cardRef.current;
+    const backdrop = backdropRef.current;
+    if (card && backdrop) {
+      backdrop.style.opacity = "0";
+      card.style.transform = "scale(0.93) translateY(20px)";
+      card.style.opacity = "0";
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        backdrop.style.transition = "opacity 0.22s ease";
+        backdrop.style.opacity = "1";
+        card.style.transition = "transform 0.35s cubic-bezier(0.34,1.15,0.64,1), opacity 0.22s ease";
+        card.style.transform = "scale(1) translateY(0)";
+        card.style.opacity = "1";
+      }));
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  useEffect(() => {
+    if (!user || user.id === r.userId) return;
+    store.getFriendships(user.id).then((fs) => {
+      const match = fs.find((f) => (f.userId === user.id && f.friendId === r.userId) || (f.userId === r.userId && f.friendId === user.id));
+      if (!match) setFriendStatus("none");
+      else if (match.status === "accepted") setFriendStatus("friend");
+      else setFriendStatus("pending");
+    });
+  }, [user, r.userId]);
+
+  function handleClose() {
+    const card = cardRef.current;
+    const backdrop = backdropRef.current;
+    if (card && backdrop) {
+      card.style.transition = "transform 0.2s ease, opacity 0.2s ease";
+      card.style.transform = "scale(0.95) translateY(10px)";
+      card.style.opacity = "0";
+      backdrop.style.transition = "opacity 0.2s ease";
+      backdrop.style.opacity = "0";
+      setTimeout(onClose, 200);
+    } else {
+      onClose();
+    }
+  }
+
+  async function handleDelete() {
+    await store.deleteReceipt(r.id);
+    handleClose();
+    onDelete?.();
+  }
+
+  async function addFriend() {
+    if (!user) return;
+    await store.sendFriendRequest(user.id, user.name, r.userId, r.userName);
+    setFriendStatus("pending");
+  }
+
+  function handleCommentClick() {
+    setFocusComment(true);
+    setTimeout(() => {
+      contentRef.current?.scrollTo({ top: contentRef.current.scrollHeight, behavior: "smooth" });
+    }, 60);
+  }
+
+  return (
+    <>
+      {/* Blurred backdrop */}
+      <div
+        ref={backdropRef}
+        className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+
+      {/* Centered card (pointer-events-none on wrapper so padding area hits backdrop) */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div
+          ref={cardRef}
+          className="w-full max-w-sm bg-surface rounded-3xl shadow-2xl overflow-hidden pointer-events-auto flex flex-col"
+          style={{ maxHeight: "88vh" }}
+        >
+          {/* ── Photo header ── */}
+          {r.photo ? (
+            <div className="relative flex-shrink-0">
+              <button onClick={() => setPhotoOpen(true)} className="block w-full">
+                <img
+                  src={r.photo}
+                  alt={r.restaurantName}
+                  className="w-full object-cover"
+                  style={{ maxHeight: 220 }}
+                />
+              </button>
+              {/* gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
+              {/* close button */}
+              <button
+                onClick={handleClose}
+                className="absolute top-3 right-3 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:bg-black/50 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              {/* restaurant name on photo */}
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pointer-events-none">
+                <h2 className="text-white font-bold text-xl leading-tight drop-shadow-lg">{r.restaurantName}</h2>
+                {(r.district || r.city) && (
+                  <p className="text-white/75 text-xs mt-0.5 flex items-center gap-1">
+                    <PinIcon className="w-2 h-2.5 shrink-0" />
+                    {[r.district, r.city].filter(Boolean).join(", ")}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* ── No-photo header ── */
+            <div className="flex items-start gap-2 px-4 pt-4 pb-3">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-xl text-charcoal leading-tight">{r.restaurantName}</h2>
+                {(r.district || r.city) && (
+                  <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                    <PinIcon className="w-2 h-2.5 shrink-0" />
+                    {[r.district, r.city].filter(Boolean).join(", ")}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleClose}
+                className="w-8 h-8 bg-background rounded-full flex items-center justify-center text-muted shrink-0 active:bg-border transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ── Scrollable body ── */}
+          <div ref={contentRef} className="flex-1 overflow-y-auto">
+
+            {/* User row */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40">
+              <Link
+                href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`}
+                onClick={handleClose}
+                className="flex items-center gap-2.5 flex-1 min-w-0"
+              >
+                <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                  {r.userName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-ink">{r.userName}</p>
+                  <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted shrink-0" />
+              </Link>
+              {user && user.id !== r.userId && (
+                <button
+                  onClick={addFriend}
+                  disabled={friendStatus !== "none"}
+                  className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+                    friendStatus === "friend" ? "bg-primary-light text-primary" :
+                    friendStatus === "pending" ? "bg-background border border-border text-muted" :
+                    "bg-primary text-white active:scale-95"
+                  }`}
+                >
+                  {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
+                </button>
+              )}
+            </div>
+
+            {/* Price card */}
+            <div className="mx-4 my-4">
+              <div className="rounded-2xl px-5 py-4 flex items-center justify-between text-white shadow-lg" style={{ background: "linear-gradient(135deg, var(--color-primary) 0%, #059669 100%)" }}>
+                <div>
+                  <p className="text-[10px] font-semibold text-white/60 uppercase tracking-widest">Kişi başı</p>
+                  <p className="text-[34px] font-black leading-none mt-1 tracking-tight">{formatCurrency(r.perPerson)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-white/60 uppercase tracking-widest">Toplam</p>
+                  <p className="text-xl font-bold mt-1">{formatCurrency(r.total)}</p>
+                  <p className="text-[10px] text-white/50 mt-0.5">{r.people} kişi</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Rating + review */}
+            {(r.rating > 0 || r.comment) && (
+              <div className="px-4 pb-3 space-y-1.5">
+                {r.rating > 0 && (
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map((s) => (
+                      <Star key={s} className={`w-4 h-4 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+                    ))}
+                  </div>
+                )}
+                {r.comment && <p className="text-sm text-ink leading-relaxed">{r.comment}</p>}
+              </div>
+            )}
+
+            {/* Comment section */}
+            <div className="border-t border-border/40">
+              <CommentSection receiptId={r.id} inline autoFocus={focusComment} />
+            </div>
+          </div>
+
+          {/* ── Action bubbles footer ── */}
+          <div className="flex items-center gap-2 px-4 py-3 border-t border-border/40 bg-surface shrink-0">
+            <HelpfulButton receiptId={r.id} />
+            <button
+              onClick={handleCommentClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 active:bg-primary-light active:text-primary active:border-primary transition-all"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Yorum
+            </button>
+            <div className="ml-auto flex items-center gap-1.5">
+              <WishlistButton restaurantName={r.restaurantName} size="sm" />
+              {user?.id === r.userId && (
+                confirmDelete ? (
+                  <>
+                    <button onClick={handleDelete} className="text-xs font-semibold text-red-500 px-2 py-1 active:opacity-70">Sil</button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted px-2 py-1 active:opacity-70">İptal</button>
+                  </>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 flex items-center justify-center rounded-full text-muted active:bg-red-50 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {photoOpen && r.photo && (
+        <PhotoLightbox src={r.photo} alt={r.restaurantName} onClose={() => setPhotoOpen(false)} />
+      )}
+    </>
   );
 }
 
@@ -466,47 +720,73 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
     onDelete?.();
   }
 
+  function handleCardClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest("button, a, input, textarea")) return;
+    onOpen();
+  }
+
   return (
-    <article className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-      {/* Fiyat + meta */}
-      <div className="px-4 pt-3.5 pb-1 flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <Link href={`/restaurants?name=${encodeURIComponent(r.restaurantName)}`} onClick={(e) => e.stopPropagation()} className="font-bold text-charcoal text-base leading-tight truncate block hover:text-primary transition-colors">{r.restaurantName}</Link>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-              <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                {r.userName.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-xs text-primary font-medium">{r.userName}</span>
-            </Link>
-            <span className="text-border text-xs">·</span>
-            <span className="text-xs text-muted">{timeAgo(r.createdAt)}</span>
-            <span className="text-border text-xs">·</span>
-            <span className="text-xs text-muted">{r.people} kişi</span>
-            {(r.city || r.district) && (
-              <>
-                <span className="text-border text-xs">·</span>
-                <span className="text-xs text-muted flex items-center gap-0.5">
-                  <PinIcon className="w-2 h-2.5 shrink-0" />
-                  {[r.district, r.city].filter(Boolean).join(", ")}
-                </span>
-              </>
-            )}
+    <article
+      className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden cursor-pointer"
+      onClick={handleCardClick}
+    >
+      {/* Fotoğraf önizlemesi */}
+      {r.photo && (
+        <div className="relative" onClick={onOpen}>
+          <img src={r.photo} alt={r.restaurantName} className="w-full max-h-48 object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
+            <p className="text-white font-bold text-base drop-shadow leading-tight truncate">{r.restaurantName}</p>
+            <div className="bg-primary rounded-xl px-2.5 py-1 shrink-0 ml-2">
+              <p className="text-white text-sm font-bold leading-none">{formatCurrency(r.perPerson)}</p>
+              <p className="text-white/70 text-[9px] mt-0.5">kişi başı</p>
+            </div>
           </div>
         </div>
-        {/* Fiyat etiketi */}
-        <div className="shrink-0 text-right">
-          <div className="bg-primary-light rounded-xl px-3 py-1.5">
-            <p className="text-lg font-bold text-primary leading-none">{formatCurrency(r.perPerson)}</p>
-            <p className="text-[10px] text-primary/70 mt-0.5">kişi başı</p>
+      )}
+
+      {/* Fiyat + meta (fotoğraf yoksa) */}
+      {!r.photo && (
+        <div className="px-4 pt-3.5 pb-1 flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <Link href={`/restaurants?name=${encodeURIComponent(r.restaurantName)}`} className="font-bold text-charcoal text-base leading-tight truncate block hover:text-primary transition-colors">{r.restaurantName}</Link>
           </div>
-          <p className="text-[10px] text-muted mt-1">toplam {formatCurrency(r.total)}</p>
+          <div className="shrink-0 text-right">
+            <div className="bg-primary-light rounded-xl px-3 py-1.5">
+              <p className="text-lg font-bold text-primary leading-none">{formatCurrency(r.perPerson)}</p>
+              <p className="text-[10px] text-primary/70 mt-0.5">kişi başı</p>
+            </div>
+            <p className="text-[10px] text-muted mt-1">toplam {formatCurrency(r.total)}</p>
+          </div>
         </div>
+      )}
+
+      {/* Meta satırı */}
+      <div className="flex items-center gap-2 px-4 py-1.5 flex-wrap">
+        <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="flex items-center gap-1.5">
+          <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+            {r.userName.charAt(0).toUpperCase()}
+          </div>
+          <span className="text-xs text-primary font-medium">{r.userName}</span>
+        </Link>
+        <span className="text-border text-xs">·</span>
+        <span className="text-xs text-muted">{timeAgo(r.createdAt)}</span>
+        <span className="text-border text-xs">·</span>
+        <span className="text-xs text-muted">{r.people} kişi</span>
+        {(r.city || r.district) && (
+          <>
+            <span className="text-border text-xs">·</span>
+            <span className="text-xs text-muted flex items-center gap-0.5">
+              <PinIcon className="w-2 h-2.5 shrink-0" />
+              {[r.district, r.city].filter(Boolean).join(", ")}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Puan + yorum */}
       {(r.rating > 0 || r.comment) && (
-        <div className="px-4 py-2 space-y-1">
+        <div className="px-4 py-1.5 space-y-1">
           {r.rating > 0 && (
             <div className="flex gap-0.5">
               {[1,2,3,4,5].map((s) => (
@@ -514,23 +794,13 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
               ))}
             </div>
           )}
-          {r.comment && (
-            <p className="text-sm text-ink leading-snug">{r.comment}</p>
-          )}
+          {r.comment && <p className="text-sm text-ink leading-snug">{r.comment}</p>}
         </div>
       )}
 
       {/* Aksiyonlar */}
       <div className="px-4 py-2.5 flex items-center gap-2 border-t border-border/60">
         <HelpfulButton receiptId={r.id} />
-        {r.photo && (
-          <button
-            onClick={onOpen}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 transition-all"
-          >
-            📷 Fotoğraf
-          </button>
-        )}
         <div className="ml-auto flex items-center gap-2">
           <WishlistButton restaurantName={r.restaurantName} size="sm" />
           {user?.id === r.userId && (
@@ -559,7 +829,8 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
 export default function HomePage() {
   const { user, ready } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
-  const [selected, setSelected] = useState<StoredReceipt | null>(null);
+  const [selected, setSelected] = useState<StoredReceipt | null>(null);   // bildirimden açılan → full-screen
+  const [popupReceipt, setPopupReceipt] = useState<StoredReceipt | null>(null); // kart tıklanınca → popup
 
   useEffect(() => {
     if (!ready) return;
@@ -618,7 +889,7 @@ export default function HomePage() {
             {userReceipts.slice(0, 20).map((r) => (
               <UserReceiptCard
                 key={r.id} r={r}
-                onOpen={() => setSelected(r)}
+                onOpen={() => setPopupReceipt(r)}
                 onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== r.id))}
               />
             ))}
@@ -626,6 +897,16 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* Feed card popup */}
+      {popupReceipt && (
+        <ReceiptPopup
+          r={popupReceipt}
+          onClose={() => setPopupReceipt(null)}
+          onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== popupReceipt.id))}
+        />
+      )}
+
+      {/* Notification full-screen sheet */}
       {selected && (
         <ReceiptDetailSheet
           r={selected}
