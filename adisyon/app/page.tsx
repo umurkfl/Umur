@@ -97,7 +97,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
 
   if (inline) {
     return (
-      <div className="px-3 pb-3 space-y-1.5">
+      <div className="px-3 pt-3 pb-3 space-y-2">
         {/* Comments */}
         {comments.length > 2 && !showAll && (
           <button onClick={() => setShowAll(true)} className="text-xs text-muted font-semibold">
@@ -137,7 +137,7 @@ export function CommentSection({ receiptId, inline = false }: { receiptId: strin
 
         {/* Input */}
         {user ? (
-          <div className="flex gap-2 items-center pt-1">
+          <div className="flex gap-2 items-center pt-2">
             <Avatar name={user.name} photo={user.avatar} size="sm" />
             <div className="flex-1 flex gap-2 bg-background rounded-full px-3 py-1.5 border border-border">
               <input
