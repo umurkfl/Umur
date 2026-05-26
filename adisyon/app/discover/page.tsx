@@ -31,7 +31,13 @@ function PhotoLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center" onClick={onClose}>
-      <img src={src} alt="" className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
+      <img src={src} alt="" className="w-full h-full object-contain" />
+      <button
+        className="absolute top-5 right-5 w-9 h-9 rounded-full bg-black/50 flex items-center justify-center"
+        onClick={onClose}
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
     </div>
   );
 }
