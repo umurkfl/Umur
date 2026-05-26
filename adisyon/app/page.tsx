@@ -309,6 +309,16 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    // Entry animation: slide up from off-screen
+    const el = sheetRef.current;
+    if (el) {
+      el.style.transform = "translateY(100%)";
+      el.style.transition = "none";
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
+        el.style.transform = "translateY(0)";
+      }));
+    }
     return () => { document.body.style.overflow = ""; };
   }, []);
 
@@ -336,7 +346,7 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] min-h-[40vh] overflow-y-auto"
       >
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
           <div className="w-10 h-1 bg-border rounded-full" />
