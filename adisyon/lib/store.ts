@@ -36,6 +36,7 @@ export interface StoredComment {
   receiptId: string;
   text: string;
   createdAt: string;
+  parentId?: string | null;
 }
 
 export interface CommentReaction {
@@ -126,7 +127,7 @@ function rowToReceipt(r: Row): StoredReceipt {
   return { id: r.id as string, userId: r.user_id as string, userName: r.user_name as string, restaurantName: r.restaurant_name as string, total: r.total as number, people: r.people as number, perPerson: r.per_person as number, rating: r.rating as number, comment: r.comment as string, photo: (r.photo as string) ?? "", createdAt: r.created_at as string, city: (r.city as string) || undefined, district: (r.district as string) || undefined, lat: r.lat != null ? Number(r.lat) : undefined, lng: r.lng != null ? Number(r.lng) : undefined };
 }
 function rowToComment(c: Row): StoredComment {
-  return { id: c.id as string, userId: c.user_id as string, userName: c.user_name as string, userAvatar: (c.user_avatar as string) ?? "", receiptId: c.receipt_id as string, text: c.text as string, createdAt: c.created_at as string };
+  return { id: c.id as string, userId: c.user_id as string, userName: c.user_name as string, userAvatar: (c.user_avatar as string) ?? "", receiptId: c.receipt_id as string, text: c.text as string, createdAt: c.created_at as string, parentId: (c.parent_id as string) ?? null };
 }
 function rowToReaction(r: Row): CommentReaction {
   return { id: r.id as string, userId: r.user_id as string, commentId: r.comment_id as string, reaction: r.reaction as "like" | "dislike" };
@@ -368,10 +369,17 @@ export const store = {
   },
   async addComment(c: StoredComment): Promise<void> {
     if (supabase) {
-      await supabase.from("comments").insert({
+      const row: Record<string, unknown> = {
         id: c.id, user_id: c.userId, user_name: c.userName, user_avatar: c.userAvatar,
         receipt_id: c.receiptId, text: c.text, created_at: c.createdAt,
-      });
+      };
+      if (c.parentId) row.parent_id = c.parentId;
+      const { error } = await supabase.from("comments").insert(row);
+      // If parent_id column doesn't exist yet, retry without it
+      if (error && c.parentId) {
+        delete row.parent_id;
+        await supabase.from("comments").insert(row);
+      }
       // Notify receipt owner (fire-and-forget)
       (async () => {
         try {
