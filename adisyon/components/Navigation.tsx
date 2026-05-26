@@ -35,11 +35,13 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
 
   const openReceipt = useCallback((receiptId: string) => {
     if (!receiptId) { onClose(); return; }
+    // Always write to sessionStorage as fallback for page navigations
+    sessionStorage.setItem("adisyon_open_receipt", receiptId);
     onClose();
     if (pathname === "/") {
+      // Already on home page — fire the event so the handler picks it up immediately
       window.dispatchEvent(new CustomEvent("adisyon:open-receipt", { detail: receiptId }));
     } else {
-      sessionStorage.setItem("adisyon_open_receipt", receiptId);
       router.push("/");
     }
   }, [pathname, router, onClose]);

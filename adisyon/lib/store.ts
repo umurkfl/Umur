@@ -281,6 +281,13 @@ export const store = {
       return base64;
     }
   },
+  async getReceiptById(id: string): Promise<StoredReceipt | null> {
+    if (supabase) {
+      const { data } = await supabase.from("receipts").select("*").eq("id", id).maybeSingle();
+      if (data) return rowToReceipt(data);
+    }
+    return lsRead<StoredReceipt[]>(K.receipts, []).find((r) => r.id === id) ?? null;
+  },
   async getReceipts(): Promise<StoredReceipt[]> {
     if (supabase) {
       const { data, error } = await supabase.from("receipts").select("*").order("created_at", { ascending: false }).limit(50);
