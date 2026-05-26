@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, Star, SlidersHorizontal, X, Bookmark, Layers } from "lucide-react";
+import { Search, Star, SlidersHorizontal, X, Bookmark, Layers, ChevronLeft, ChevronRight, MoveHorizontal } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, WishlistList } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
@@ -24,12 +24,13 @@ function PinIcon({ className }: { className?: string }) {
 // ─── Swipe mode ───────────────────────────────────────────────────────────────
 
 function SwipeCard({
-  receipt, isTop, onSwipeLeft, onSwipeRight,
+  receipt, isTop, onSwipeLeft, onSwipeRight, onTap,
 }: {
   receipt: StoredReceipt;
   isTop: boolean;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
+  onTap?: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const saveOverlayRef = useRef<HTMLDivElement>(null);
@@ -100,6 +101,7 @@ function SwipeCard({
       card.style.transform = "translateX(0) rotate(0deg)";
       if (saveOverlayRef.current) { saveOverlayRef.current.style.transition = "opacity 0.2s"; saveOverlayRef.current.style.opacity = "0"; }
       if (passOverlayRef.current) { passOverlayRef.current.style.transition = "opacity 0.2s"; passOverlayRef.current.style.opacity = "0"; }
+      if (Math.abs(dx) < 10) onTap?.();
     }
   }
 
@@ -210,6 +212,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
   const { user } = useAuth();
   const [index, setIndex] = useState(0);
   const [lastAction, setLastAction] = useState<"save" | "pass" | null>(null);
+  const [tappedReceipt, setTappedReceipt] = useState<StoredReceipt | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const current = receipts[index];
@@ -277,12 +280,15 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
     <div className="flex flex-col">
       {/* Hint bar */}
       <div className="flex items-center justify-between px-2 mb-3">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
-          <span className="text-base">←</span> GEÇ
+        <div className="flex items-center gap-0.5 text-xs font-semibold text-red-400">
+          <ChevronLeft className="w-4 h-4" /> GEÇ
         </div>
-        <span className="text-xs text-muted tabular-nums">{index + 1} / {receipts.length}</span>
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-          KAYDET <span className="text-base">→</span>
+        <div className="flex flex-col items-center gap-0.5">
+          <MoveHorizontal className="w-4 h-4 text-muted" />
+          <span className="text-[10px] text-muted tabular-nums">{index + 1} / {receipts.length}</span>
+        </div>
+        <div className="flex items-center gap-0.5 text-xs font-semibold text-primary">
+          KAYDET <ChevronRight className="w-4 h-4" />
         </div>
       </div>
 
@@ -298,6 +304,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
             isTop
             onSwipeLeft={handleSwipeRight}
             onSwipeRight={handleSwipeLeft}
+            onTap={() => setTappedReceipt(current)}
           />
         )}
       </div>
@@ -331,6 +338,12 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
         >
           {lastAction === "save" ? "🔖 Keşfetten Gelenler'e eklendi" : "✕ Geçildi"}
         </div>
+      )}
+
+      {tappedReceipt && (
+        <ReceiptModal receipt={tappedReceipt} onClose={() => setTappedReceipt(null)}>
+          <CommentSection receiptId={tappedReceipt.id} />
+        </ReceiptModal>
       )}
     </div>
   );
