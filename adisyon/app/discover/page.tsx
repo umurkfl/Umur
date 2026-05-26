@@ -210,7 +210,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
   const { user } = useAuth();
   const [index, setIndex] = useState(0);
   const [lastAction, setLastAction] = useState<"save" | "pass" | null>(null);
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout>>();
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const current = receipts[index];
   const next = receipts[index + 1];
