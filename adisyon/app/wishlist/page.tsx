@@ -126,13 +126,12 @@ function ListSection({
                   <MapPin className="w-4 h-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  {item.restaurantSlug ? (
-                    <Link href={`/restaurants/${item.restaurantSlug}`} className="font-medium text-sm text-charcoal hover:text-primary truncate block">
-                      {item.restaurantName}
-                    </Link>
-                  ) : (
-                    <p className="font-medium text-sm text-charcoal truncate">{item.restaurantName}</p>
-                  )}
+                  <Link
+                    href={item.restaurantSlug ? `/restaurants/${item.restaurantSlug}` : `/discover?q=${encodeURIComponent(item.restaurantName)}`}
+                    className="font-medium text-sm text-charcoal hover:text-primary truncate block"
+                  >
+                    {item.restaurantName}
+                  </Link>
                   <p className="text-xs text-muted mt-0.5">{timeAgo(item.addedAt)} eklendi</p>
                 </div>
                 <button

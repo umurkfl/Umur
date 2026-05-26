@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Search, Star, SlidersHorizontal, X } from "lucide-react";
 import { formatCurrency } from "@/lib/mock";
@@ -133,7 +134,8 @@ function FilterPill({
 
 export default function DiscoverPage() {
   const { user, ready } = useAuth();
-  const [q, setQ] = useState("");
+  const searchParams = useSearchParams();
+  const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const [sort, setSort] = useState("count");
   const [city, setCity] = useState("");
   const [district, setDistrict] = useState("");
