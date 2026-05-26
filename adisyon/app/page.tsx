@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Camera, Receipt, Send, Star, ThumbsUp, ThumbsDown, Trash2, X, ChevronRight } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
@@ -265,6 +265,26 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
   const { user } = useAuth();
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startYRef = useRef<number>(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  function onTouchStart(e: React.TouchEvent) {
+    startYRef.current = e.touches[0].clientY;
+    setDragging(true);
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    const delta = e.touches[0].clientY - startYRef.current;
+    const scrollTop = sheetRef.current?.scrollTop ?? 0;
+    if (delta > 0 && scrollTop === 0) setDragY(delta);
+    else setDragY(0);
+  }
+  function onTouchEnd() {
+    setDragging(false);
+    if (dragY > 120) onClose();
+    else setDragY(0);
+  }
 
   async function handleDelete() {
     await store.deleteReceipt(r.id);
@@ -296,7 +316,14 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] overflow-y-auto">
+      <div
+        ref={sheetRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateY(${dragY}px)`, transition: dragging ? "none" : "transform 0.25s ease" }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
           <div className="w-10 h-1 bg-border rounded-full" />
         </div>
