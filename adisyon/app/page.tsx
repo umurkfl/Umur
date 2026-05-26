@@ -133,24 +133,28 @@ export function CommentSection({ receiptId, inline = false, autoFocus = false }:
     const replies = repliesMap.get(c.id) ?? [];
     const repliesExpanded = expandedReplies.has(c.id);
     return (
-      <div className={isReply ? "ml-8" : ""}>
+      <div>
         <div className="flex gap-2 items-start">
+          {/* Avatar — smaller for replies */}
           <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="shrink-0 mt-0.5">
-            <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+            {isReply
+              ? (c.userAvatar
+                  ? <img src={c.userAvatar} className="w-5 h-5 rounded-full object-cover" alt={c.userName} />
+                  : <div className="w-5 h-5 bg-border rounded-full flex items-center justify-center text-[9px] font-bold text-muted">{c.userName.charAt(0).toUpperCase()}</div>
+                )
+              : <Avatar name={c.userName} photo={c.userAvatar} size="sm" />
+            }
           </Link>
           <div className="flex-1 min-w-0">
-            <p className="text-xs leading-snug">
-              <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className="font-semibold text-charcoal hover:underline">{c.userName}</Link>
+            <p className={`leading-snug ${isReply ? "text-[11px]" : "text-xs"}`}>
+              <Link href={`/users?id=${c.userId}&n=${encodeURIComponent(c.userName)}`} className={`font-semibold hover:underline ${isReply ? "text-muted" : "text-charcoal"}`}>{c.userName}</Link>
               {" "}<span className="text-ink">{c.text}</span>
             </p>
             <div className="flex items-center gap-3 mt-0.5 flex-wrap">
               <span className="text-[10px] text-muted">{timeAgo(c.createdAt)}</span>
-              <ReactionBar commentId={c.id} />
+              {!isReply && <ReactionBar commentId={c.id} />}
               {user && !isReply && (
-                <button
-                  onClick={() => startReply(c)}
-                  className="text-[10px] font-semibold text-muted active:text-primary transition-colors"
-                >
+                <button onClick={() => startReply(c)} className="text-[10px] font-semibold text-muted active:text-primary transition-colors">
                   Yanıtla
                 </button>
               )}
@@ -167,22 +171,29 @@ export function CommentSection({ receiptId, inline = false, autoFocus = false }:
                 )
               )}
             </div>
-            {/* Replies toggle */}
-            {!isReply && replies.length > 0 && (
-              <button
-                onClick={() => toggleReplies(c.id)}
-                className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-primary active:opacity-70"
-              >
-                <span className={`inline-block transition-transform duration-150 ${repliesExpanded ? "rotate-90" : ""}`}>▶</span>
-                {repliesExpanded ? "Yanıtları gizle" : `${replies.length} yanıtı gör`}
-              </button>
-            )}
           </div>
         </div>
-        {/* Expanded replies */}
-        {!isReply && repliesExpanded && (
-          <div className="mt-2 space-y-2">
-            {replies.map((r) => <CommentRow key={r.id} c={r} isReply />)}
+
+        {/* Replies section — only on top-level */}
+        {!isReply && (replies.length > 0 || repliesExpanded) && (
+          <div className="ml-8 mt-1.5">
+            {/* Toggle button */}
+            <button
+              onClick={() => toggleReplies(c.id)}
+              className="flex items-center gap-2 text-[11px] font-semibold text-primary active:opacity-70 mb-2"
+            >
+              <span className="w-5 h-px bg-border/70 shrink-0" />
+              {repliesExpanded
+                ? "Yanıtları gizle"
+                : `${replies.length} yanıt`}
+            </button>
+
+            {/* Expanded replies with left accent line */}
+            {repliesExpanded && (
+              <div className="border-l-2 border-border/50 pl-3 space-y-2.5">
+                {replies.map((r) => <CommentRow key={r.id} c={r} isReply />)}
+              </div>
+            )}
           </div>
         )}
       </div>
