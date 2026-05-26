@@ -282,29 +282,27 @@ export function Navigation() {
           </Link>
 
           {/* Sağ: bildirim + avatar */}
-          <div className="justify-self-end flex items-center gap-1.5">
+          <div className="justify-self-end flex items-center gap-1.5 relative">
             {ready && user && (
-              <div className="relative">
-                <button
-                  onClick={() => { setNotifOpen((v) => !v); setDropdownOpen(false); }}
-                  className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-background active:bg-background transition-colors"
-                  aria-label="Bildirimler"
-                >
-                  <Bell className="w-5 h-5 text-muted" />
-                  {pendingCount > 0 && (
-                    <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center px-0.5">
-                      {pendingCount > 9 ? "9+" : pendingCount}
-                    </span>
-                  )}
-                </button>
-                {notifOpen && user && (
-                  <NotificationPanel
-                    userId={user.id}
-                    onClose={() => setNotifOpen(false)}
-                    onCountChange={setPendingCount}
-                  />
+              <button
+                onClick={() => { setNotifOpen((v) => !v); setDropdownOpen(false); }}
+                className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-background active:bg-background transition-colors"
+                aria-label="Bildirimler"
+              >
+                <Bell className="w-5 h-5 text-muted" />
+                {pendingCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+                    {pendingCount > 9 ? "9+" : pendingCount}
+                  </span>
                 )}
-              </div>
+              </button>
+            )}
+            {notifOpen && user && (
+              <NotificationPanel
+                userId={user.id}
+                onClose={() => setNotifOpen(false)}
+                onCountChange={setPendingCount}
+              />
             )}
 
             <div className="relative">
