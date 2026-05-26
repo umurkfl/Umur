@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, Star, SlidersHorizontal, X, Bookmark, Layers, ChevronLeft, ChevronRight, MoveHorizontal } from "lucide-react";
+import { Search, Star, SlidersHorizontal, X, Bookmark, Layers } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, WishlistList } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
@@ -22,6 +22,19 @@ function PinIcon({ className }: { className?: string }) {
 }
 
 // ─── Swipe mode ───────────────────────────────────────────────────────────────
+
+function PhotoLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center" onClick={onClose}>
+      <img src={src} alt="" className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
+    </div>
+  );
+}
 
 function SwipeCard({
   receipt, isTop, onSwipeLeft, onSwipeRight, onTap,
@@ -111,97 +124,75 @@ function SwipeCard({
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      className="absolute inset-0 bg-surface rounded-3xl overflow-hidden shadow-xl"
+      className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl"
       style={{
         zIndex: isTop ? 2 : 1,
-        transform: isTop ? "scale(1) translateY(0)" : "scale(0.95) translateY(10px)",
+        transform: isTop ? "scale(1) translateY(0)" : "scale(0.95) translateY(12px)",
         transition: isTop ? undefined : "transform 0.3s ease",
         userSelect: "none",
         touchAction: "pan-y",
+        background: "#111",
       }}
     >
-      {/* KAYDET overlay (sağa kaydırma) */}
-      <div
-        ref={saveOverlayRef}
-        className="absolute inset-0 z-20 rounded-3xl pointer-events-none opacity-0 flex items-start justify-start p-5"
-        style={{ background: "rgba(29,158,117,0.18)" }}
-      >
-        <div className="border-[3px] border-primary rounded-2xl px-4 py-2 rotate-12">
-          <p className="text-primary font-black text-xl tracking-wide">KAYDET</p>
-        </div>
-      </div>
-
-      {/* GEÇ overlay (sola kaydırma) */}
-      <div
-        ref={passOverlayRef}
-        className="absolute inset-0 z-20 rounded-3xl pointer-events-none opacity-0 flex items-start justify-end p-5"
-        style={{ background: "rgba(239,68,68,0.15)" }}
-      >
-        <div className="border-[3px] border-red-400 rounded-2xl px-4 py-2 -rotate-12">
-          <p className="text-red-400 font-black text-xl tracking-wide">GEÇ</p>
-        </div>
-      </div>
-
-      {/* Photo */}
+      {/* Full-bleed background */}
       {receipt.photo ? (
-        <div className="relative flex-shrink-0">
-          <img src={receipt.photo} alt={receipt.restaurantName} className="w-full object-cover" style={{ maxHeight: 220 }} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-            <h3 className="text-white font-bold text-xl leading-tight drop-shadow">{receipt.restaurantName}</h3>
-            {(receipt.district || receipt.city) && (
-              <p className="text-white/70 text-xs mt-0.5 flex items-center gap-1">
-                <PinIcon className="w-2 h-2.5 shrink-0" />
-                {[receipt.district, receipt.city].filter(Boolean).join(", ")}
-              </p>
-            )}
-          </div>
-        </div>
+        <img
+          src={receipt.photo}
+          alt={receipt.restaurantName}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       ) : (
-        <div className="px-5 pt-5 pb-3 bg-gradient-to-br from-primary/10 to-primary/5">
-          <h3 className="font-bold text-xl text-charcoal leading-tight">{receipt.restaurantName}</h3>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-emerald-900/50" />
+      )}
+
+      {/* Bottom gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+
+      {/* Swipe color washes — no text, just color */}
+      <div ref={saveOverlayRef} className="absolute inset-0 pointer-events-none opacity-0" style={{ background: "rgba(29,158,117,0.45)" }} />
+      <div ref={passOverlayRef} className="absolute inset-0 pointer-events-none opacity-0" style={{ background: "rgba(239,68,68,0.40)" }} />
+
+      {/* Info overlay */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 space-y-2 pointer-events-none">
+        {/* User row */}
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-white/25 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+            {receipt.userName.charAt(0).toUpperCase()}
+          </div>
+          <span className="text-white/80 text-xs font-medium">{receipt.userName}</span>
+          <span className="text-white/40 text-[10px]">·</span>
+          <span className="text-white/55 text-[10px]">{timeAgo(receipt.createdAt)}</span>
+        </div>
+
+        {/* Name + location */}
+        <div>
+          <h3 className="text-white font-bold text-2xl leading-tight drop-shadow">{receipt.restaurantName}</h3>
           {(receipt.district || receipt.city) && (
-            <p className="text-xs text-muted mt-1 flex items-center gap-1">
+            <p className="text-white/60 text-xs mt-0.5 flex items-center gap-1">
               <PinIcon className="w-2 h-2.5 shrink-0" />
               {[receipt.district, receipt.city].filter(Boolean).join(", ")}
             </p>
           )}
         </div>
-      )}
-
-      {/* Content */}
-      <div className="px-5 py-4 space-y-3">
-        {/* User + time */}
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-            {receipt.userName.charAt(0).toUpperCase()}
-          </div>
-          <span className="text-sm text-ink font-medium">{receipt.userName}</span>
-          <span className="text-border text-xs">·</span>
-          <span className="text-xs text-muted">{timeAgo(receipt.createdAt)}</span>
-          <span className="text-border text-xs">·</span>
-          <span className="text-xs text-muted">{receipt.people} kişi</span>
-        </div>
 
         {/* Price + rating */}
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-primary to-emerald-600 rounded-xl px-4 py-2 text-white shadow-sm">
-            <p className="text-xl font-black leading-none">{formatCurrency(receipt.perPerson)}</p>
-            <p className="text-[9px] text-white/60 mt-0.5">kişi başı</p>
+          <div className="bg-black/35 backdrop-blur-sm rounded-xl px-3 py-1.5">
+            <p className="text-white font-bold text-base leading-none">{formatCurrency(receipt.perPerson)}</p>
+            <p className="text-white/55 text-[10px] mt-0.5">kişi başı · {receipt.people} kişi</p>
           </div>
           {receipt.rating > 0 && (
             <div className="flex gap-0.5">
               {[1,2,3,4,5].map((s) => (
-                <Star key={s} className={`w-4 h-4 ${s <= receipt.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+                <Star key={s} className={`w-3.5 h-3.5 ${s <= receipt.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-white/25"}`} />
               ))}
             </div>
           )}
-          <span className="ml-auto text-xs text-muted">toplam {formatCurrency(receipt.total)}</span>
         </div>
 
         {/* Comment */}
         {receipt.comment && (
-          <p className="text-sm text-ink leading-relaxed line-clamp-2">"{receipt.comment}"</p>
+          <p className="text-white/70 text-sm leading-snug line-clamp-2">"{receipt.comment}"</p>
         )}
       </div>
     </div>
@@ -213,6 +204,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
   const [index, setIndex] = useState(0);
   const [lastAction, setLastAction] = useState<"save" | "pass" | null>(null);
   const [tappedReceipt, setTappedReceipt] = useState<StoredReceipt | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const current = receipts[index];
@@ -278,25 +270,9 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
 
   return (
     <div className="flex flex-col">
-      {/* Hint bar */}
-      <div className="flex items-center justify-between px-2 mb-3">
-        <div className="flex items-center gap-0.5 text-xs font-semibold text-red-400">
-          <ChevronLeft className="w-4 h-4" /> GEÇ
-        </div>
-        <div className="flex flex-col items-center gap-0.5">
-          <MoveHorizontal className="w-4 h-4 text-muted" />
-          <span className="text-[10px] text-muted tabular-nums">{index + 1} / {receipts.length}</span>
-        </div>
-        <div className="flex items-center gap-0.5 text-xs font-semibold text-primary">
-          KAYDET <ChevronRight className="w-4 h-4" />
-        </div>
-      </div>
-
-      {/* Card stack */}
-      <div className="relative mx-1" style={{ height: 420 }}>
-        {next && (
-          <SwipeCard key={next.id} receipt={next} isTop={false} />
-        )}
+      {/* Card stack — taller now, fills more screen */}
+      <div className="relative mx-1" style={{ height: "min(520px, calc(100svh - 195px))" }}>
+        {next && <SwipeCard key={next.id} receipt={next} isTop={false} />}
         {current && (
           <SwipeCard
             key={current.id}
@@ -304,42 +280,43 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
             isTop
             onSwipeLeft={handleSwipeRight}
             onSwipeRight={handleSwipeLeft}
-            onTap={() => setTappedReceipt(current)}
+            onTap={() => {
+              if (current.photo) setLightboxPhoto(current.photo);
+              else setTappedReceipt(current);
+            }}
           />
         )}
       </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center justify-center gap-10 mt-6">
+      {/* Action buttons — small, icon only, no labels */}
+      <div className="flex items-center justify-center gap-8 mt-4">
         <button
           onClick={handleSwipeRight}
-          className="w-16 h-16 rounded-full bg-surface border-2 border-border shadow-md flex flex-col items-center justify-center gap-0.5 active:scale-90 transition-transform"
+          className="w-11 h-11 rounded-full bg-surface border border-border shadow flex items-center justify-center active:scale-90 transition-transform"
         >
-          <X className="w-6 h-6 text-muted" />
-          <span className="text-[9px] font-bold text-muted">GEÇ</span>
+          <X className="w-5 h-5 text-muted" />
         </button>
+        <span className="text-[10px] text-muted tabular-nums">{index + 1} / {receipts.length}</span>
         <button
           onClick={handleSwipeLeft}
-          className="w-16 h-16 rounded-full bg-primary shadow-lg shadow-primary/30 flex flex-col items-center justify-center gap-0.5 active:scale-90 transition-transform"
+          className="w-11 h-11 rounded-full bg-primary shadow-md shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform"
         >
-          <Bookmark className="w-6 h-6 text-white" />
-          <span className="text-[9px] font-bold text-white">KAYDET</span>
+          <Bookmark className="w-5 h-5 text-white" />
         </button>
       </div>
 
       {/* Feedback toast */}
       {lastAction && (
         <div
-          className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg z-50 transition-all ${
-            lastAction === "save"
-              ? "bg-primary text-white"
-              : "bg-charcoal text-white"
+          className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg z-50 ${
+            lastAction === "save" ? "bg-primary text-white" : "bg-charcoal text-white"
           }`}
         >
           {lastAction === "save" ? "🔖 Keşfetten Gelenler'e eklendi" : "✕ Geçildi"}
         </div>
       )}
 
+      {lightboxPhoto && <PhotoLightbox src={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />}
       {tappedReceipt && (
         <ReceiptModal receipt={tappedReceipt} onClose={() => setTappedReceipt(null)}>
           <CommentSection receiptId={tappedReceipt.id} />
