@@ -304,6 +304,7 @@ function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [focusComment, setFocusComment] = useState(false);
+  const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -326,6 +327,10 @@ function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () 
     }
     return () => { document.body.style.overflow = ""; };
   }, []);
+
+  useEffect(() => {
+    store.getPublicAvatar(r.userId).then((a) => { if (a) setOwnerAvatar(a); });
+  }, [r.userId]);
 
   useEffect(() => {
     if (!user || user.id === r.userId) return;
@@ -449,9 +454,10 @@ function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () 
                 onClick={handleClose}
                 className="flex items-center gap-2.5 flex-1 min-w-0"
               >
-                <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                  {r.userName.charAt(0).toUpperCase()}
-                </div>
+                {ownerAvatar
+                  ? <img src={ownerAvatar} className="w-9 h-9 rounded-full object-cover shrink-0" alt={r.userName} />
+                  : <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{r.userName.charAt(0).toUpperCase()}</div>
+                }
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-ink">{r.userName}</p>
                   <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
@@ -711,7 +717,7 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
 
 // ─── Receipt card ─────────────────────────────────────────────────────────────
 
-function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: () => void; onDelete?: () => void }) {
+function UserReceiptCard({ r, userAvatar, onOpen, onDelete }: { r: StoredReceipt; userAvatar?: string | null; onOpen: () => void; onDelete?: () => void }) {
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -764,9 +770,10 @@ function UserReceiptCard({ r, onOpen, onDelete }: { r: StoredReceipt; onOpen: ()
       {/* Meta satırı */}
       <div className="flex items-center gap-2 px-4 py-1.5 flex-wrap">
         <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-            {r.userName.charAt(0).toUpperCase()}
-          </div>
+          {userAvatar
+            ? <img src={userAvatar} className="w-5 h-5 rounded-full object-cover shrink-0" alt={r.userName} />
+            : <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{r.userName.charAt(0).toUpperCase()}</div>
+          }
           <span className="text-xs text-primary font-medium">{r.userName}</span>
         </Link>
         <span className="text-border text-xs">·</span>
@@ -830,10 +837,20 @@ export default function HomePage() {
   const { user, ready } = useAuth();
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
   const [popupReceipt, setPopupReceipt] = useState<StoredReceipt | null>(null);
+  const [avatarCache, setAvatarCache] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     if (!ready) return;
-    store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
+    store.getPrivacyFilteredReceipts(user?.id).then((receipts) => {
+      setUserReceipts(receipts);
+      // Fetch avatars for unique users in the feed
+      const uniqueIds = [...new Set(receipts.map((r) => r.userId))];
+      uniqueIds.forEach((id) => {
+        store.getPublicAvatar(id).then((avatar) => {
+          if (avatar) setAvatarCache((prev) => ({ ...prev, [id]: avatar }));
+        });
+      });
+    });
   }, [ready, user?.id]);
 
   // Open a specific receipt when navigating from a notification (cross-page case)
@@ -887,6 +904,7 @@ export default function HomePage() {
             {userReceipts.slice(0, 20).map((r) => (
               <UserReceiptCard
                 key={r.id} r={r}
+                userAvatar={avatarCache[r.userId] ?? null}
                 onOpen={() => setPopupReceipt(r)}
                 onDelete={() => setUserReceipts((prev) => prev.filter((x) => x.id !== r.id))}
               />
