@@ -265,25 +265,40 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
   const { user } = useAuth();
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [dragY, setDragY] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const startYRef = useRef<number>(0);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const startYRef = useRef(0);
+  const isDismissRef = useRef(false);
+  const dragRef = useRef(0);
 
   function onTouchStart(e: React.TouchEvent) {
     startYRef.current = e.touches[0].clientY;
-    setDragging(true);
+    isDismissRef.current = (sheetRef.current?.scrollTop ?? 0) === 0;
+    dragRef.current = 0;
+    if (sheetRef.current) sheetRef.current.style.transition = "none";
   }
   function onTouchMove(e: React.TouchEvent) {
+    if (!isDismissRef.current) return;
     const delta = e.touches[0].clientY - startYRef.current;
-    const scrollTop = sheetRef.current?.scrollTop ?? 0;
-    if (delta > 0 && scrollTop === 0) setDragY(delta);
-    else setDragY(0);
+    if (delta > 0) {
+      dragRef.current = delta;
+      if (sheetRef.current) sheetRef.current.style.transform = `translateY(${delta}px)`;
+    } else {
+      isDismissRef.current = false;
+    }
   }
   function onTouchEnd() {
-    setDragging(false);
-    if (dragY > 120) onClose();
-    else setDragY(0);
+    const drag = dragRef.current;
+    dragRef.current = 0;
+    isDismissRef.current = false;
+    if (!sheetRef.current) return;
+    if (drag > 120) {
+      sheetRef.current.style.transition = "transform 0.22s ease";
+      sheetRef.current.style.transform = "translateY(100%)";
+      setTimeout(onClose, 220);
+    } else {
+      sheetRef.current.style.transition = "transform 0.22s ease";
+      sheetRef.current.style.transform = "translateY(0)";
+    }
   }
 
   async function handleDelete() {
@@ -321,7 +336,6 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
-        style={{ transform: `translateY(${dragY}px)`, transition: dragging ? "none" : "transform 0.25s ease" }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl max-h-[90vh] overflow-y-auto"
       >
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
@@ -521,11 +535,17 @@ export default function HomePage() {
     store.getPrivacyFilteredReceipts(user?.id).then(setUserReceipts);
   }, [ready, user?.id]);
 
-  // Open a specific receipt when navigating from a notification
+  // Open a specific receipt when navigating from a notification (cross-page case)
   useEffect(() => {
-    const id = sessionStorage.getItem("adisyon_open_receipt");
-    if (!id) return;
+    const raw = sessionStorage.getItem("adisyon_open_receipt");
+    if (!raw) return;
     sessionStorage.removeItem("adisyon_open_receipt");
+    try {
+      const { receipt } = JSON.parse(raw) as { id: string; receipt: StoredReceipt | null };
+      if (receipt) { setSelected(receipt); return; }
+    } catch { /* plain string fallback */ }
+    // fallback: search feed or fetch
+    const id = (() => { try { return (JSON.parse(raw) as { id: string }).id; } catch { return raw; } })();
     const cached = userReceipts.find((x) => x.id === id);
     if (cached) { setSelected(cached); return; }
     store.getReceiptById(id).then((r) => { if (r) setSelected(r); });
@@ -533,8 +553,9 @@ export default function HomePage() {
 
   useEffect(() => {
     function handler(e: Event) {
-      const id = (e as CustomEvent<string>).detail;
-      sessionStorage.removeItem("adisyon_open_receipt"); // prevent sessionStorage effect from reopening
+      const { id, receipt } = (e as CustomEvent<{ id: string; receipt: StoredReceipt | null }>).detail;
+      sessionStorage.removeItem("adisyon_open_receipt");
+      if (receipt) { setSelected(receipt); return; }
       const cached = userReceipts.find((x) => x.id === id);
       if (cached) { setSelected(cached); return; }
       store.getReceiptById(id).then((r) => { if (r) setSelected(r); });

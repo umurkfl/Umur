@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users, Bell, Check, X, Settings, MessageCircle, ThumbsUp } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { store, StoredFriendship, StoredNotification } from "@/lib/store";
+import { store, StoredFriendship, StoredNotification, StoredReceipt } from "@/lib/store";
 
 const MENU_ITEMS = [
   {
@@ -32,15 +32,16 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
+  const receiptCache = useRef<Map<string, StoredReceipt>>(new Map());
 
   const openReceipt = useCallback((receiptId: string) => {
     if (!receiptId) { onClose(); return; }
-    // Always write to sessionStorage as fallback for page navigations
-    sessionStorage.setItem("adisyon_open_receipt", receiptId);
+    const receipt = receiptCache.current.get(receiptId) ?? null;
+    const payload = JSON.stringify({ id: receiptId, receipt });
+    sessionStorage.setItem("adisyon_open_receipt", payload);
     onClose();
     if (pathname === "/") {
-      // Already on home page — fire the event so the handler picks it up immediately
-      window.dispatchEvent(new CustomEvent("adisyon:open-receipt", { detail: receiptId }));
+      window.dispatchEvent(new CustomEvent("adisyon:open-receipt", { detail: { id: receiptId, receipt } }));
     } else {
       router.push("/");
     }
@@ -62,9 +63,13 @@ function NotificationPanel({ userId, onClose, onCountChange }: {
       setRequests(fs.filter((f) => f.status === "pending" && f.friendId === userId));
       setNotifications(notifs);
       setLoading(false);
-      // Mark all as read now that panel is open
       store.markNotificationsRead(userId);
       onCountChange(fs.filter((f) => f.status === "pending" && f.friendId === userId).length);
+      // Prefetch receipts so tapping a notification opens instantly
+      const ids = [...new Set(notifs.map((n) => n.receiptId).filter(Boolean))];
+      ids.forEach((id) => {
+        store.getReceiptById(id).then((r) => { if (r) receiptCache.current.set(id, r); });
+      });
     });
   }, [userId]);
 
