@@ -507,6 +507,7 @@ export default function HomePage() {
   useEffect(() => {
     function handler(e: Event) {
       const id = (e as CustomEvent<string>).detail;
+      sessionStorage.removeItem("adisyon_open_receipt"); // prevent sessionStorage effect from reopening
       const cached = userReceipts.find((x) => x.id === id);
       if (cached) { setSelected(cached); return; }
       store.getReceiptById(id).then((r) => { if (r) setSelected(r); });
