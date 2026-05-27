@@ -772,6 +772,7 @@ function ReceiptDetailSheet({ r, onClose, onDelete }: { r: StoredReceipt; onClos
 function UserReceiptCard({ r, userAvatar, onOpen, onDelete }: { r: StoredReceipt; userAvatar?: string | null; onOpen: () => void; onDelete?: () => void }) {
   const { user } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   async function handleDelete() {
     await store.deleteReceipt(r.id);
@@ -860,6 +861,15 @@ function UserReceiptCard({ r, userAvatar, onOpen, onDelete }: { r: StoredReceipt
       {/* Aksiyonlar */}
       <div className="px-4 py-2.5 flex items-center gap-2 border-t border-border/60">
         <HelpfulButton receiptId={r.id} />
+        {user && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 transition-transform"
+          >
+            <Send className="w-3 h-3" />
+            Gönder
+          </button>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <WishlistButton restaurantName={r.restaurantName} size="sm" />
           {user?.id === r.userId && (
@@ -879,6 +889,7 @@ function UserReceiptCard({ r, userAvatar, onOpen, onDelete }: { r: StoredReceipt
 
       {/* Yorum bölümü */}
       <CommentSection receiptId={r.id} inline />
+      {shareOpen && <ShareSheet receipt={r} onClose={() => setShareOpen(false)} />}
     </article>
   );
 }

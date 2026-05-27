@@ -14,10 +14,21 @@ type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
 // ─── DM components ───────────────────────────────────────────────────────────
 
 function MessageBubble({ msg, isMine, onOpenReceipt }: { msg: StoredDirectMessage; isMine: boolean; onOpenReceipt: (id: string) => void }) {
+  const [receiptPhoto, setReceiptPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (msg.type === "receipt" && msg.receiptId) {
+      store.getReceiptById(msg.receiptId).then((r) => { if (r?.photo) setReceiptPhoto(r.photo); });
+    }
+  }, [msg.receiptId, msg.type]);
+
   if (msg.type === "receipt") {
     return (
       <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
         <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          {receiptPhoto && (
+            <img src={receiptPhoto} alt={msg.restaurantName ?? ""} className="w-full object-cover" style={{ maxHeight: 110 }} />
+          )}
           <div className="px-3 pt-2.5 pb-1.5">
             <p className="text-[10px] text-muted mb-0.5">{isMine ? "Gönderdiğin adisyon" : "Adisyon paylaştı"}</p>
             <p className="text-sm font-semibold text-charcoal">{msg.restaurantName}</p>
@@ -36,7 +47,7 @@ function MessageBubble({ msg, isMine, onOpenReceipt }: { msg: StoredDirectMessag
   return (
     <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-snug break-words ${
-        isMine ? "bg-primary text-white rounded-br-md" : "bg-background text-ink rounded-bl-md"
+        isMine ? "bg-primary text-white rounded-br-md" : "bg-surface border border-border text-ink rounded-bl-md"
       }`}>
         {msg.text}
       </div>
@@ -142,19 +153,20 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
       )}
 
       {/* Input */}
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-surface shrink-0">
+      <div className="flex items-end gap-2 px-4 py-3 border-t border-border bg-surface shrink-0">
         <input
           type="text"
           value={text}
           onChange={(e) => { setText(e.target.value); if (sendError) setSendError(null); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           placeholder="Mesaj yaz..."
-          className="flex-1 px-4 py-2.5 rounded-full border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 min-w-0 px-4 py-2.5 rounded-full border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          style={{ fontSize: 16 }}
         />
         <button
           onClick={handleSend}
           disabled={!text.trim() || sending}
-          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform"
+          className="w-10 h-10 shrink-0 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform"
         >
           <Send className="w-4 h-4 text-white" />
         </button>

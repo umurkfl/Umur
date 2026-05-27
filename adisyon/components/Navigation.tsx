@@ -246,7 +246,7 @@ export function Navigation() {
         const friendPending = fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length;
         const unreadNotifs = notifs.filter((n) => !n.read).length;
         setDmCount(dm);
-        setPendingCount(friendPending + unreadNotifs + dm);
+        setPendingCount(friendPending + unreadNotifs);
       });
     }
 
