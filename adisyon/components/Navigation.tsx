@@ -253,8 +253,10 @@ export function Navigation() {
     load();
     const interval = setInterval(load, 30_000);
     const onFocus = () => load();
+    const onDmRead = () => load();
     window.addEventListener("focus", onFocus);
-    return () => { clearInterval(interval); window.removeEventListener("focus", onFocus); };
+    window.addEventListener("adisyon:messages-read", onDmRead);
+    return () => { clearInterval(interval); window.removeEventListener("focus", onFocus); window.removeEventListener("adisyon:messages-read", onDmRead); };
   }, [user]);
 
   const navItems = [

@@ -44,7 +44,7 @@ function MessageBubble({ msg, isMine, onOpenReceipt }: { msg: StoredDirectMessag
   );
 }
 
-function ConversationView({ userId, userName, otherId, otherName, onClose }: { userId: string; userName: string; otherId: string; otherName: string; onClose: () => void }) {
+function ConversationView({ userId, userName, otherId, otherName, onClose, onMessagesRead }: { userId: string; userName: string; otherId: string; otherName: string; onClose: () => void; onMessagesRead?: () => void }) {
   const [messages, setMessages] = useState<StoredDirectMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -57,8 +57,12 @@ function ConversationView({ userId, userName, otherId, otherName, onClose }: { u
         .filter((m) => (m.fromUserId === userId && m.toUserId === otherId) || (m.fromUserId === otherId && m.toUserId === userId))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       setMessages(thread);
-      // Mark unread messages as read
-      thread.filter((m) => m.toUserId === userId && !m.read).forEach((m) => store.markMessageRead(m.id, userId));
+      const unread = thread.filter((m) => m.toUserId === userId && !m.read);
+      unread.forEach((m) => store.markMessageRead(m.id, userId));
+      if (unread.length > 0) {
+        onMessagesRead?.();
+        window.dispatchEvent(new CustomEvent("adisyon:messages-read"));
+      }
     });
   }, [userId, otherId]);
 
@@ -634,7 +638,12 @@ export default function FriendsPage() {
       }
     }
   }
-  const conversations = [...conversationMap.entries()].map(([otherId, v]) => ({ otherId, ...v }));
+  // Resolve actual name from friendships so deriveUsername matches the profile page
+  const conversations = [...conversationMap.entries()].map(([otherId, v]) => {
+    const fs = accepted.find((f) => (f.userId === user?.id ? f.friendId : f.userId) === otherId);
+    const otherName = fs ? (fs.userId === user?.id ? fs.friendName : fs.userName) : v.otherName;
+    return { otherId, ...v, otherName };
+  });
 
   if (!user) {
     return (
@@ -899,6 +908,7 @@ export default function FriendsPage() {
           userName={user.name}
           otherId={openConversation.otherId}
           otherName={openConversation.otherName}
+          onMessagesRead={() => store.getAllMessages(user.id).then(setAllMessages)}
           onClose={() => { setOpenConversation(null); store.getAllMessages(user.id).then(setAllMessages); }}
         />
       )}

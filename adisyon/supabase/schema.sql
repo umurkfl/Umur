@@ -142,3 +142,26 @@ alter table receipts add column if not exists city     text not null default '';
 alter table receipts add column if not exists district text not null default '';
 alter table receipts add column if not exists lat      numeric;
 alter table receipts add column if not exists lng      numeric;
+
+-- Direct messages (run once)
+create table if not exists direct_messages (
+  id               text primary key,
+  from_user_id     text not null,
+  from_user_name   text not null,
+  from_user_avatar text,
+  to_user_id       text not null,
+  to_user_name     text not null default '',
+  type             text not null default 'receipt',
+  receipt_id       text,
+  restaurant_name  text,
+  note             text,
+  created_at       text not null,
+  read             boolean not null default false
+);
+
+alter table direct_messages enable row level security;
+
+create policy "public read direct_messages"   on direct_messages for select using (true);
+create policy "public insert direct_messages" on direct_messages for insert with check (true);
+create policy "public update direct_messages" on direct_messages for update using (true);
+create policy "public delete direct_messages" on direct_messages for delete using (true);
