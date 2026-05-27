@@ -162,6 +162,8 @@ function SwipeCard({
       {/* Adisyonu Gör button — top right */}
       {onOpenPost && (
         <button
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onOpenPost(); }}
           className="absolute top-4 right-4 z-30 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform"
         >
@@ -169,21 +171,35 @@ function SwipeCard({
         </button>
       )}
 
-      {/* Info overlay */}
+      {/* Info overlay — non-interactive wrapper, links are pointer-events-auto */}
       <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 space-y-2 pointer-events-none">
         {/* User row */}
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 bg-white/25 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0">
             {receipt.userName.charAt(0).toUpperCase()}
           </div>
-          <span className="text-white/80 text-xs font-medium">{receipt.userName}</span>
+          <Link
+            href={`/users?id=${receipt.userId}&n=${encodeURIComponent(receipt.userName)}`}
+            className="text-white/80 text-xs font-medium pointer-events-auto"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            {receipt.userName}
+          </Link>
           <span className="text-white/40 text-[10px]">·</span>
           <span className="text-white/55 text-[10px]">{timeAgo(receipt.createdAt)}</span>
         </div>
 
         {/* Name + location */}
         <div>
-          <h3 className="text-white font-bold text-2xl leading-tight drop-shadow">{receipt.restaurantName}</h3>
+          <Link
+            href={`/restaurants?name=${encodeURIComponent(receipt.restaurantName)}`}
+            className="text-white font-bold text-2xl leading-tight drop-shadow block pointer-events-auto"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            {receipt.restaurantName}
+          </Link>
           {(receipt.district || receipt.city) && (
             <p className="text-white/60 text-xs mt-0.5 flex items-center gap-1">
               <PinIcon className="w-2 h-2.5 shrink-0" />
