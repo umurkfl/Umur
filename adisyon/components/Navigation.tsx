@@ -353,7 +353,7 @@ export function Navigation() {
         <div className="max-w-2xl mx-auto flex">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
-            const showBadge = href === "/friends" && dmCount > 0;
+            const showBadge = href === "/friends" && dmCount > 0 && !pathname.startsWith("/friends");
             return (
               <Link
                 key={label}
