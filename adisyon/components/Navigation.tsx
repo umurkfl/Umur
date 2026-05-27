@@ -241,10 +241,11 @@ export function Navigation() {
       Promise.all([
         store.getFriendships(user!.id),
         store.getNotifications(user!.id),
-        store.getUnreadMessageCount(user!.id),
-      ]).then(([fs, notifs, dm]) => {
+        store.getAllMessages(user!.id),
+      ]).then(([fs, notifs, msgs]) => {
         const friendPending = fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length;
         const unreadNotifs = notifs.filter((n) => !n.read).length;
+        const dm = msgs.filter((m) => m.toUserId === user!.id && !m.read).length;
         setDmCount(dm);
         setPendingCount(friendPending + unreadNotifs);
       });
