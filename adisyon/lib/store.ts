@@ -728,7 +728,7 @@ export const store = {
       to_user_name: msg.toUserName, type: msg.type,
       receipt_id: msg.receiptId ?? null, restaurant_name: msg.restaurantName ?? null,
       note: msg.text ?? null, created_at: msg.createdAt, read: false,
-      reply_to_id: msg.replyToId ?? null, reply_to_text: msg.replyToText ?? null,
+      ...(msg.replyToId ? { reply_to_id: msg.replyToId, reply_to_text: msg.replyToText ?? null } : {}),
     });
     if (error) {
       console.error("[DM] Supabase insert failed:", error.message, "code:", error.code);

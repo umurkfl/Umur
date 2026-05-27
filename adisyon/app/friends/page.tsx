@@ -47,9 +47,9 @@ function MessageBubble({
   const [swipeX, setSwipeX] = useState(0);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isHoriz = useRef<boolean | null>(null);
   const didReply = useRef(false);
+  const didSwipe = useRef(false);
 
   useEffect(() => {
     if (msg.type === "receipt" && msg.receiptId) {
@@ -64,7 +64,7 @@ function MessageBubble({
     touchStartY.current = e.touches[0].clientY;
     isHoriz.current = null;
     didReply.current = false;
-    longPressTimer.current = setTimeout(() => onLongPress(msg.id), 500);
+    didSwipe.current = false;
   }
 
   function handleTouchMove(e: React.TouchEvent) {
@@ -72,14 +72,13 @@ function MessageBubble({
     const dy = e.touches[0].clientY - touchStartY.current;
     if (isHoriz.current === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
       isHoriz.current = Math.abs(dx) > Math.abs(dy);
+      if (isHoriz.current) didSwipe.current = true;
     }
-    if (!isHoriz.current) { clearTimeout(longPressTimer.current); return; }
-    clearTimeout(longPressTimer.current);
+    if (!isHoriz.current) return;
     if (dx > 0) setSwipeX(Math.min(dx * 0.5, 60));
   }
 
   function handleTouchEnd() {
-    clearTimeout(longPressTimer.current);
     if (swipeX >= 40 && !didReply.current) {
       didReply.current = true;
       const replyText = msg.type === "receipt" ? `📋 ${msg.restaurantName}` : (msg.text ?? "");
@@ -87,6 +86,11 @@ function MessageBubble({
     }
     setSwipeX(0);
     isHoriz.current = null;
+  }
+
+  function handleClick() {
+    if (didSwipe.current) { didSwipe.current = false; return; }
+    onLongPress(msg.id);
   }
 
   const reactionGroups: Record<string, string[]> = {};
@@ -115,6 +119,7 @@ function MessageBubble({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
       >
         {msg.type === "receipt" ? (
           <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
@@ -128,7 +133,7 @@ function MessageBubble({
             </div>
             {msg.text && <p className="px-3 pb-1 text-xs text-muted italic">&ldquo;{msg.text}&rdquo;</p>}
             <button
-              onClick={() => onOpenReceipt(msg.receiptId!)}
+              onClick={(e) => { e.stopPropagation(); onOpenReceipt(msg.receiptId!); }}
               className="w-full px-3 py-2 text-xs font-semibold text-primary text-center border-t border-border/50 active:bg-primary-light transition-colors"
             >
               Adisyonu Görüntüle →
@@ -136,12 +141,12 @@ function MessageBubble({
             <p className="px-3 pb-2 text-[9px] text-muted text-right">{timeStr}</p>
           </div>
         ) : (
-          <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-snug break-words ${
+          <div className={`max-w-[78%] px-4 py-2 rounded-2xl text-sm leading-snug break-words ${
             isMine ? "bg-primary text-white rounded-br-md" : "bg-[#f0f0f0] dark:bg-surface border border-border text-ink rounded-bl-md"
           }`}>
             {replyPreview}
-            {msg.text}
-            <p className={`text-[9px] mt-1 text-right ${isMine ? "text-white/60" : "text-muted"}`}>{timeStr}</p>
+            <span>{msg.text}</span>
+            <span className={`inline-block text-[9px] leading-none align-bottom ml-2 translate-y-[-1px] ${isMine ? "text-white/60" : "text-muted"}`}>{timeStr}</span>
           </div>
         )}
         {Object.keys(reactionGroups).length > 0 && (
