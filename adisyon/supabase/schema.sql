@@ -165,3 +165,7 @@ create policy "public read direct_messages"   on direct_messages for select usin
 create policy "public insert direct_messages" on direct_messages for insert with check (true);
 create policy "public update direct_messages" on direct_messages for update using (true);
 create policy "public delete direct_messages" on direct_messages for delete using (true);
+
+-- Reply columns (run if table already exists)
+alter table direct_messages add column if not exists reply_to_id   text;
+alter table direct_messages add column if not exists reply_to_text text;

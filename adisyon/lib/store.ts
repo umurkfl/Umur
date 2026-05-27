@@ -119,6 +119,8 @@ export interface StoredDirectMessage {
   text?: string;
   createdAt: string;
   read: boolean;
+  replyToId?: string;
+  replyToText?: string;
 }
 
 // ─── localStorage helpers ────────────────────────────────────────────────────
@@ -726,6 +728,7 @@ export const store = {
       to_user_name: msg.toUserName, type: msg.type,
       receipt_id: msg.receiptId ?? null, restaurant_name: msg.restaurantName ?? null,
       note: msg.text ?? null, created_at: msg.createdAt, read: false,
+      reply_to_id: msg.replyToId ?? null, reply_to_text: msg.replyToText ?? null,
     });
     if (error) {
       console.error("[DM] Supabase insert failed:", error.message, "code:", error.code);
@@ -750,6 +753,7 @@ export const store = {
       toUserName: (r.to_user_name as string) ?? "", type: ((r.type as string) ?? "receipt") as "receipt" | "text",
       receiptId: (r.receipt_id as string) ?? undefined, restaurantName: (r.restaurant_name as string) ?? undefined,
       text: (r.note as string) ?? undefined, createdAt: r.created_at as string, read: r.read as boolean,
+      replyToId: (r.reply_to_id as string) ?? undefined, replyToText: (r.reply_to_text as string) ?? undefined,
     });
     if (supabase) {
       try {
@@ -781,6 +785,23 @@ export const store = {
 
   getUnreadMessageCount(userId: string): number {
     return lsRead<StoredDirectMessage[]>(`adisyon_inbox_${userId}`, []).filter((m) => !m.read).length;
+  },
+
+  getMsgReactions(msgId: string): Record<string, string> {
+    if (typeof window === "undefined") return {};
+    return lsRead<Record<string, Record<string, string>>>("adisyon_msg_reactions", {})[msgId] ?? {};
+  },
+  setMsgReaction(msgId: string, userId: string, emoji: string | null): void {
+    if (typeof window === "undefined") return;
+    const all = lsRead<Record<string, Record<string, string>>>("adisyon_msg_reactions", {});
+    if (!all[msgId]) all[msgId] = {};
+    if (emoji === null) delete all[msgId][userId]; else all[msgId][userId] = emoji;
+    if (Object.keys(all[msgId] ?? {}).length === 0) delete all[msgId];
+    lsWrite("adisyon_msg_reactions", all);
+  },
+  getAllMsgReactions(): Record<string, Record<string, string>> {
+    if (typeof window === "undefined") return {};
+    return lsRead<Record<string, Record<string, string>>>("adisyon_msg_reactions", {});
   },
 
   // Privacy settings

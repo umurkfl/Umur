@@ -234,10 +234,22 @@ export function Navigation() {
   const [pendingCount, setPendingCount] = useState(0);
   const [dmCount, setDmCount] = useState(0);
 
+  // Clear badge the moment the user taps Arkadaşlar
+  useEffect(() => {
+    if (pathname.startsWith("/friends") && user) {
+      setDmCount(0);
+      if (typeof window !== "undefined")
+        localStorage.setItem(`adisyon_nav_dm_cleared_${user.id}`, new Date().toISOString());
+    }
+  }, [pathname, user?.id]);
+
   useEffect(() => {
     if (!user) { setPendingCount(0); setDmCount(0); return; }
 
     function load() {
+      const clearedAt = typeof window !== "undefined"
+        ? localStorage.getItem(`adisyon_nav_dm_cleared_${user!.id}`)
+        : null;
       Promise.all([
         store.getFriendships(user!.id),
         store.getNotifications(user!.id),
@@ -245,7 +257,9 @@ export function Navigation() {
       ]).then(([fs, notifs, msgs]) => {
         const friendPending = fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length;
         const unreadNotifs = notifs.filter((n) => !n.read).length;
-        const dm = msgs.filter((m) => m.toUserId === user!.id && !m.read).length;
+        const dm = msgs.filter((m) =>
+          m.toUserId === user!.id && !m.read && (!clearedAt || m.createdAt > clearedAt)
+        ).length;
         setDmCount(dm);
         setPendingCount(friendPending + unreadNotifs);
       });
