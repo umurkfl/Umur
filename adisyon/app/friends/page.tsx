@@ -98,11 +98,13 @@ function ConversationView({ userId, userName, otherId, otherName, onClose }: { u
         <button onClick={onClose} className="p-1 -ml-1">
           <ChevronLeft className="w-5 h-5 text-charcoal" />
         </button>
-        <UserAvatar userId={otherId} name={otherName} size="sm" />
-        <div className="flex-1 min-w-0">
+        <Link href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`} className="shrink-0">
+          <UserAvatar userId={otherId} name={otherName} size="sm" />
+        </Link>
+        <Link href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`} className="flex-1 min-w-0">
           <p className="font-semibold text-charcoal text-sm leading-tight">{otherName}</p>
-          <p className="text-[10px] text-muted">@{deriveUsername(otherName, otherId)}</p>
-        </div>
+          <p className="text-[10px] text-muted">{deriveUsername(otherName, otherId)}</p>
+        </Link>
       </div>
 
       {/* Messages */}
@@ -850,32 +852,41 @@ export default function FriendsPage() {
             </div>
           ) : (
             conversations.map(({ otherId, otherName, last, unread }) => (
-              <button
+              <div
                 key={otherId}
                 onClick={() => setOpenConversation({ otherId, otherName })}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface border border-border active:bg-background text-left transition-colors"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface border border-border active:bg-background transition-colors cursor-pointer"
               >
-                <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full bg-primary-light flex items-center justify-center text-base font-bold text-primary">
-                    {otherName.charAt(0).toUpperCase()}
-                  </div>
+                <Link
+                  href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative shrink-0"
+                >
+                  <UserAvatar userId={otherId} name={otherName} />
                   {unread > 0 && (
                     <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                       <span className="text-[9px] font-bold text-white">{unread}</span>
                     </div>
                   )}
-                </div>
+                </Link>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className={`text-sm ${unread > 0 ? "font-bold text-charcoal" : "font-medium text-ink"}`}>{otherName}</p>
-                    <p className="text-[10px] text-muted shrink-0 ml-2">{timeAgo(last.createdAt)}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="min-w-0"
+                    >
+                      <p className={`text-sm ${unread > 0 ? "font-bold text-charcoal" : "font-medium text-ink"}`}>{otherName}</p>
+                      <p className="text-[10px] text-muted">{deriveUsername(otherName, otherId)}</p>
+                    </Link>
+                    <p className="text-[10px] text-muted shrink-0">{timeAgo(last.createdAt)}</p>
                   </div>
-                  <p className={`text-xs mt-0.5 truncate ${unread > 0 ? "text-primary font-medium" : "text-muted"}`}>
+                  <p className={`text-xs mt-1 truncate ${unread > 0 ? "text-primary font-medium" : "text-muted"}`}>
                     {last.fromUserId === user?.id ? "Sen: " : ""}
                     {last.type === "receipt" ? `📋 ${last.restaurantName}` : last.text}
                   </p>
                 </div>
-              </button>
+              </div>
             ))
           )}
         </div>
