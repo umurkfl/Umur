@@ -710,26 +710,34 @@ export const store = {
     });
   },
 
-  async sendDirectMessage(msg: StoredDirectMessage): Promise<void> {
-    // Save to recipient's inbox
-    const inboxKey = `adisyon_inbox_${msg.toUserId}`;
-    const inbox = lsRead<StoredDirectMessage[]>(inboxKey, []);
-    if (!inbox.find((m) => m.id === msg.id)) { inbox.unshift(msg); lsWrite(inboxKey, inbox); }
-    // Save to sender's sent list so they can see it in their thread
+  async sendDirectMessage(msg: StoredDirectMessage): Promise<{ ok: boolean; error?: string }> {
+    // Save to sender's sent list (for their own thread view)
     const sentKey = `adisyon_sent_${msg.fromUserId}`;
     const sent = lsRead<StoredDirectMessage[]>(sentKey, []);
     if (!sent.find((m) => m.id === msg.id)) { sent.unshift(msg); lsWrite(sentKey, sent); }
-    if (supabase) {
-      try {
-        await supabase.from("direct_messages").insert({
-          id: msg.id, from_user_id: msg.fromUserId, from_user_name: msg.fromUserName,
-          from_user_avatar: msg.fromUserAvatar ?? null, to_user_id: msg.toUserId,
-          to_user_name: msg.toUserName, type: msg.type,
-          receipt_id: msg.receiptId ?? null, restaurant_name: msg.restaurantName ?? null,
-          note: msg.text ?? null, created_at: msg.createdAt, read: false,
-        });
-      } catch { /* table may not exist yet */ }
+    // Also write to local inbox key — only useful if both users are on the same device
+    const inboxKey = `adisyon_inbox_${msg.toUserId}`;
+    const inbox = lsRead<StoredDirectMessage[]>(inboxKey, []);
+    if (!inbox.find((m) => m.id === msg.id)) { inbox.unshift(msg); lsWrite(inboxKey, inbox); }
+    if (!supabase) return { ok: false, error: "Supabase yapılandırılmamış" };
+    const { error } = await supabase.from("direct_messages").insert({
+      id: msg.id, from_user_id: msg.fromUserId, from_user_name: msg.fromUserName,
+      from_user_avatar: msg.fromUserAvatar ?? null, to_user_id: msg.toUserId,
+      to_user_name: msg.toUserName, type: msg.type,
+      receipt_id: msg.receiptId ?? null, restaurant_name: msg.restaurantName ?? null,
+      note: msg.text ?? null, created_at: msg.createdAt, read: false,
+    });
+    if (error) {
+      console.error("[DM] Supabase insert failed:", error.message, "code:", error.code);
+      return { ok: false, error: error.message };
     }
+    return { ok: true };
+  },
+
+  async checkDirectMessagesTable(): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.from("direct_messages").select("id").limit(1);
+    return !error;
   },
 
   async getAllMessages(userId: string): Promise<StoredDirectMessage[]> {

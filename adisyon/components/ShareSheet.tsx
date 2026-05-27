@@ -44,24 +44,32 @@ export function ShareSheet({ receipt, onClose }: { receipt: StoredReceipt; onClo
     if (!user || selected.size === 0) return;
     setSending(true);
     const avatar = await store.getPublicAvatar(user.id);
-    for (const f of friends.filter((x) => selected.has(x.userId))) {
-      await store.sendDirectMessage({
-        id: crypto.randomUUID(),
-        fromUserId: user.id,
-        fromUserName: user.name,
-        fromUserAvatar: avatar ?? undefined,
-        toUserId: f.userId,
-        toUserName: f.userName,
-        type: "receipt",
-        receiptId: receipt.id,
-        restaurantName: receipt.restaurantName,
-        text: note.trim() || undefined,
-        createdAt: new Date().toISOString(),
-        read: false,
-      });
+    const results = await Promise.all(
+      friends.filter((x) => selected.has(x.userId)).map((f) =>
+        store.sendDirectMessage({
+          id: crypto.randomUUID(),
+          fromUserId: user.id,
+          fromUserName: user.name,
+          fromUserAvatar: avatar ?? undefined,
+          toUserId: f.userId,
+          toUserName: f.userName,
+          type: "receipt",
+          receiptId: receipt.id,
+          restaurantName: receipt.restaurantName,
+          text: note.trim() || undefined,
+          createdAt: new Date().toISOString(),
+          read: false,
+        })
+      )
+    );
+    const allOk = results.every((r) => r.ok);
+    if (allOk) {
+      setSent(true);
+      setTimeout(onClose, 1100);
+    } else {
+      console.error("[ShareSheet] Some messages failed:", results.filter((r) => !r.ok).map((r) => r.error));
+      setSending(false);
     }
-    setSent(true);
-    setTimeout(onClose, 1100);
   }
 
   return (

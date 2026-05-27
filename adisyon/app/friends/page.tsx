@@ -48,6 +48,7 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
   const [messages, setMessages] = useState<StoredDirectMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [receiptPopup, setReceiptPopup] = useState<StoredReceipt | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +74,7 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
   async function handleSend() {
     if (!text.trim() || !userId || sending) return;
     setSending(true);
+    setSendError(null);
     const msg: StoredDirectMessage = {
       id: crypto.randomUUID(),
       fromUserId: userId,
@@ -84,9 +86,13 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
       createdAt: new Date().toISOString(),
       read: false,
     };
-    await store.sendDirectMessage(msg);
-    setMessages((prev) => [...prev, msg]);
-    setText("");
+    const result = await store.sendDirectMessage(msg);
+    if (result.ok) {
+      setMessages((prev) => [...prev, msg]);
+      setText("");
+    } else {
+      setSendError(result.error ?? "Mesaj gönderilemedi");
+    }
     setSending(false);
   }
 
@@ -125,12 +131,22 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
         <div ref={bottomRef} />
       </div>
 
+      {/* Send error */}
+      {sendError && (
+        <div className="px-4 py-2 bg-red-50 border-t border-red-100 shrink-0">
+          <p className="text-xs text-red-600 font-medium">⚠ {sendError}</p>
+          {sendError.includes("does not exist") || sendError.includes("exist") ? (
+            <p className="text-[10px] text-red-500 mt-0.5">Supabase Dashboard → SQL Editor&apos;da <code>direct_messages</code> tablosunu oluştur (schema.sql).</p>
+          ) : null}
+        </div>
+      )}
+
       {/* Input */}
       <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-surface shrink-0">
         <input
           type="text"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); if (sendError) setSendError(null); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           placeholder="Mesaj yaz..."
           className="flex-1 px-4 py-2.5 rounded-full border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -527,6 +543,7 @@ export default function FriendsPage() {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [allMessages, setAllMessages] = useState<StoredDirectMessage[]>([]);
   const [openConversation, setOpenConversation] = useState<{ otherId: string; otherName: string } | null>(null);
+  const [dmTableReady, setDmTableReady] = useState<boolean | null>(null);
 
   async function loadData() {
     if (!user) { setLoading(false); return; }
@@ -563,6 +580,12 @@ export default function FriendsPage() {
     return () => { window.removeEventListener("focus", onFocus); clearInterval(interval); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    if (tab === "mesajlar" && dmTableReady === null) {
+      store.checkDirectMessagesTable().then(setDmTableReady);
+    }
+  }, [tab, dmTableReady]);
 
   async function search(q: string) {
     setSearchQuery(q);
@@ -846,6 +869,13 @@ export default function FriendsPage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {tab === "mesajlar" && dmTableReady === false && (
+        <div className="mx-4 mb-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <p className="text-sm font-bold text-amber-800 mb-1">⚠ Mesajlaşma kurulumu gerekli</p>
+          <p className="text-xs text-amber-700 leading-relaxed">Supabase Dashboard → SQL Editor&apos;ı aç ve <code className="bg-amber-100 px-1 rounded">supabase/schema.sql</code> dosyasının altındaki <code className="bg-amber-100 px-1 rounded">direct_messages</code> tablosu bölümünü çalıştır.</p>
         </div>
       )}
 
