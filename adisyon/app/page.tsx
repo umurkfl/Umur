@@ -7,6 +7,7 @@ import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { WishlistButton } from "@/components/WishlistButton";
+import { ShareSheet } from "@/components/ShareSheet";
 
 function PinIcon({ className }: { className?: string }) {
   return (
@@ -345,6 +346,7 @@ export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClo
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [focusComment, setFocusComment] = useState(false);
   const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -566,6 +568,13 @@ export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClo
               <MessageCircle className="w-3.5 h-3.5" />
               Yorum
             </button>
+            <button
+              onClick={() => setShareOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 active:bg-primary-light active:text-primary active:border-primary transition-all"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Gönder
+            </button>
             <div className="ml-auto flex items-center gap-1.5">
               <WishlistButton restaurantName={r.restaurantName} size="sm" />
               {user?.id === r.userId && (
@@ -588,6 +597,7 @@ export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClo
       {photoOpen && r.photo && (
         <PhotoLightbox src={r.photo} alt={r.restaurantName} onClose={() => setPhotoOpen(false)} />
       )}
+      {shareOpen && <ShareSheet receipt={r} onClose={() => setShareOpen(false)} />}
     </>
   );
 }

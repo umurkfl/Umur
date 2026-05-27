@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus, Trash2 } from "lucide-react";
-import { store, StoredFriendship, StoredCheckIn, StoredReceipt, deriveUsername } from "@/lib/store";
+import { store, StoredFriendship, StoredCheckIn, StoredReceipt, StoredDirectMessage, deriveUsername } from "@/lib/store";
+import { ReceiptPopup } from "@/app/page";
 import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
-type Tab = "akis" | "arkadaslar" | "kesfet";
+type Tab = "akis" | "arkadaslar" | "kesfet" | "gelen";
 
 function UserAvatar({ userId, name, size = "md" }: { userId: string; name: string; size?: "sm" | "md" }) {
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -385,15 +386,19 @@ export default function FriendsPage() {
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [myReceipts, setMyReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null); // friendshipId
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [inbox, setInbox] = useState<StoredDirectMessage[]>([]);
+  const [inboxPopupReceipt, setInboxPopupReceipt] = useState<StoredReceipt | null>(null);
 
   async function loadData() {
     if (!user) { setLoading(false); return; }
-    const [fs, myR, myCI] = await Promise.all([
+    const [fs, myR, myCI, msgs] = await Promise.all([
       store.getFriendships(user.id),
       store.getUserReceipts(user.id),
       store.getUserCheckIns(user.id),
+      store.getInbox(user.id),
     ]);
+    setInbox(msgs);
     setFriendships(fs);
     setMyReceipts(myR);
     setMyCheckIns(myCI);
@@ -450,6 +455,16 @@ export default function FriendsPage() {
     const { receipts, checkIns } = await store.getFriendActivity(friendIds, nameMap);
     setFriendReceipts(receipts);
     setFriendCheckIns(checkIns);
+  }
+
+  async function openInboxReceipt(msg: StoredDirectMessage) {
+    if (!user) return;
+    if (!msg.read) {
+      await store.markMessageRead(msg.id, user.id);
+      setInbox((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true } : m));
+    }
+    const receipt = await store.getReceiptById(msg.receiptId);
+    if (receipt) setInboxPopupReceipt(receipt);
   }
 
   async function rejectRequest(friendshipId: string) {
@@ -519,8 +534,13 @@ export default function FriendsPage() {
       )}
 
       <div className="flex mx-4 mb-4 bg-background rounded-2xl p-1 gap-1">
-        {([["akis", "Akış"], ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` (${accepted.length})` : ""}`], ["kesfet", "Keşfet"]] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${tab === t ? "bg-surface shadow-sm text-primary" : "text-muted"}`}>
+        {([
+          ["akis", "Akış"],
+          ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` (${accepted.length})` : ""}`],
+          ["kesfet", "Keşfet"],
+          ["gelen", inbox.filter(m => !m.read).length > 0 ? `Gelen (${inbox.filter(m => !m.read).length})` : "Gelen"],
+        ] as [Tab, string][]).map(([t, label]) => (
+          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[11px] font-semibold rounded-xl transition-all ${tab === t ? "bg-surface shadow-sm text-primary" : "text-muted"}`}>
             {label}
           </button>
         ))}
@@ -678,7 +698,54 @@ export default function FriendsPage() {
         </div>
       )}
 
+      {tab === "gelen" && (
+        <div className="px-4 space-y-3">
+          {inbox.length === 0 ? (
+            <div className="flex flex-col items-center py-16 gap-3 text-center">
+              <div className="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center">
+                <Receipt className="w-7 h-7 text-primary/40" />
+              </div>
+              <p className="font-semibold text-charcoal">Gelen kutusu boş</p>
+              <p className="text-sm text-muted">Arkadaşların sana adisyon gönderince burada görünür.</p>
+            </div>
+          ) : (
+            inbox.map((msg) => (
+              <div
+                key={msg.id}
+                className={`bg-surface rounded-2xl p-4 shadow-sm border transition-colors ${msg.read ? "border-border" : "border-primary/30 bg-primary-light/10"}`}
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                    {msg.fromUserName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-charcoal">{msg.fromUserName}</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      sana <span className="text-ink font-medium">{msg.restaurantName}</span> adisyonunu gönderdi
+                    </p>
+                    {msg.note && (
+                      <p className="text-xs text-muted italic mt-1">"{msg.note}"</p>
+                    )}
+                    <p className="text-[10px] text-muted/70 mt-1">{timeAgo(msg.createdAt)}</p>
+                  </div>
+                  {!msg.read && (
+                    <div className="w-2.5 h-2.5 bg-primary rounded-full shrink-0 mt-1" />
+                  )}
+                </div>
+                <button
+                  onClick={() => openInboxReceipt(msg)}
+                  className="w-full text-xs font-semibold text-primary border border-primary/30 rounded-xl py-2 active:bg-primary-light transition-colors"
+                >
+                  Adisyonu Görüntüle
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
       {checkInOpen && <CheckInModal onClose={() => setCheckInOpen(false)} recentRestaurants={recentRestaurants} />}
+      {inboxPopupReceipt && <ReceiptPopup r={inboxPopupReceipt} onClose={() => setInboxPopupReceipt(null)} />}
     </div>
   );
 }

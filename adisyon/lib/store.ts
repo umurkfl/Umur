@@ -106,6 +106,19 @@ export interface StoredCheckIn {
   district?: string;
 }
 
+export interface StoredDirectMessage {
+  id: string;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserAvatar?: string;
+  toUserId: string;
+  receiptId: string;
+  restaurantName: string;
+  note?: string;
+  createdAt: string;
+  read: boolean;
+}
+
 // ─── localStorage helpers ────────────────────────────────────────────────────
 
 const K = { users: "adisyon_users", current: "adisyon_current_user", receipts: "adisyon_receipts", comments: "adisyon_comments", reactions: "adisyon_reactions", wishlist: "adisyon_wishlist", wishlistLists: "adisyon_wishlist_lists", receiptLikes: "adisyon_receipt_likes", friendships: "adisyon_friendships", checkIns: "adisyon_check_ins", privacy: "adisyon_privacy", notifications: "adisyon_notifications" };
@@ -693,6 +706,59 @@ export const store = {
       if (privacyMap[r.userId] !== "friends") return true;
       return mutualSet.has(r.userId);
     });
+  },
+
+  async sendDirectMessage(msg: StoredDirectMessage): Promise<void> {
+    const key = `adisyon_inbox_${msg.toUserId}`;
+    const inbox = lsRead<StoredDirectMessage[]>(key, []);
+    if (!inbox.find((m) => m.id === msg.id)) { inbox.unshift(msg); lsWrite(key, inbox); }
+    if (supabase) {
+      try {
+        await supabase.from("direct_messages").insert({
+          id: msg.id, from_user_id: msg.fromUserId, from_user_name: msg.fromUserName,
+          from_user_avatar: msg.fromUserAvatar ?? null, to_user_id: msg.toUserId,
+          receipt_id: msg.receiptId, restaurant_name: msg.restaurantName,
+          note: msg.note ?? null, created_at: msg.createdAt, read: false,
+        });
+      } catch { /* table may not exist yet */ }
+    }
+  },
+
+  async getInbox(userId: string): Promise<StoredDirectMessage[]> {
+    const key = `adisyon_inbox_${userId}`;
+    const local = lsRead<StoredDirectMessage[]>(key, []);
+    if (supabase) {
+      try {
+        const { data } = await supabase.from("direct_messages")
+          .select("*").eq("to_user_id", userId).order("created_at", { ascending: false });
+        if (data) {
+          const remote: StoredDirectMessage[] = data.map((r) => ({
+            id: r.id as string, fromUserId: r.from_user_id as string, fromUserName: r.from_user_name as string,
+            fromUserAvatar: (r.from_user_avatar as string) ?? undefined, toUserId: r.to_user_id as string,
+            receiptId: r.receipt_id as string, restaurantName: r.restaurant_name as string,
+            note: (r.note as string) ?? undefined, createdAt: r.created_at as string, read: r.read as boolean,
+          }));
+          const merged = [...remote];
+          local.forEach((l) => { if (!merged.find((r) => r.id === l.id)) merged.push(l); });
+          merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          lsWrite(key, merged);
+          return merged;
+        }
+      } catch { /* ignore */ }
+    }
+    return local;
+  },
+
+  async markMessageRead(msgId: string, userId: string): Promise<void> {
+    const key = `adisyon_inbox_${userId}`;
+    lsWrite(key, lsRead<StoredDirectMessage[]>(key, []).map((m) => m.id === msgId ? { ...m, read: true } : m));
+    if (supabase) {
+      try { await supabase.from("direct_messages").update({ read: true }).eq("id", msgId); } catch { /* ignore */ }
+    }
+  },
+
+  getUnreadMessageCount(userId: string): number {
+    return lsRead<StoredDirectMessage[]>(`adisyon_inbox_${userId}`, []).filter((m) => !m.read).length;
   },
 
   // Privacy settings
