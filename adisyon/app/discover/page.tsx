@@ -7,7 +7,7 @@ import { Search, Star, SlidersHorizontal, X, Bookmark, Layers } from "lucide-rea
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, WishlistList } from "@/lib/store";
 import { ReceiptModal } from "@/components/ReceiptModal";
-import { CommentSection } from "@/app/page";
+import { CommentSection, ReceiptPopup } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 
@@ -43,13 +43,14 @@ function PhotoLightbox({ src, onClose }: { src: string; onClose: () => void }) {
 }
 
 function SwipeCard({
-  receipt, isTop, onSwipeLeft, onSwipeRight, onTap,
+  receipt, isTop, onSwipeLeft, onSwipeRight, onTap, onOpenPost,
 }: {
   receipt: StoredReceipt;
   isTop: boolean;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
   onTap?: () => void;
+  onOpenPost?: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const saveOverlayRef = useRef<HTMLDivElement>(null);
@@ -158,6 +159,16 @@ function SwipeCard({
       <div ref={saveOverlayRef} className="absolute inset-0 pointer-events-none opacity-0" style={{ background: "rgba(29,158,117,0.45)" }} />
       <div ref={passOverlayRef} className="absolute inset-0 pointer-events-none opacity-0" style={{ background: "rgba(239,68,68,0.40)" }} />
 
+      {/* Adisyonu Gör button — top right */}
+      {onOpenPost && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onOpenPost(); }}
+          className="absolute top-4 right-4 z-30 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+        >
+          Adisyonu gör
+        </button>
+      )}
+
       {/* Info overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 space-y-2 pointer-events-none">
         {/* User row */}
@@ -211,6 +222,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
   const [lastAction, setLastAction] = useState<"save" | "pass" | null>(null);
   const [tappedReceipt, setTappedReceipt] = useState<StoredReceipt | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [popupReceipt, setPopupReceipt] = useState<StoredReceipt | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const current = receipts[index];
@@ -288,8 +300,9 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
             onSwipeRight={handleSwipeLeft}
             onTap={() => {
               if (current.photo) setLightboxPhoto(current.photo);
-              else setTappedReceipt(current);
+              else setPopupReceipt(current);
             }}
+            onOpenPost={() => setPopupReceipt(current)}
           />
         )}
       </div>
@@ -328,6 +341,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
           <CommentSection receiptId={tappedReceipt.id} />
         </ReceiptModal>
       )}
+      {popupReceipt && <ReceiptPopup r={popupReceipt} onClose={() => setPopupReceipt(null)} />}
     </div>
   );
 }

@@ -340,7 +340,7 @@ function PhotoLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
 
 // ─── Receipt popup (feed card) ───────────────────────────────────────────────
 
-function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () => void; onDelete?: () => void }) {
+export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClose: () => void; onDelete?: () => void }) {
   const { user } = useAuth();
   const [friendStatus, setFriendStatus] = useState<"none" | "pending" | "friend">("none");
   const [confirmDelete, setConfirmDelete] = useState(false);
