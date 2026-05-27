@@ -112,9 +112,11 @@ export interface StoredDirectMessage {
   fromUserName: string;
   fromUserAvatar?: string;
   toUserId: string;
-  receiptId: string;
-  restaurantName: string;
-  note?: string;
+  toUserName: string;
+  type: "receipt" | "text";
+  receiptId?: string;
+  restaurantName?: string;
+  text?: string;
   createdAt: string;
   read: boolean;
 }
@@ -709,49 +711,61 @@ export const store = {
   },
 
   async sendDirectMessage(msg: StoredDirectMessage): Promise<void> {
-    const key = `adisyon_inbox_${msg.toUserId}`;
-    const inbox = lsRead<StoredDirectMessage[]>(key, []);
-    if (!inbox.find((m) => m.id === msg.id)) { inbox.unshift(msg); lsWrite(key, inbox); }
+    // Save to recipient's inbox
+    const inboxKey = `adisyon_inbox_${msg.toUserId}`;
+    const inbox = lsRead<StoredDirectMessage[]>(inboxKey, []);
+    if (!inbox.find((m) => m.id === msg.id)) { inbox.unshift(msg); lsWrite(inboxKey, inbox); }
+    // Save to sender's sent list so they can see it in their thread
+    const sentKey = `adisyon_sent_${msg.fromUserId}`;
+    const sent = lsRead<StoredDirectMessage[]>(sentKey, []);
+    if (!sent.find((m) => m.id === msg.id)) { sent.unshift(msg); lsWrite(sentKey, sent); }
     if (supabase) {
       try {
         await supabase.from("direct_messages").insert({
           id: msg.id, from_user_id: msg.fromUserId, from_user_name: msg.fromUserName,
           from_user_avatar: msg.fromUserAvatar ?? null, to_user_id: msg.toUserId,
-          receipt_id: msg.receiptId, restaurant_name: msg.restaurantName,
-          note: msg.note ?? null, created_at: msg.createdAt, read: false,
+          to_user_name: msg.toUserName, type: msg.type,
+          receipt_id: msg.receiptId ?? null, restaurant_name: msg.restaurantName ?? null,
+          note: msg.text ?? null, created_at: msg.createdAt, read: false,
         });
       } catch { /* table may not exist yet */ }
     }
   },
 
-  async getInbox(userId: string): Promise<StoredDirectMessage[]> {
-    const key = `adisyon_inbox_${userId}`;
-    const local = lsRead<StoredDirectMessage[]>(key, []);
+  async getAllMessages(userId: string): Promise<StoredDirectMessage[]> {
+    const inbox = lsRead<StoredDirectMessage[]>(`adisyon_inbox_${userId}`, []);
+    const sent = lsRead<StoredDirectMessage[]>(`adisyon_sent_${userId}`, []);
+    const local = [...inbox, ...sent];
+    const rowToMsg = (r: Record<string, unknown>): StoredDirectMessage => ({
+      id: r.id as string, fromUserId: r.from_user_id as string, fromUserName: r.from_user_name as string,
+      fromUserAvatar: (r.from_user_avatar as string) ?? undefined, toUserId: r.to_user_id as string,
+      toUserName: (r.to_user_name as string) ?? "", type: ((r.type as string) ?? "receipt") as "receipt" | "text",
+      receiptId: (r.receipt_id as string) ?? undefined, restaurantName: (r.restaurant_name as string) ?? undefined,
+      text: (r.note as string) ?? undefined, createdAt: r.created_at as string, read: r.read as boolean,
+    });
     if (supabase) {
       try {
-        const { data } = await supabase.from("direct_messages")
-          .select("*").eq("to_user_id", userId).order("created_at", { ascending: false });
+        const { data } = await supabase.from("direct_messages").select("*")
+          .or(`to_user_id.eq.${userId},from_user_id.eq.${userId}`)
+          .order("created_at", { ascending: false });
         if (data) {
-          const remote: StoredDirectMessage[] = data.map((r) => ({
-            id: r.id as string, fromUserId: r.from_user_id as string, fromUserName: r.from_user_name as string,
-            fromUserAvatar: (r.from_user_avatar as string) ?? undefined, toUserId: r.to_user_id as string,
-            receiptId: r.receipt_id as string, restaurantName: r.restaurant_name as string,
-            note: (r.note as string) ?? undefined, createdAt: r.created_at as string, read: r.read as boolean,
-          }));
+          const remote = data.map(rowToMsg);
           const merged = [...remote];
           local.forEach((l) => { if (!merged.find((r) => r.id === l.id)) merged.push(l); });
           merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-          lsWrite(key, merged);
+          lsWrite(`adisyon_inbox_${userId}`, merged.filter((m) => m.toUserId === userId));
+          lsWrite(`adisyon_sent_${userId}`, merged.filter((m) => m.fromUserId === userId));
           return merged;
         }
       } catch { /* ignore */ }
     }
-    return local;
+    return local.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
   async markMessageRead(msgId: string, userId: string): Promise<void> {
-    const key = `adisyon_inbox_${userId}`;
-    lsWrite(key, lsRead<StoredDirectMessage[]>(key, []).map((m) => m.id === msgId ? { ...m, read: true } : m));
+    const update = (arr: StoredDirectMessage[]) => arr.map((m) => m.id === msgId ? { ...m, read: true } : m);
+    lsWrite(`adisyon_inbox_${userId}`, update(lsRead(`adisyon_inbox_${userId}`, [])));
+    lsWrite(`adisyon_sent_${userId}`, update(lsRead(`adisyon_sent_${userId}`, [])));
     if (supabase) {
       try { await supabase.from("direct_messages").update({ read: true }).eq("id", msgId); } catch { /* ignore */ }
     }

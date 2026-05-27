@@ -44,16 +44,18 @@ export function ShareSheet({ receipt, onClose }: { receipt: StoredReceipt; onClo
     if (!user || selected.size === 0) return;
     setSending(true);
     const avatar = await store.getPublicAvatar(user.id);
-    for (const toUserId of selected) {
+    for (const f of friends.filter((x) => selected.has(x.userId))) {
       await store.sendDirectMessage({
         id: crypto.randomUUID(),
         fromUserId: user.id,
         fromUserName: user.name,
         fromUserAvatar: avatar ?? undefined,
-        toUserId,
+        toUserId: f.userId,
+        toUserName: f.userName,
+        type: "receipt",
         receiptId: receipt.id,
         restaurantName: receipt.restaurantName,
-        note: note.trim() || undefined,
+        text: note.trim() || undefined,
         createdAt: new Date().toISOString(),
         read: false,
       });

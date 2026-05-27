@@ -2,14 +2,145 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus, Trash2 } from "lucide-react";
+import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus, Trash2, ChevronLeft, Send, MessageCircle } from "lucide-react";
 import { store, StoredFriendship, StoredCheckIn, StoredReceipt, StoredDirectMessage, deriveUsername } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { ReceiptPopup } from "@/app/page";
 import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
-import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 
-type Tab = "akis" | "arkadaslar" | "kesfet" | "gelen";
+type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
+
+// ─── DM components ───────────────────────────────────────────────────────────
+
+function MessageBubble({ msg, isMine, onOpenReceipt }: { msg: StoredDirectMessage; isMine: boolean; onOpenReceipt: (id: string) => void }) {
+  if (msg.type === "receipt") {
+    return (
+      <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+        <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-3 pt-2.5 pb-1.5">
+            <p className="text-[10px] text-muted mb-0.5">{isMine ? "Gönderdiğin adisyon" : "Adisyon paylaştı"}</p>
+            <p className="text-sm font-semibold text-charcoal">{msg.restaurantName}</p>
+          </div>
+          {msg.text && <p className="px-3 pb-1.5 text-xs text-muted italic">"{msg.text}"</p>}
+          <button
+            onClick={() => onOpenReceipt(msg.receiptId!)}
+            className="w-full px-3 py-2 text-xs font-semibold text-primary text-center border-t border-border/50 active:bg-primary-light transition-colors"
+          >
+            Adisyonu Görüntüle →
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+      <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-snug break-words ${
+        isMine ? "bg-primary text-white rounded-br-md" : "bg-background text-ink rounded-bl-md"
+      }`}>
+        {msg.text}
+      </div>
+    </div>
+  );
+}
+
+function ConversationView({ userId, userName, otherId, otherName, onClose }: { userId: string; userName: string; otherId: string; otherName: string; onClose: () => void }) {
+  const [messages, setMessages] = useState<StoredDirectMessage[]>([]);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [receiptPopup, setReceiptPopup] = useState<StoredReceipt | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    store.getAllMessages(userId).then((all) => {
+      const thread = all
+        .filter((m) => (m.fromUserId === userId && m.toUserId === otherId) || (m.fromUserId === otherId && m.toUserId === userId))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      setMessages(thread);
+      // Mark unread messages as read
+      thread.filter((m) => m.toUserId === userId && !m.read).forEach((m) => store.markMessageRead(m.id, userId));
+    });
+  }, [userId, otherId]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function handleSend() {
+    if (!text.trim() || !userId || sending) return;
+    setSending(true);
+    const msg: StoredDirectMessage = {
+      id: crypto.randomUUID(),
+      fromUserId: userId,
+      fromUserName: userName,
+      toUserId: otherId,
+      toUserName: otherName,
+      type: "text",
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+    await store.sendDirectMessage(msg);
+    setMessages((prev) => [...prev, msg]);
+    setText("");
+    setSending(false);
+  }
+
+  async function openReceipt(receiptId: string) {
+    const r = await store.getReceiptById(receiptId);
+    if (r) setReceiptPopup(r);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[120] bg-background flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface shrink-0">
+        <button onClick={onClose} className="p-1 -ml-1">
+          <ChevronLeft className="w-5 h-5 text-charcoal" />
+        </button>
+        <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary shrink-0">
+          {otherName.charAt(0).toUpperCase()}
+        </div>
+        <span className="font-semibold text-charcoal">{otherName}</span>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 min-h-0">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center gap-2 opacity-50">
+            <MessageCircle className="w-10 h-10 text-border" />
+            <p className="text-sm text-muted">Henüz mesaj yok. İlk mesajı gönder!</p>
+          </div>
+        )}
+        {messages.map((msg) => (
+          <MessageBubble key={msg.id} msg={msg} isMine={msg.fromUserId === userId} onOpenReceipt={openReceipt} />
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-surface shrink-0">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          placeholder="Mesaj yaz..."
+          className="flex-1 px-4 py-2.5 rounded-full border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!text.trim() || sending}
+          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform"
+        >
+          <Send className="w-4 h-4 text-white" />
+        </button>
+      </div>
+
+      {receiptPopup && <ReceiptPopup r={receiptPopup} onClose={() => setReceiptPopup(null)} />}
+    </div>
+  );
+}
 
 function UserAvatar({ userId, name, size = "md" }: { userId: string; name: string; size?: "sm" | "md" }) {
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -387,8 +518,8 @@ export default function FriendsPage() {
   const [myReceipts, setMyReceipts] = useState<StoredReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
-  const [inbox, setInbox] = useState<StoredDirectMessage[]>([]);
-  const [inboxPopupReceipt, setInboxPopupReceipt] = useState<StoredReceipt | null>(null);
+  const [allMessages, setAllMessages] = useState<StoredDirectMessage[]>([]);
+  const [openConversation, setOpenConversation] = useState<{ otherId: string; otherName: string } | null>(null);
 
   async function loadData() {
     if (!user) { setLoading(false); return; }
@@ -396,9 +527,9 @@ export default function FriendsPage() {
       store.getFriendships(user.id),
       store.getUserReceipts(user.id),
       store.getUserCheckIns(user.id),
-      store.getInbox(user.id),
+      store.getAllMessages(user.id),
     ]);
-    setInbox(msgs);
+    setAllMessages(msgs);
     setFriendships(fs);
     setMyReceipts(myR);
     setMyCheckIns(myCI);
@@ -457,16 +588,6 @@ export default function FriendsPage() {
     setFriendCheckIns(checkIns);
   }
 
-  async function openInboxReceipt(msg: StoredDirectMessage) {
-    if (!user) return;
-    if (!msg.read) {
-      await store.markMessageRead(msg.id, user.id);
-      setInbox((prev) => prev.map((m) => m.id === msg.id ? { ...m, read: true } : m));
-    }
-    const receipt = await store.getReceiptById(msg.receiptId);
-    if (receipt) setInboxPopupReceipt(receipt);
-  }
-
   async function rejectRequest(friendshipId: string) {
     await store.removeFriendship(friendshipId);
     setFriendships((prev) => prev.filter((f) => f.id !== friendshipId));
@@ -496,6 +617,21 @@ export default function FriendsPage() {
   ].sort((a, b) => b.time.localeCompare(a.time)).slice(0, 30);
 
   const recentRestaurants = [...new Set(myReceipts.map((r) => r.restaurantName))];
+
+  // Build conversation list from allMessages
+  const unreadCount = user ? allMessages.filter((m) => m.toUserId === user.id && !m.read).length : 0;
+  const conversationMap = new Map<string, { otherName: string; last: StoredDirectMessage; unread: number }>();
+  if (user) {
+    for (const msg of allMessages.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+      const otherId = msg.fromUserId === user.id ? msg.toUserId : msg.fromUserId;
+      const otherName = msg.fromUserId === user.id ? msg.toUserName : msg.fromUserName;
+      if (!conversationMap.has(otherId)) {
+        const unread = allMessages.filter((m) => m.fromUserId === otherId && m.toUserId === user.id && !m.read).length;
+        conversationMap.set(otherId, { otherName, last: msg, unread });
+      }
+    }
+  }
+  const conversations = [...conversationMap.entries()].map(([otherId, v]) => ({ otherId, ...v }));
 
   if (!user) {
     return (
@@ -538,7 +674,7 @@ export default function FriendsPage() {
           ["akis", "Akış"],
           ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` (${accepted.length})` : ""}`],
           ["kesfet", "Keşfet"],
-          ["gelen", inbox.filter(m => !m.read).length > 0 ? `Gelen (${inbox.filter(m => !m.read).length})` : "Gelen"],
+          ["mesajlar", unreadCount > 0 ? `Mesajlar (${unreadCount})` : "Mesajlar"],
         ] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[11px] font-semibold rounded-xl transition-all ${tab === t ? "bg-surface shadow-sm text-primary" : "text-muted"}`}>
             {label}
@@ -698,54 +834,59 @@ export default function FriendsPage() {
         </div>
       )}
 
-      {tab === "gelen" && (
-        <div className="px-4 space-y-3">
-          {inbox.length === 0 ? (
+      {tab === "mesajlar" && (
+        <div className="px-4 space-y-2">
+          {conversations.length === 0 ? (
             <div className="flex flex-col items-center py-16 gap-3 text-center">
               <div className="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center">
-                <Receipt className="w-7 h-7 text-primary/40" />
+                <MessageCircle className="w-7 h-7 text-primary/40" />
               </div>
-              <p className="font-semibold text-charcoal">Gelen kutusu boş</p>
-              <p className="text-sm text-muted">Arkadaşların sana adisyon gönderince burada görünür.</p>
+              <p className="font-semibold text-charcoal">Henüz mesaj yok</p>
+              <p className="text-sm text-muted">Arkadaşlarına adisyon gönder ya da mesaj yaz.</p>
             </div>
           ) : (
-            inbox.map((msg) => (
-              <div
-                key={msg.id}
-                className={`bg-surface rounded-2xl p-4 shadow-sm border transition-colors ${msg.read ? "border-border" : "border-primary/30 bg-primary-light/10"}`}
+            conversations.map(({ otherId, otherName, last, unread }) => (
+              <button
+                key={otherId}
+                onClick={() => setOpenConversation({ otherId, otherName })}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface border border-border active:bg-background text-left transition-colors"
               >
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                    {msg.fromUserName.charAt(0).toUpperCase()}
+                <div className="relative shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-primary-light flex items-center justify-center text-base font-bold text-primary">
+                    {otherName.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-charcoal">{msg.fromUserName}</p>
-                    <p className="text-xs text-muted mt-0.5">
-                      sana <span className="text-ink font-medium">{msg.restaurantName}</span> adisyonunu gönderdi
-                    </p>
-                    {msg.note && (
-                      <p className="text-xs text-muted italic mt-1">"{msg.note}"</p>
-                    )}
-                    <p className="text-[10px] text-muted/70 mt-1">{timeAgo(msg.createdAt)}</p>
-                  </div>
-                  {!msg.read && (
-                    <div className="w-2.5 h-2.5 bg-primary rounded-full shrink-0 mt-1" />
+                  {unread > 0 && (
+                    <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-white">{unread}</span>
+                    </div>
                   )}
                 </div>
-                <button
-                  onClick={() => openInboxReceipt(msg)}
-                  className="w-full text-xs font-semibold text-primary border border-primary/30 rounded-xl py-2 active:bg-primary-light transition-colors"
-                >
-                  Adisyonu Görüntüle
-                </button>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className={`text-sm ${unread > 0 ? "font-bold text-charcoal" : "font-medium text-ink"}`}>{otherName}</p>
+                    <p className="text-[10px] text-muted shrink-0 ml-2">{timeAgo(last.createdAt)}</p>
+                  </div>
+                  <p className={`text-xs mt-0.5 truncate ${unread > 0 ? "text-primary font-medium" : "text-muted"}`}>
+                    {last.fromUserId === user?.id ? "Sen: " : ""}
+                    {last.type === "receipt" ? `📋 ${last.restaurantName}` : last.text}
+                  </p>
+                </div>
+              </button>
             ))
           )}
         </div>
       )}
 
       {checkInOpen && <CheckInModal onClose={() => setCheckInOpen(false)} recentRestaurants={recentRestaurants} />}
-      {inboxPopupReceipt && <ReceiptPopup r={inboxPopupReceipt} onClose={() => setInboxPopupReceipt(null)} />}
+      {openConversation && user && (
+        <ConversationView
+          userId={user.id}
+          userName={user.name}
+          otherId={openConversation.otherId}
+          otherName={openConversation.otherName}
+          onClose={() => { setOpenConversation(null); store.getAllMessages(user.id).then(setAllMessages); }}
+        />
+      )}
     </div>
   );
 }
