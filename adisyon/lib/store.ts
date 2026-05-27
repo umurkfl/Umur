@@ -722,15 +722,25 @@ export const store = {
     const inbox = lsRead<StoredDirectMessage[]>(inboxKey, []);
     if (!inbox.find((m) => m.id === msg.id)) { inbox.unshift(msg); lsWrite(inboxKey, inbox); }
     if (!supabase) return { ok: false, error: "Supabase yapılandırılmamış" };
-    const { error } = await supabase.from("direct_messages").insert({
+    const base = {
       id: msg.id, from_user_id: msg.fromUserId, from_user_name: msg.fromUserName,
       from_user_avatar: msg.fromUserAvatar ?? null, to_user_id: msg.toUserId,
       to_user_name: msg.toUserName, type: msg.type,
       receipt_id: msg.receiptId ?? null, restaurant_name: msg.restaurantName ?? null,
       note: msg.text ?? null, created_at: msg.createdAt, read: false,
-      ...(msg.replyToId ? { reply_to_id: msg.replyToId, reply_to_text: msg.replyToText ?? null } : {}),
-    });
+    };
+    const withReply = msg.replyToId
+      ? { ...base, reply_to_id: msg.replyToId, reply_to_text: msg.replyToText ?? null }
+      : base;
+    const { error } = await supabase.from("direct_messages").insert(withReply);
     if (error) {
+      // Reply columns not yet added to table — retry without them
+      if (msg.replyToId && (error.message.includes("reply_to") || error.message.includes("schema cache"))) {
+        const { error: e2 } = await supabase.from("direct_messages").insert(base);
+        if (!e2) return { ok: true };
+        console.error("[DM] Supabase retry failed:", e2.message);
+        return { ok: false, error: e2.message };
+      }
       console.error("[DM] Supabase insert failed:", error.message, "code:", error.code);
       return { ok: false, error: error.message };
     }

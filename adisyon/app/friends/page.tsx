@@ -108,19 +108,20 @@ function MessageBubble({
   ) : null;
 
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"} relative`}>
-      {swipeX > 20 && (
-        <div className="absolute top-1/2 -translate-y-1/2 left-1 pointer-events-none">
-          <CornerUpLeft className="w-4 h-4 text-primary" style={{ opacity: swipeX / 60 }} />
-        </div>
-      )}
+    <>
       <div
+        className={`flex ${isMine ? "justify-end" : "justify-start"} relative`}
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? "transform 0.2s ease" : "none" }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleClick}
       >
+        {swipeX > 20 && (
+          <div className="absolute top-1/2 -translate-y-1/2 left-1 pointer-events-none">
+            <CornerUpLeft className="w-4 h-4 text-primary" style={{ opacity: swipeX / 60 }} />
+          </div>
+        )}
         {msg.type === "receipt" ? (
           <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
             {receiptPhoto && (
@@ -149,20 +150,20 @@ function MessageBubble({
             <span className={`inline-block text-[9px] leading-none align-bottom ml-2 translate-y-[-1px] ${isMine ? "text-white/60" : "text-muted"}`}>{timeStr}</span>
           </div>
         )}
-        {Object.keys(reactionGroups).length > 0 && (
-          <div className={`flex flex-wrap gap-1 mt-1 ${isMine ? "justify-end" : "justify-start"}`}>
-            {Object.entries(reactionGroups).map(([emoji, users]) => (
-              <button key={emoji} onClick={() => onClickReaction(msg.id, emoji)}
-                className={`text-xs rounded-full px-2 py-0.5 border ${
-                  users.includes(currentUserId) ? "bg-primary-light border-primary/30" : "bg-background border-border"
-                }`}>
-                {emoji}{users.length > 1 ? ` ${users.length}` : ""}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
-    </div>
+      {Object.keys(reactionGroups).length > 0 && (
+        <div className={`flex flex-wrap gap-1 mt-0.5 ${isMine ? "justify-end" : "justify-start"}`}>
+          {Object.entries(reactionGroups).map(([emoji, users]) => (
+            <button key={emoji} onClick={() => onClickReaction(msg.id, emoji)}
+              className={`text-xs rounded-full px-2 py-0.5 border ${
+                users.includes(currentUserId) ? "bg-primary-light border-primary/30" : "bg-background border-border"
+              }`}>
+              {emoji}{users.length > 1 ? ` ${users.length}` : ""}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
