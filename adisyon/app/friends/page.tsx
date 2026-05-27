@@ -98,10 +98,11 @@ function ConversationView({ userId, userName, otherId, otherName, onClose }: { u
         <button onClick={onClose} className="p-1 -ml-1">
           <ChevronLeft className="w-5 h-5 text-charcoal" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary shrink-0">
-          {otherName.charAt(0).toUpperCase()}
+        <UserAvatar userId={otherId} name={otherName} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-charcoal text-sm leading-tight">{otherName}</p>
+          <p className="text-[10px] text-muted">@{deriveUsername(otherName, otherId)}</p>
         </div>
-        <span className="font-semibold text-charcoal">{otherName}</span>
       </div>
 
       {/* Messages */}
@@ -674,9 +675,12 @@ export default function FriendsPage() {
           ["akis", "Akış"],
           ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` (${accepted.length})` : ""}`],
           ["kesfet", "Keşfet"],
-          ["mesajlar", unreadCount > 0 ? `Mesajlar (${unreadCount})` : "Mesajlar"],
+          ["mesajlar", "Mesajlar"],
         ] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[11px] font-semibold rounded-xl transition-all ${tab === t ? "bg-surface shadow-sm text-primary" : "text-muted"}`}>
+          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[11px] font-semibold rounded-xl transition-all relative ${tab === t ? "bg-surface shadow-sm text-primary" : "text-muted"}`}>
+            {t === "mesajlar" && unreadCount > 0 && (
+              <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />
+            )}
             {label}
           </button>
         ))}

@@ -232,18 +232,21 @@ export function Navigation() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [dmCount, setDmCount] = useState(0);
 
   useEffect(() => {
-    if (!user) { setPendingCount(0); return; }
+    if (!user) { setPendingCount(0); setDmCount(0); return; }
 
     function load() {
       Promise.all([
         store.getFriendships(user!.id),
         store.getNotifications(user!.id),
-      ]).then(([fs, notifs]) => {
+        store.getUnreadMessageCount(user!.id),
+      ]).then(([fs, notifs, dm]) => {
         const friendPending = fs.filter((f) => f.status === "pending" && f.friendId === user!.id).length;
         const unreadNotifs = notifs.filter((n) => !n.read).length;
-        setPendingCount(friendPending + unreadNotifs);
+        setDmCount(dm);
+        setPendingCount(friendPending + unreadNotifs + dm);
       });
     }
 
@@ -348,6 +351,7 @@ export function Navigation() {
         <div className="max-w-2xl mx-auto flex">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+            const showBadge = href === "/friends" && dmCount > 0;
             return (
               <Link
                 key={label}
@@ -356,7 +360,14 @@ export function Navigation() {
                   active ? "text-primary" : "text-muted hover:text-ink"
                 }`}
               >
-                <Icon className={`w-6 h-6 ${active ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
+                <div className="relative">
+                  <Icon className={`w-6 h-6 ${active ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
+                  {showBadge && (
+                    <span className="absolute -top-0.5 -right-1 min-w-[14px] h-3.5 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center px-0.5">
+                      {dmCount > 9 ? "9+" : dmCount}
+                    </span>
+                  )}
+                </div>
                 <span>{label}</span>
               </Link>
             );
