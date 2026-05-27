@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus, Trash2, ChevronLeft, Send, MessageCircle } from "lucide-react";
+import { Users, Search, MapPin, UserPlus, Clock, Receipt, Check, X, UserMinus, Trash2, ChevronLeft, Send, MessageCircle, CornerUpLeft } from "lucide-react";
 import { store, StoredFriendship, StoredCheckIn, StoredReceipt, StoredDirectMessage, deriveUsername } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { ReceiptPopup } from "@/app/page";
@@ -13,8 +13,43 @@ type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
 
 // ─── DM components ───────────────────────────────────────────────────────────
 
-function MessageBubble({ msg, isMine, onOpenReceipt }: { msg: StoredDirectMessage; isMine: boolean; onOpenReceipt: (id: string) => void }) {
+const REACTION_EMOJIS = ["❤️", "😂", "😮", "😢", "😡", "👍"];
+
+function EmojiPicker({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[200]" onClick={onClose} />
+      <div className="relative z-[201] bg-surface border border-border rounded-2xl shadow-xl px-2 py-1.5 flex gap-1">
+        {REACTION_EMOJIS.map((e) => (
+          <button key={e} onClick={() => { onSelect(e); onClose(); }}
+            className="text-xl leading-none p-1.5 rounded-xl active:bg-primary-light transition-colors">
+            {e}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function MessageBubble({
+  msg, isMine, onOpenReceipt, onReply, onLongPress, reactions, currentUserId, onClickReaction,
+}: {
+  msg: StoredDirectMessage;
+  isMine: boolean;
+  onOpenReceipt: (id: string) => void;
+  onReply: (id: string, text: string) => void;
+  onLongPress: (id: string) => void;
+  reactions: Record<string, string>;
+  currentUserId: string;
+  onClickReaction: (msgId: string, emoji: string) => void;
+}) {
   const [receiptPhoto, setReceiptPhoto] = useState<string | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isHoriz = useRef<boolean | null>(null);
+  const didReply = useRef(false);
 
   useEffect(() => {
     if (msg.type === "receipt" && msg.receiptId) {
@@ -22,46 +57,123 @@ function MessageBubble({ msg, isMine, onOpenReceipt }: { msg: StoredDirectMessag
     }
   }, [msg.receiptId, msg.type]);
 
-  if (msg.type === "receipt") {
-    return (
-      <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-        <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
-          {receiptPhoto && (
-            <img src={receiptPhoto} alt={msg.restaurantName ?? ""} className="w-full object-cover" style={{ maxHeight: 110 }} />
-          )}
-          <div className="px-3 pt-2.5 pb-1.5">
-            <p className="text-[10px] text-muted mb-0.5">{isMine ? "Gönderdiğin adisyon" : "Adisyon paylaştı"}</p>
-            <p className="text-sm font-semibold text-charcoal">{msg.restaurantName}</p>
-          </div>
-          {msg.text && <p className="px-3 pb-1.5 text-xs text-muted italic">"{msg.text}"</p>}
-          <button
-            onClick={() => onOpenReceipt(msg.receiptId!)}
-            className="w-full px-3 py-2 text-xs font-semibold text-primary text-center border-t border-border/50 active:bg-primary-light transition-colors"
-          >
-            Adisyonu Görüntüle →
-          </button>
-        </div>
-      </div>
-    );
+  const timeStr = new Date(msg.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isHoriz.current = null;
+    didReply.current = false;
+    longPressTimer.current = setTimeout(() => onLongPress(msg.id), 500);
   }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (isHoriz.current === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+      isHoriz.current = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!isHoriz.current) { clearTimeout(longPressTimer.current); return; }
+    clearTimeout(longPressTimer.current);
+    if (dx > 0) setSwipeX(Math.min(dx * 0.5, 60));
+  }
+
+  function handleTouchEnd() {
+    clearTimeout(longPressTimer.current);
+    if (swipeX >= 40 && !didReply.current) {
+      didReply.current = true;
+      const replyText = msg.type === "receipt" ? `📋 ${msg.restaurantName}` : (msg.text ?? "");
+      onReply(msg.id, replyText);
+    }
+    setSwipeX(0);
+    isHoriz.current = null;
+  }
+
+  const reactionGroups: Record<string, string[]> = {};
+  for (const [uid, emoji] of Object.entries(reactions)) {
+    if (!reactionGroups[emoji]) reactionGroups[emoji] = [];
+    reactionGroups[emoji].push(uid);
+  }
+
+  const replyPreview = msg.replyToText ? (
+    <div className={`text-[10px] px-2 py-1 rounded-lg mb-1 border-l-2 truncate ${
+      isMine ? "bg-white/20 border-white/60 text-white/80" : "bg-muted/10 border-border text-muted"
+    }`}>
+      {msg.replyToText}
+    </div>
+  ) : null;
+
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-snug break-words ${
-        isMine ? "bg-primary text-white rounded-br-md" : "bg-surface border border-border text-ink rounded-bl-md"
-      }`}>
-        {msg.text}
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"} relative`}>
+      {swipeX > 20 && (
+        <div className="absolute top-1/2 -translate-y-1/2 left-1 pointer-events-none">
+          <CornerUpLeft className="w-4 h-4 text-primary" style={{ opacity: swipeX / 60 }} />
+        </div>
+      )}
+      <div
+        style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? "transform 0.2s ease" : "none" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {msg.type === "receipt" ? (
+          <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+            {receiptPhoto && (
+              <img src={receiptPhoto} alt={msg.restaurantName ?? ""} className="w-full object-cover" style={{ maxHeight: 110 }} />
+            )}
+            <div className="px-3 pt-2.5 pb-1">
+              {replyPreview}
+              <p className="text-[10px] text-muted mb-0.5">{isMine ? "Gönderdiğin adisyon" : "Adisyon paylaştı"}</p>
+              <p className="text-sm font-semibold text-charcoal">{msg.restaurantName}</p>
+            </div>
+            {msg.text && <p className="px-3 pb-1 text-xs text-muted italic">&ldquo;{msg.text}&rdquo;</p>}
+            <button
+              onClick={() => onOpenReceipt(msg.receiptId!)}
+              className="w-full px-3 py-2 text-xs font-semibold text-primary text-center border-t border-border/50 active:bg-primary-light transition-colors"
+            >
+              Adisyonu Görüntüle →
+            </button>
+            <p className="px-3 pb-2 text-[9px] text-muted text-right">{timeStr}</p>
+          </div>
+        ) : (
+          <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-snug break-words ${
+            isMine ? "bg-primary text-white rounded-br-md" : "bg-[#f0f0f0] dark:bg-surface border border-border text-ink rounded-bl-md"
+          }`}>
+            {replyPreview}
+            {msg.text}
+            <p className={`text-[9px] mt-1 text-right ${isMine ? "text-white/60" : "text-muted"}`}>{timeStr}</p>
+          </div>
+        )}
+        {Object.keys(reactionGroups).length > 0 && (
+          <div className={`flex flex-wrap gap-1 mt-1 ${isMine ? "justify-end" : "justify-start"}`}>
+            {Object.entries(reactionGroups).map(([emoji, users]) => (
+              <button key={emoji} onClick={() => onClickReaction(msg.id, emoji)}
+                className={`text-xs rounded-full px-2 py-0.5 border ${
+                  users.includes(currentUserId) ? "bg-primary-light border-primary/30" : "bg-background border-border"
+                }`}>
+                {emoji}{users.length > 1 ? ` ${users.length}` : ""}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function ConversationView({ userId, userName, otherId, otherName, onClose, onMessagesRead }: { userId: string; userName: string; otherId: string; otherName: string; onClose: () => void; onMessagesRead?: () => void }) {
+function ConversationView({ userId, userName, otherId, otherName, onClose, onMessagesRead }: {
+  userId: string; userName: string; otherId: string; otherName: string; onClose: () => void; onMessagesRead?: () => void;
+}) {
   const [messages, setMessages] = useState<StoredDirectMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [receiptPopup, setReceiptPopup] = useState<StoredReceipt | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; text: string } | null>(null);
+  const [reactions, setReactions] = useState<Record<string, Record<string, string>>>({});
+  const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const firstScroll = useRef(true);
 
   useEffect(() => {
     store.getAllMessages(userId).then((all) => {
@@ -76,11 +188,25 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
         window.dispatchEvent(new CustomEvent("adisyon:messages-read"));
       }
     });
+    setReactions(store.getAllMsgReactions());
   }, [userId, otherId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!bottomRef.current) return;
+    if (firstScroll.current) {
+      bottomRef.current.scrollIntoView();
+      firstScroll.current = false;
+    } else {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  const handleReaction = useCallback((msgId: string, emoji: string) => {
+    const prev = reactions[msgId]?.[userId];
+    store.setMsgReaction(msgId, userId, prev === emoji ? null : emoji);
+    setReactions(store.getAllMsgReactions());
+    setEmojiPickerFor(null);
+  }, [reactions, userId]);
 
   async function handleSend() {
     if (!text.trim() || !userId || sending) return;
@@ -96,11 +222,14 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
       text: text.trim(),
       createdAt: new Date().toISOString(),
       read: false,
+      replyToId: replyTo?.id,
+      replyToText: replyTo?.text,
     };
     const result = await store.sendDirectMessage(msg);
     if (result.ok) {
       setMessages((prev) => [...prev, msg]);
       setText("");
+      setReplyTo(null);
     } else {
       setSendError(result.error ?? "Mesaj gönderilemedi");
     }
@@ -137,7 +266,26 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
           </div>
         )}
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} isMine={msg.fromUserId === userId} onOpenReceipt={openReceipt} />
+          <div key={msg.id} className="relative">
+            <MessageBubble
+              msg={msg}
+              isMine={msg.fromUserId === userId}
+              onOpenReceipt={openReceipt}
+              onReply={(id, t) => setReplyTo({ id, text: t })}
+              onLongPress={(id) => setEmojiPickerFor(emojiPickerFor === id ? null : id)}
+              reactions={reactions[msg.id] ?? {}}
+              currentUserId={userId}
+              onClickReaction={handleReaction}
+            />
+            {emojiPickerFor === msg.id && (
+              <div className={`absolute bottom-full mb-1 z-[200] ${msg.fromUserId === userId ? "right-0" : "left-0"}`}>
+                <EmojiPicker
+                  onSelect={(e) => handleReaction(msg.id, e)}
+                  onClose={() => setEmojiPickerFor(null)}
+                />
+              </div>
+            )}
+          </div>
         ))}
         <div ref={bottomRef} />
       </div>
@@ -149,6 +297,17 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
           {sendError.includes("does not exist") || sendError.includes("exist") ? (
             <p className="text-[10px] text-red-500 mt-0.5">Supabase Dashboard → SQL Editor&apos;da <code>direct_messages</code> tablosunu oluştur (schema.sql).</p>
           ) : null}
+        </div>
+      )}
+
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="flex items-center gap-2 px-4 py-2 border-t border-border bg-surface/80 shrink-0">
+          <CornerUpLeft className="w-4 h-4 text-primary shrink-0" />
+          <p className="flex-1 text-xs text-muted truncate">{replyTo.text}</p>
+          <button onClick={() => setReplyTo(null)} className="shrink-0 text-muted active:text-ink">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
