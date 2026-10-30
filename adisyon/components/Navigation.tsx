@@ -235,6 +235,14 @@ export function Navigation() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [dmCount, setDmCount] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Clear badge the moment the user taps Arkadaşlar
   useEffect(() => {
@@ -286,13 +294,12 @@ export function Navigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-surface border-b-2 border-border">
+      <header className="app-header sticky top-0 z-50 bg-page/90 backdrop-blur" data-scrolled={scrolled ? "1" : "0"}>
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
 
           {/* Sol: Gus + wordmark */}
           <Link href="/" aria-label="grazer ana sayfa" className="flex items-center gap-2 active:scale-95 transition-transform">
-            <GusIcon size={34} />
-            <span className="font-display text-[24px] font-black text-primary tracking-[-0.5px]">grazer</span>
+            <GusIcon size={38} />
           </Link>
 
           {/* Sağ: bildirim + avatar */}
@@ -353,7 +360,7 @@ export function Navigation() {
         </div>
       </header>
 
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-surface border-t-2 border-border safe-area-pb">
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-page/95 backdrop-blur border-t-2 border-border safe-area-pb">
         <div className="max-w-2xl mx-auto flex items-end justify-around px-2 pt-2 pb-2">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));

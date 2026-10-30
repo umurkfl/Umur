@@ -7,12 +7,13 @@
   --color-primary-light: #E1F5EE;
   --color-accent:        #D85A30;
   --color-accent-light:  #F5C4B3;
-  --color-charcoal:      #2C2C2A;
-  --color-ink:           #444441;
-  --color-muted:         #888780;
-  --color-background:    #F6F4EC;
+  --color-charcoal:      #2B2B29;
+  --color-ink:           #484846;
+  --color-muted:         #7C7C78;
+  --color-background:    #F4F4F2; /* soft fill for inputs, chips, inner blocks */
+  --color-page:          #FFFFFF; /* the screen itself */
   --color-surface:       #FFFFFF;
-  --color-border:        #DDDAD0;
+  --color-border:        #E5E5E2;
   --color-dark:          #1A1A18;
   /* Duolingo-style 3D button shades + reward colours */
   --color-primary-shade: #16825F;
@@ -49,14 +50,15 @@ body {
 
 /* ── Dark mode overrides ── */
 .dark {
-  --color-background:    #1C1B18;
-  --color-surface:       #252421;
-  --color-border:        #3A3836;
-  --color-charcoal:      #F0EEE7;
-  --color-ink:           #C8C6BE;
-  --color-muted:         #7A7870;
-  --color-primary-light: #1A3A2D;
-  --color-dark:          #F0EEE7;
+  --color-page:          #151514;
+  --color-background:    #212120;
+  --color-surface:       #1C1C1B;
+  --color-border:        #353533;
+  --color-charcoal:      #F2F1EC;
+  --color-ink:           #D4D3CC;
+  --color-muted:         #8F8E87;
+  --color-primary-light: #16382B;
+  --color-dark:          #F2F1EC;
 }
 
 
@@ -187,3 +189,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 /* Chips and badges: heavier type */
 .pill-stat, .text-\[10px\], .text-xs { letter-spacing: 0; }
+
+/* ═══ Modern layer: large titles, calm header ═════════════════════════════ */
+main h1 { font-size: 1.9rem; line-height: 1.12; font-weight: 900; letter-spacing: -0.025em; }
+.app-header { transition: border-color .2s ease, box-shadow .2s ease; border-bottom: 2px solid transparent; }
+.app-header[data-scrolled="1"] { border-bottom-color: var(--color-border); }
+.photo-card .photo { aspect-ratio: 4 / 3; width: 100%; background: var(--color-background); }
+.photo-card img.photo { object-fit: cover; display: block; }

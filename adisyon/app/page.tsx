@@ -293,14 +293,14 @@ function HelpfulButton({ receiptId }: { receiptId: string }) {
   return (
     <button
       onClick={toggle}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95 ${
+      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-extrabold border transition-all active:scale-95 ${
         liked
           ? "bg-primary border-primary text-white"
           : "bg-surface border-border text-muted hover:border-primary hover:text-primary"
       }`}
     >
       {/* Checkmark icon */}
-      <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M2.5 8.5l3.5 3.5 7-7" />
       </svg>
       {liked ? "Faydalı buldum" : "Faydalı"}
@@ -787,104 +787,82 @@ function UserReceiptCard({ r, userAvatar, onOpen, onDelete }: { r: StoredReceipt
 
   return (
     <article
-      className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden cursor-pointer"
+      className="photo-card bg-surface rounded-3xl border-2 border-b-4 border-border overflow-hidden cursor-pointer"
       onClick={handleCardClick}
     >
-      {/* Fotoğraf önizlemesi */}
-      {r.photo && (
-        <div className="relative" onClick={onOpen}>
-          <img src={r.photo} alt={r.restaurantName} className="w-full object-cover" style={{ maxHeight: 120 }} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between">
-            <p className="text-white font-bold text-base drop-shadow leading-tight truncate">{r.restaurantName}</p>
-            <div className="bg-primary rounded-xl px-2.5 py-1 shrink-0 ml-2">
-              <p className="text-white text-sm font-bold leading-none">{formatCurrency(r.perPerson)}</p>
-              <p className="text-white/70 text-[9px] mt-0.5">kişi başı</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fiyat + meta (fotoğraf yoksa) */}
-      {!r.photo && (
-        <div className="px-4 pt-3.5 pb-1 flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <Link href={`/restaurants?name=${encodeURIComponent(r.restaurantName)}`} className="font-bold text-charcoal text-base leading-tight truncate block hover:text-primary transition-colors">{r.restaurantName}</Link>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="bg-primary-light rounded-xl px-3 py-1.5">
-              <p className="text-lg font-bold text-primary leading-none">{formatCurrency(r.perPerson)}</p>
-              <p className="text-[10px] text-primary/70 mt-0.5">kişi başı</p>
-            </div>
-            <p className="text-[10px] text-muted mt-1">toplam {formatCurrency(r.total)}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Meta satırı */}
-      <div className="flex items-center gap-2 px-4 py-1.5 flex-wrap">
-        <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="flex items-center gap-1.5">
+      {/* Yazar satırı */}
+      <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-3">
+        <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="shrink-0">
           {userAvatar
-            ? <img src={userAvatar} className="w-5 h-5 rounded-full object-cover shrink-0" alt={r.userName} />
-            : <div className="w-5 h-5 bg-primary-light rounded-full flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{r.userName.charAt(0).toUpperCase()}</div>
+            ? <img src={userAvatar} className="w-9 h-9 rounded-full object-cover" alt={r.userName} />
+            : <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-black text-primary">{r.userName.charAt(0).toUpperCase()}</div>
           }
-          <span className="text-xs text-primary font-medium">{r.userName}</span>
         </Link>
-        <span className="text-border text-xs">·</span>
-        <span className="text-xs text-muted">{timeAgo(r.createdAt)}</span>
-        <span className="text-border text-xs">·</span>
-        <span className="text-xs text-muted">{r.people} kişi</span>
-        {(r.city || r.district) && (
-          <>
-            <span className="text-border text-xs">·</span>
-            <span className="text-xs text-muted flex items-center gap-0.5">
-              <PinIcon className="w-2 h-2.5 shrink-0" />
-              {[r.district, r.city].filter(Boolean).join(", ")}
-            </span>
-          </>
+        <div className="min-w-0 flex-1 leading-tight">
+          <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} className="block text-sm font-extrabold text-charcoal truncate">{r.userName}</Link>
+          <p className="text-xs font-semibold text-muted truncate">
+            {timeAgo(r.createdAt)}
+            {(r.city || r.district) && <> · {[r.district, r.city].filter(Boolean).join(", ")}</>}
+          </p>
+        </div>
+        {user?.id === r.userId && (
+          confirmDelete ? (
+            <div className="flex items-center gap-3">
+              <button onClick={handleDelete} className="text-xs font-extrabold text-red-500 active:opacity-70">Sil</button>
+              <button onClick={() => setConfirmDelete(false)} className="text-xs font-bold text-muted active:opacity-70">İptal</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDelete(true)} aria-label="Sil" className="w-8 h-8 flex items-center justify-center rounded-full active:bg-red-50 transition-colors">
+              <Trash2 className="w-4 h-4 text-muted" />
+            </button>
+          )
         )}
       </div>
 
-      {/* Puan + yorum */}
-      {(r.rating > 0 || r.comment) && (
-        <div className="px-4 py-1.5 space-y-1">
+      {/* Fotoğraf + fiyat rozeti */}
+      <div className="relative" onClick={onOpen}>
+        {r.photo ? (
+          <img src={r.photo} alt={r.restaurantName} className="photo" />
+        ) : (
+          <div className="photo flex items-center justify-center bg-primary-light">
+            <Receipt className="w-14 h-14 text-primary/30" strokeWidth={1.5} />
+          </div>
+        )}
+        <div className="absolute right-3 bottom-3 rounded-2xl bg-white border-2 border-b-4 border-border px-3 py-1.5 text-right shadow-sm">
+          <p className="text-xl font-black text-primary leading-none">{formatCurrency(r.perPerson)}</p>
+          <p className="text-[11px] font-extrabold text-muted mt-0.5">kişi başı</p>
+        </div>
+      </div>
+
+      {/* Başlık + puan */}
+      <div className="px-4 pt-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <Link href={`/restaurants?name=${encodeURIComponent(r.restaurantName)}`} className="text-xl font-black text-charcoal leading-tight">{r.restaurantName}</Link>
           {r.rating > 0 && (
-            <div className="flex gap-0.5">
-              {[1,2,3,4,5].map((s) => (
-                <Star key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
-              ))}
+            <div className="flex items-center gap-1 shrink-0 mt-0.5">
+              <Star className="w-4 h-4 fill-yellow-400 stroke-yellow-400" />
+              <span className="text-sm font-black text-charcoal">{r.rating.toFixed(1)}</span>
             </div>
           )}
-          {r.comment && <p className="text-sm text-ink leading-snug">{r.comment}</p>}
         </div>
-      )}
+        <p className="mt-1 text-sm font-bold text-muted">{r.people} kişi · toplam {formatCurrency(r.total)}</p>
+        {r.comment && <p className="mt-2 text-[15px] font-semibold text-ink leading-snug">{r.comment}</p>}
+      </div>
 
       {/* Aksiyonlar */}
-      <div className="px-4 py-2.5 flex items-center gap-2 border-t border-border/60">
+      <div className="px-4 pt-3 pb-3.5 flex items-center gap-2">
         <HelpfulButton receiptId={r.id} />
         {user && (
           <button
             onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 transition-transform"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-extrabold border border-border text-muted bg-surface active:scale-95 transition-transform"
           >
-            <Send className="w-3 h-3" />
+            <Send className="w-4 h-4" />
             Gönder
           </button>
         )}
         <div className="ml-auto flex items-center gap-2">
           <WishlistButton restaurantName={r.restaurantName} size="sm" />
-          {user?.id === r.userId && (
-            confirmDelete ? (
-              <>
-                <button onClick={handleDelete} className="text-xs font-semibold text-red-500 active:opacity-70">Sil</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted active:opacity-70">İptal</button>
-              </>
-            ) : (
-              <button onClick={() => setConfirmDelete(true)} className="w-7 h-7 flex items-center justify-center rounded-full active:bg-red-50 transition-colors">
-                <Trash2 className="w-3.5 h-3.5 text-muted" />
-              </button>
-            )
-          )}
         </div>
       </div>
 

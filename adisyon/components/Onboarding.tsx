@@ -81,7 +81,7 @@ export function Onboarding() {
       role="dialog"
       aria-modal="true"
       aria-label="grazer tanıtımı"
-      className="fixed inset-0 z-[400] bg-background flex flex-col"
+      className="fixed inset-0 z-[400] bg-page flex flex-col"
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
       onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
