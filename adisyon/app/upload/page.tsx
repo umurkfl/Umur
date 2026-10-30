@@ -12,6 +12,7 @@ import { Gus } from "@/components/Gus";
 import { computeStats, GameStats, POINT_RULES, LEVELS } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
 import { playSfx } from "@/lib/sfx";
+import { getPro } from "@/lib/pro";
 import { StarIcon, CloverIcon, LevelIcon } from "@/components/Icons";
 
 interface Suggestion {
@@ -212,7 +213,8 @@ export default function UploadPage() {
     const p = parseInt(people);
     const receiptId = crypto.randomUUID();
     const photo = await store.uploadReceiptPhoto(receiptId, photoBase64);
-    const before = computeStats(await store.getUserReceipts(user.id));
+    const pro = getPro(user.id).active;
+    const before = computeStats(await store.getUserReceipts(user.id), { pro });
     await store.addReceipt({
       id: receiptId,
       userId: user.id,
@@ -230,7 +232,7 @@ export default function UploadPage() {
       lat: selectedLat,
       lng: selectedLng,
     });
-    const after = computeStats(await store.getUserReceipts(user.id));
+    const after = computeStats(await store.getUserReceipts(user.id), { pro });
     setReward({ before, after });
     haptic("success");
     playSfx(after.level > before.level ? "level" : "success");
@@ -302,7 +304,7 @@ export default function UploadPage() {
 
         {leveledUp && reward && (
           <div className="pop-in w-full max-w-xs rounded-3xl border-2 border-b-4 border-gold-shade bg-gold/20 px-5 py-4 flex items-center gap-3 text-left" style={{ animationDelay: ".4s" }}>
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shrink-0"><LevelIcon index={reward.after.level - 1} size={42} /></div>
+            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shrink-0"><LevelIcon index={reward.after.levelIcon} size={42} /></div>
             <div>
               <p className="text-xs font-extrabold text-muted uppercase tracking-wide">Yeni seviye</p>
               <p className="text-xl font-black text-charcoal leading-tight">{LEVELS[reward.after.level - 1].name}</p>

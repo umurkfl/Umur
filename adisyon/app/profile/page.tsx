@@ -11,7 +11,9 @@ import { store, StoredReceipt, StoredFriendship, StoredCheckIn, calcBadges, deri
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
-import { CloverIcon, LevelIcon, SavedIcon, GearIcon } from "@/components/Icons";
+import { CloverIcon, LevelIcon, SavedIcon, GearIcon, CrownIcon } from "@/components/Icons";
+import { usePro } from "@/lib/pro";
+import { ProChip } from "@/components/Pro";
 import { BadgeArt } from "@/components/BadgeArt";
 import { computeStats, LEVELS } from "@/lib/gamify";
 
@@ -68,6 +70,7 @@ function FriendAvatar({ userId, name }: { userId: string; name: string }) {
 
 export default function ProfilePage() {
   const { user, login, logout, ready } = useAuth();
+  const { pro } = usePro(user?.id);
   const router = useRouter();
   const [receipts, setReceipts] = useState<StoredReceipt[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -168,7 +171,7 @@ export default function ProfilePage() {
   }
 
   const visibleReceipts = showAllReceipts ? receipts : receipts.slice(0, 4);
-  const gstats = computeStats(receipts);
+  const gstats = computeStats(receipts, { pro });
 
   return (
     <div className="space-y-4 pb-8">
@@ -199,11 +202,12 @@ export default function ProfilePage() {
 
             <div className="flex-1 min-w-0 pt-1">
               <Link href="/levels" className="inline-flex items-center gap-1.5 bg-white/20 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-black active:opacity-80">
-                <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><LevelIcon index={gstats.level - 1} size={16} /></span> {gstats.levelName}
+                <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><LevelIcon index={gstats.levelIcon} size={16} /></span> {gstats.levelName}
               </Link>
               <h1 className="mt-1.5 !text-[1.6rem] !leading-tight text-white truncate">
                 {showName ? user.name : (user.username ?? deriveUsername(user.name, user.id))}
               </h1>
+              {pro && <ProChip className="mt-1" />}
               <p className="text-sm font-bold text-white/80 truncate">
                 {user.username ?? deriveUsername(user.name, user.id)}{!showName && " · Anonim"}
               </p>
@@ -242,10 +246,23 @@ export default function ProfilePage() {
           <span className="leading-tight"><span className="block text-base font-black text-charcoal">Kaydedilenler</span><span className="block text-xs font-bold text-muted">Gitmek istediklerin</span></span>
         </Link>
         <Link href="/levels" className="rounded-2xl border-2 border-b-4 border-border bg-surface px-4 py-3.5 flex items-center gap-3 active:translate-y-0.5 active:border-b-2 transition-all">
-          <span className="w-11 h-11 rounded-xl bg-gold/25 flex items-center justify-center shrink-0"><LevelIcon index={gstats.level - 1} size={30} /></span>
-          <span className="leading-tight"><span className="block text-base font-black text-charcoal">Tırmanış</span><span className="block text-xs font-bold text-muted">Yonca ve seviyeler</span></span>
+          <span className="w-11 h-11 rounded-xl bg-gold/25 flex items-center justify-center shrink-0"><LevelIcon index={gstats.levelIcon} size={30} /></span>
+          <span className="leading-tight"><span className="block text-base font-black text-charcoal">Tırmanış</span><span className="block text-xs font-bold text-muted">Seviye, görev, yonca</span></span>
+        </Link>
+        <Link href="/shop" className="rounded-2xl border-2 border-b-4 border-border bg-surface px-4 py-3.5 flex items-center gap-3 active:translate-y-0.5 active:border-b-2 transition-all">
+          <span className="w-11 h-11 rounded-xl bg-primary-light flex items-center justify-center shrink-0"><BadgeArt id="tatli" size={34} /></span>
+          <span className="leading-tight"><span className="block text-base font-black text-charcoal">Dolap</span><span className="block text-xs font-bold text-muted">Gus'a kostüm al</span></span>
+        </Link>
+        <Link href={pro ? "/assistant" : "/pro"} className="rounded-2xl border-2 border-b-4 border-gold-shade bg-gold/20 px-4 py-3.5 flex items-center gap-3 active:translate-y-0.5 active:border-b-2 transition-all">
+          <span className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0"><CrownIcon size={28} /></span>
+          <span className="leading-tight"><span className="block text-base font-black text-charcoal">{pro ? "Gus Asistan" : "grazer Pro"}</span><span className="block text-xs font-bold text-muted">{pro ? "Mekan önerisi al" : "Daha fazlasını aç"}</span></span>
         </Link>
       </div>
+      {pro && (
+        <div className="flex gap-3">
+          <Link href="/report" className="btn btn-ghost flex-1 !text-charcoal">Harcama raporu</Link>
+        </div>
+      )}
       <div className="flex gap-3">
         <Link href="/settings" className="btn btn-ghost flex-1 !text-charcoal"><GearIcon size={22} /> Ayarlar</Link>
         <button onClick={handleLogout} aria-label="Çıkış yap" className="btn btn-ghost !px-4 !text-muted"><LogOut className="w-5 h-5" /></button>

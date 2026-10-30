@@ -7,20 +7,22 @@ import { Gus } from "@/components/Gus";
 import { useAuth } from "@/lib/auth";
 import { store } from "@/lib/store";
 import { computeStats, GameStats, LEVELS } from "@/lib/gamify";
+import { usePro } from "@/lib/pro";
 import { haptic } from "@/lib/haptics";
 import { FlameIcon, GoalIcon, CloverIcon, LevelIcon } from "@/components/Icons";
 
 export function HomeHero() {
   const { user, ready } = useAuth();
   const [stats, setStats] = useState<GameStats | null>(null);
+  const { pro } = usePro(user?.id);
 
   useEffect(() => {
     if (!user) { setStats(null); return; }
-    const load = () => store.getUserReceipts(user.id).then((r) => setStats(computeStats(r)));
+    const load = () => store.getUserReceipts(user.id).then((r) => setStats(computeStats(r, { pro })));
     load();
     window.addEventListener("adisyon:receipt-added", load);
     return () => window.removeEventListener("adisyon:receipt-added", load);
-  }, [user]);
+  }, [user, pro]);
 
   if (!ready) return <div className="mx-4 mt-2 mb-5 h-44" />;
 
@@ -42,7 +44,7 @@ export function HomeHero() {
       {stats && (
         <>
           <Link href="/levels" className="flex items-center gap-3.5 active:opacity-80">
-            <div className="w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center shrink-0"><LevelIcon index={stats.level - 1} size={40} /></div>
+            <div className="w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center shrink-0"><LevelIcon index={stats.levelIcon} size={40} /></div>
             <div className="flex-1 min-w-0 leading-tight">
               <p className="text-lg font-black text-charcoal">{stats.levelName}</p>
               <p className="text-xs font-bold text-muted">Seviye {stats.level} · Gus'ın tırmanışı</p>
@@ -61,7 +63,10 @@ export function HomeHero() {
             </p>
           </div>
           <div className="mt-3 flex items-center justify-between text-xs font-extrabold text-muted">
-            <span className="flex items-center gap-1.5"><GoalIcon size={18} done={done} />{done ? "Bu hafta fiş eklendi" : "Bu hafta henüz fiş yok"}</span>
+            <Link href="/levels" className="flex items-center gap-1.5">
+              <span className="flex -space-x-1">{stats.quests.map((q) => <GoalIcon key={q.id} size={18} done={q.done} />)}</span>
+              {stats.quests.filter((q) => q.done).length}/3 haftalık görev
+            </Link>
             {stats.weekStreak >= 2 && <span className="flex items-center gap-1"><FlameIcon size={14} />{stats.weekStreak} hafta üst üste</span>}
           </div>
         </>

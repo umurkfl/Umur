@@ -177,7 +177,7 @@ function ProfileContent() {
             <div className="flex-1 min-w-0 pt-1">
               {!stillLoadingAccess && canSeeReceipts && (
                 <span className="inline-flex items-center gap-1.5 bg-white/20 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-black">
-                  <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><LevelIcon index={computeStats(receipts).level - 1} size={16} /></span> {computeStats(receipts).levelName}
+                  <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><LevelIcon index={computeStats(receipts).levelIcon} size={16} /></span> {computeStats(receipts).levelName}
                 </span>
               )}
               <h1 className="mt-1.5 !text-[1.6rem] !leading-tight text-white truncate">{stillLoadingAccess ? "Yükleniyor…" : userName}</h1>

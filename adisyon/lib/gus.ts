@@ -26,6 +26,8 @@ export interface GusOpts {
   noShadow?: boolean;
   label?: string;
   viewBox?: string;
+  /** equipped costume ids by slot (see lib/shop.ts) */
+  look?: { head?: string; face?: string; neck?: string; horn?: string };
 }
 
 export type GusMood =
@@ -144,8 +146,26 @@ function prop(type: GusProp): string {
   }
 }
 
+
+function costumes(look: NonNullable<GusOpts["look"]>): string {
+  let g = "";
+  switch (look.neck) {
+    case "scarf": g += `<path d="M50 158 Q100 184 150 158 L154 172 Q100 198 46 172 Z" fill="#D85A30"/><path d="M118 180 L128 202 L112 204 L106 184 Z" fill="#B8461F"/>`; break;
+    case "bow": g += `<path d="M100 164 L80 152 V176 Z M100 164 L120 152 V176 Z" fill="#FF4D6D"/><circle cx="100" cy="164" r="6" fill="#D63030"/>`; break;
+  }
+  switch (look.head) {
+    case "cap": g += `<path d="M70 64 C70 36 130 36 130 64 Z" fill="#1D9E75"/><path d="M64 64 Q100 76 136 64 Q100 56 64 64 Z" fill="#0F6E56"/><circle cx="100" cy="40" r="3.4" fill="#0F6E56"/>`; break;
+    case "chef": g += `<path d="M74 64 V52 C58 52 58 30 78 30 C80 18 122 18 124 30 C142 30 142 52 126 52 V64 Z" fill="#fff" stroke="#E3D6BC" stroke-width="2.4" stroke-linejoin="round"/>`; break;
+    case "party": g += `<path d="M100 14 L126 64 H74 Z" fill="#FF6B81"/><path d="M89 38 L112 38 M82 52 L119 52" stroke="#FFD166" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="14" r="6" fill="#FFC800"/>`; break;
+    case "phones": g += `<path d="M42 110 C42 40 158 40 158 110" fill="none" stroke="#33312D" stroke-width="8" stroke-linecap="round"/><rect x="30" y="94" width="20" height="34" rx="9" fill="#4DA3FF"/><rect x="150" y="94" width="20" height="34" rx="9" fill="#4DA3FF"/>`; break;
+    case "flower": g += `<g transform="translate(72 54)"><g fill="#fff"><circle cx="0" cy="-8" r="6.4"/><circle cx="7.6" cy="-2.5" r="6.4"/><circle cx="4.7" cy="6.5" r="6.4"/><circle cx="-4.7" cy="6.5" r="6.4"/><circle cx="-7.6" cy="-2.5" r="6.4"/></g><circle r="5" fill="#FFC800"/></g>`; break;
+    case "crown": g += `<path d="M72 64 L72 36 L87 50 L100 28 L113 50 L128 36 L128 64 Z" fill="#C99A00" transform="translate(0 3)"/><path d="M72 64 L72 36 L87 50 L100 28 L113 50 L128 36 L128 64 Z" fill="#FFC800" stroke="#FFC800" stroke-width="4" stroke-linejoin="round"/><circle cx="100" cy="46" r="4.4" fill="#E4572E"/><circle cx="84" cy="54" r="3" fill="#1D9E75"/><circle cx="116" cy="54" r="3" fill="#4DA3FF"/>`; break;
+  }
+  return g;
+}
+
 export function gusInner(o: GusOpts): string {
-  const hC = o.hornC ?? GR, hS = o.hornS ?? GRS;
+  const hC = o.hornC ?? (o.look?.horn === "gold" ? "#FFC800" : GR), hS = o.hornS ?? (o.look?.horn === "gold" ? "#D9A400" : GRS);
   let g = "";
   // horns (swept back, brand green)
   for (const d of ["M72 62 C60 24 28 10 4 30 C36 30 56 48 62 80 Z", "M128 62 C140 24 172 10 196 30 C164 30 144 48 138 80 Z"]) {
@@ -163,13 +183,14 @@ export function gusInner(o: GusOpts): string {
   g += `<ellipse cx="100" cy="136" rx="27" ry="19" fill="${BELLY}"/><ellipse cx="100" cy="126" rx="7" ry="5" fill="#C98B74"/>`;
   if (o.blush !== false) g += `<ellipse cx="56" cy="124" rx="10" ry="6.5" fill="${PINK}" opacity=".75"/><ellipse cx="144" cy="124" rx="10" ry="6.5" fill="${PINK}" opacity=".75"/>`;
   // eyes
-  if (o.shades) {
+  if (o.shades || o.look?.face === "shades") {
     g += `<g><rect x="46" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><rect x="104" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><path d="M96 84 H104" stroke="#1B1B1B" stroke-width="5"/><path d="M54 84 l12 -3 M112 84 l12 -3" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".45"/></g>`;
   } else {
     g += eye(o.eyes ?? "open", 76, 92, o.dx, o.dy) + eye(o.eyeR ?? o.eyes ?? "open", 124, 92, o.dx, o.dy);
   }
   g += brows(o.brows, 62);
   g += `<g transform="translate(0 14)">${mouth(o.mouth ?? "smile")}</g>`;
+  if (o.look) g += costumes(o.look);
   g += extras(o.extra);
   if (o.prop) g += prop(o.prop);
   return g;

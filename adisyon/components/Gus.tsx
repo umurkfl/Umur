@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { gusSvg, gusIconSvg, gusFaceSvg, GUS_MOODS, GusMood, GusOpts } from "@/lib/gus";
 import { haptic } from "@/lib/haptics";
+import { currentUserId, getLook, Look } from "@/lib/shop";
+import { getPro } from "@/lib/pro";
 
 interface GusProps extends GusOpts {
   mood?: GusMood;
@@ -10,13 +12,32 @@ interface GusProps extends GusOpts {
   className?: string;
   /** tapping makes Gus jump */
   playful?: boolean;
+  /** render without the equipped costume (e.g. the shop preview passes its own look) */
+  bare?: boolean;
 }
 
-export function Gus({ mood = "happy", size = 140, className = "", playful = true, ...overrides }: GusProps) {
+/** The costume the signed-in user has equipped (empty for guests and when Pro ended) */
+function useLook(enabled: boolean): Look {
+  const [look, setLook] = useState<Look>({});
+  useEffect(() => {
+    if (!enabled) return;
+    const read = () => { const uid = currentUserId(); setLook(getLook(uid, getPro(uid).active)); };
+    read();
+    window.addEventListener("grazer:look-changed", read);
+    window.addEventListener("grazer:pro-changed", read);
+    window.addEventListener("storage", read);
+    return () => { window.removeEventListener("grazer:look-changed", read); window.removeEventListener("grazer:pro-changed", read); window.removeEventListener("storage", read); };
+  }, [enabled]);
+  return look;
+}
+
+export function Gus({ mood = "happy", size = 140, className = "", playful = true, bare = false, ...overrides }: GusProps) {
   const [jump, setJump] = useState(0);
-  const key = JSON.stringify([mood, overrides]);
+  const worn = useLook(!bare && !overrides.look);
+  const look = overrides.look ?? worn;
+  const key = JSON.stringify([mood, overrides, look]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const html = useMemo(() => gusSvg({ ...GUS_MOODS[mood], ...overrides }), [key]);
+  const html = useMemo(() => gusSvg({ ...GUS_MOODS[mood], ...overrides, look }), [key]);
   return (
     <div
       className={`gus ${jump ? "gus-jump" : ""} ${className}`}

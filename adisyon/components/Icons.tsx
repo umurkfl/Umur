@@ -129,3 +129,26 @@ export function GearIcon({ size = 22, className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function CrownIcon({ size = 20, className = "" }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M3.5 18.5 2.8 7.6l5 4.2L12 4.6l4.2 7.2 5-4.2-.7 10.9Z" fill="#C99A00" transform="translate(0 1.2)" />
+      <path d="M3.5 18.5 2.8 7.6l5 4.2L12 4.6l4.2 7.2 5-4.2-.7 10.9Z" fill="#FFC800" stroke="#FFC800" strokeWidth="1.4" strokeLinejoin="round" />
+      <circle cx="12" cy="13.8" r="1.6" fill="#E4572E" />
+    </svg>
+  );
+}
+
+/** rank 1..3 get gold, silver, bronze */
+export function MedalIcon({ rank, size = 26, className = "" }: { rank: 1 | 2 | 3; size?: number; className?: string }) {
+  const t = rank === 1 ? { b: "#FFC800", s: "#C99A00" } : rank === 2 ? { b: "#C8CED6", s: "#9BA3AE" } : { b: "#E0955A", s: "#B26A33" };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M7 2.5h3.4L12 6l1.6-3.5H17L14.2 9H9.8Z" fill="#4DA3FF" />
+      <circle cx="12" cy="15" r="7" fill={t.s} transform="translate(0 1)" />
+      <circle cx="12" cy="15" r="7" fill={t.b} />
+      <text x="12" y="18.6" textAnchor="middle" fontFamily="Nunito, sans-serif" fontWeight="900" fontSize="9.5" fill="#fff">{rank}</text>
+    </svg>
+  );
+}
