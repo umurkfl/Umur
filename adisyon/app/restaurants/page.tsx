@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { WishlistButton } from "@/components/WishlistButton";
 import { CommentSection } from "@/app/page";
+import { Gus } from "@/components/Gus";
 
 function RestaurantContent() {
   const searchParams = useSearchParams();
@@ -78,9 +79,10 @@ function RestaurantContent() {
 
   if (!name) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-muted">
-        <p>Restoran bulunamadı.</p>
-        <Link href="/discover" className="mt-4 text-primary text-sm font-semibold">Keşfet'e dön →</Link>
+      <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
+        <Gus mood="dizzy" size={150} />
+        <p className="font-black text-charcoal text-xl">Restoran bulunamadı</p>
+        <Link href="/discover" className="btn btn-primary btn-sm mt-2">Keşfet'e dön</Link>
       </div>
     );
   }

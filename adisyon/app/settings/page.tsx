@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { store, deriveUsername } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { sfxEnabled, setSfxEnabled, playSfx } from "@/lib/sfx";
 
 type Theme = "light" | "dark" | "system";
 type Privacy = "public" | "friends";
@@ -91,6 +92,7 @@ export default function SettingsPage() {
   const { user, login, logout } = useAuth();
   const router = useRouter();
   const [theme, setTheme] = useState<Theme>("system");
+  const [sfx, setSfx] = useState(true);
   const [privacy, setPrivacy] = useState<Privacy>("public");
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacySaveMsg, setPrivacySaveMsg] = useState("");
@@ -101,6 +103,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     try { setTheme((localStorage.getItem("adisyon_theme") as Theme) || "system"); } catch { /* ignore */ }
+    setSfx(sfxEnabled());
     if (user) {
       store.getUserPrivacy(user.id).then(setPrivacy);
       setShowNameState(store.getShowName(user.id));
@@ -270,6 +273,21 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      <SectionHeader title="Deneyim" />
+      <div className="mx-4 rounded-2xl overflow-hidden border border-border bg-surface">
+        <button
+          onClick={() => { const on = !sfx; setSfx(on); setSfxEnabled(on); if (on) playSfx("success"); }}
+          className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-border/50 text-left"
+          role="switch" aria-checked={sfx}
+        >
+          <span className="flex-1 text-sm text-ink">Ses efektleri</span>
+          <span className={`w-12 h-7 rounded-full p-0.5 transition-colors ${sfx ? "bg-primary" : "bg-border"}`}>
+            <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${sfx ? "translate-x-5" : ""}`} />
+          </span>
+        </button>
+        <SettingRow icon={Globe} label="Tanıtımı tekrar göster" onClick={() => window.dispatchEvent(new CustomEvent("grazer:show-onboarding"))} />
       </div>
 
       {/* ── Gizlilik ── */}

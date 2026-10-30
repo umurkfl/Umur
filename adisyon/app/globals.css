@@ -151,3 +151,39 @@ main > * { animation: page-in .32s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
   main > *, .gus *, .flame, .pop-in { animation: none !important; }
 }
+
+/* ═══ Onboarding ═════════════════════════════════════════════════════════ */
+html[data-onb="1"] header, html[data-onb="1"] nav, html[data-onb="1"] main { visibility: hidden; }
+@keyframes onb-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes onb-left  { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+.onb-in-right { animation: onb-right .35s cubic-bezier(.2,.8,.3,1) both; }
+.onb-in-left  { animation: onb-left .35s cubic-bezier(.2,.8,.3,1) both; }
+@media (prefers-reduced-motion: reduce) { .onb-in-right, .onb-in-left { animation: none !important; } }
+
+/* ═══ More Duolingo cosmetics (no structural change) ═════════════════════ */
+
+/* Outline pill buttons (Faydalı, Gönder, filters...) get a solid base */
+:is(button, a).border.rounded-full:not(.btn) {
+  border-width: 2px; border-bottom-width: 4px; font-weight: 800;
+  transition: transform .08s ease, border-bottom-width .08s ease, background-color .15s;
+}
+:is(button, a).border.rounded-full:not(.btn):active { transform: translateY(2px); border-bottom-width: 2px; }
+
+/* Tinted secondary buttons */
+:is(button, a).bg-primary-light.text-primary[class*="px-"]:not(.btn) {
+  border: 2px solid color-mix(in srgb, var(--color-primary) 35%, transparent); border-bottom-width: 4px; font-weight: 800;
+  transition: transform .08s ease, border-bottom-width .08s ease;
+}
+:is(button, a).bg-primary-light.text-primary[class*="px-"]:not(.btn):active { transform: translateY(2px); border-bottom-width: 2px; }
+
+/* Smaller rounded cards and sheets */
+.bg-surface.rounded-xl.border { border-width: 2px; border-bottom-width: 4px; border-color: var(--color-border); }
+.rounded-t-3xl { border-top: 2px solid var(--color-border); }
+.bg-surface.rounded-2xl.shadow-xl { border-width: 2px; border-bottom-width: 4px; }
+
+/* Friendly press feedback everywhere */
+button:not(.btn):not(:disabled):active { transition: transform .06s ease; }
+a, button { -webkit-tap-highlight-color: transparent; }
+
+/* Chips and badges: heavier type */
+.pill-stat, .text-\[10px\], .text-xs { letter-spacing: 0; }

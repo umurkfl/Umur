@@ -17,8 +17,8 @@ function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: Badg
           <div className="w-10 h-1 bg-border rounded-full" />
         </div>
         <div className="flex flex-col items-center gap-4">
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center relative ${earned ? "bg-primary" : "bg-border"}`}>
-            <Icon className="w-11 h-11 text-white" strokeWidth={1.5} />
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center relative border-4 border-b-[9px] ${earned ? "bg-primary border-primary-shade pop-in" : "bg-border border-[#C9C6BB]"}`}>
+            <Icon className="w-11 h-11 text-white" strokeWidth={2.25} />
             {!earned && (
               <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-muted rounded-full flex items-center justify-center border-2 border-surface">
                 <Lock className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
@@ -26,7 +26,7 @@ function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: Badg
             )}
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold text-charcoal">{earnedBadge?.dynamicLabel ?? badge.label}</p>
+            <p className="text-2xl font-black text-charcoal">{earnedBadge?.dynamicLabel ?? badge.label}</p>
             {earned
               ? <p className="text-sm text-primary font-semibold mt-1">✓ Kazanıldı</p>
               : <p className="text-sm text-muted mt-1">Henüz kazanılmadı</p>
@@ -39,7 +39,7 @@ function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: Badg
               <span className="text-xs text-primary font-semibold">{badge.howTo}</span>
             </div>
           </div>
-          <button onClick={onClose} className="w-full py-3 bg-background border border-border rounded-2xl text-sm font-semibold text-muted">
+          <button onClick={onClose} className="btn btn-ghost btn-block !text-muted">
             Kapat
           </button>
         </div>
@@ -51,9 +51,10 @@ function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: Badg
 function BadgeCoin({ badge, earned, label, onClick }: { badge: BadgeDef; earned: boolean; label: string; onClick: () => void }) {
   const Icon = BADGE_ICONS[badge.id] ?? Star;
   return (
-    <button onClick={onClick} className={`flex flex-col items-center gap-2.5 ${earned ? "" : "opacity-35"} active:scale-95 transition-transform`}>
-      <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${earned ? "bg-primary" : "bg-border"}`}>
-        <Icon className="w-9 h-9 text-white" strokeWidth={1.5} />
+    <button onClick={onClick} className="flex flex-col items-center gap-2.5 active:scale-95 transition-transform">
+      <div className={`w-20 h-20 rounded-full flex items-center justify-center relative border-4 border-b-[8px] ${earned ? "bg-primary border-primary-shade pop-in" : "bg-border border-[#C9C6BB]"}`}>
+        {earned && <span className="absolute top-2 left-3.5 w-5 h-2 rounded-full bg-white/40 -rotate-[28deg]" />}
+        <Icon className={`w-9 h-9 ${earned ? "text-white" : "text-white/80"}`} strokeWidth={2.25} />
         {!earned && (
           <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-muted rounded-full flex items-center justify-center border-2 border-surface">
             <Lock className="w-3 h-3 text-white" strokeWidth={2.5} />
@@ -61,9 +62,9 @@ function BadgeCoin({ badge, earned, label, onClick }: { badge: BadgeDef; earned:
         )}
       </div>
       <div className="text-center px-1">
-        <p className={`text-xs font-bold leading-tight ${earned ? "text-ink" : "text-muted"}`}>{label}</p>
+        <p className={`text-xs font-extrabold leading-tight ${earned ? "text-charcoal" : "text-muted"}`}>{label}</p>
         {earned
-          ? <p className="text-[10px] text-primary font-semibold mt-0.5">✓ Kazanıldı</p>
+          ? <p className="text-[10px] text-primary font-extrabold mt-0.5">Kazanıldı</p>
           : <p className="text-[10px] text-muted mt-0.5 leading-tight line-clamp-2">{badge.howTo}</p>
         }
       </div>
@@ -88,10 +89,10 @@ export default function BadgesPage() {
     <div className="space-y-6 pb-10">
       <div className="flex items-center gap-3">
         <Link href="/profile" className="text-muted text-xl leading-none">←</Link>
-        <h1 className="text-xl font-bold text-charcoal">Rozetler</h1>
+        <h1 className="text-2xl font-black text-charcoal">Rozetler</h1>
       </div>
 
-      <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-5 text-white">
+      <div className="bg-primary rounded-3xl p-5 text-white border-2 border-b-[6px] border-primary-shade">
         <div className="flex items-end justify-between mb-3">
           <div>
             <p className="text-white/70 text-xs font-semibold uppercase tracking-wide">Toplam İlerleme</p>
@@ -102,8 +103,8 @@ export default function BadgesPage() {
           </div>
           <p className="text-4xl font-black text-white/20">{pct}%</p>
         </div>
-        <div className="bg-white/20 rounded-full h-2.5 overflow-hidden">
-          <div className="bg-white h-full rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+        <div className="bg-black/20 rounded-full h-4 overflow-hidden">
+          <div className="xp-fill" style={{ width: `${Math.max(pct, 4)}%` }} />
         </div>
         <p className="text-white/70 text-xs mt-2">{ALL_BADGES.length - earnedIds.size} rozet daha kazanabilirsin</p>
       </div>

@@ -8,9 +8,10 @@ import { TR_CITIES, TR_DISTRICTS } from "@/lib/turkey-locations";
 import { useAuth } from "@/lib/auth";
 import { CropModal } from "@/components/CropModal";
 import Link from "next/link";
-import { Gus } from "@/components/Gus";
+import { Gus, GusSays } from "@/components/Gus";
 import { computeStats, GameStats, XP_PER_RECEIPT } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
+import { playSfx } from "@/lib/sfx";
 import { StarIcon } from "@/components/Icons";
 
 interface Suggestion {
@@ -211,6 +212,7 @@ export default function UploadPage() {
     const after = computeStats(await store.getUserReceipts(user.id));
     setReward({ before, after });
     haptic("success");
+    playSfx(after.level > before.level ? "level" : "success");
     window.dispatchEvent(new CustomEvent("adisyon:receipt-added"));
     setStep("done");
   }
@@ -482,9 +484,9 @@ export default function UploadPage() {
         <button
           onClick={submit}
           disabled={!name.trim() || !total || parseFloat(total) <= 0}
-          className="w-full bg-primary disabled:bg-border disabled:text-muted text-white font-bold rounded-2xl py-4 text-sm transition-colors active:bg-primary-dark"
+          className="btn btn-primary btn-block disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted"
         >
-          Adisyonu Paylaş
+          Adisyonu Paylaş · +50 XP
         </button>
       </div>
     );
@@ -493,6 +495,11 @@ export default function UploadPage() {
   return (
     <div className="space-y-5">
       <h1 className="text-xl font-bold text-charcoal">Adisyon Ekle</h1>
+      {!photoUrl && (
+        <GusSays mood="wink" size={96}>
+          Fişin fotoğrafını çek, ben de 50 XP vereyim!
+        </GusSays>
+      )}
 
       <input id="input-camera" type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
       <input id="input-gallery" type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
@@ -535,12 +542,12 @@ export default function UploadPage() {
       <button
         onClick={() => setStep("details")}
         disabled={!photoUrl}
-        className="w-full bg-primary disabled:bg-border disabled:text-muted text-white font-bold rounded-2xl py-4 text-sm transition-colors active:bg-primary-dark"
+        className="btn btn-primary btn-block disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted"
       >
         Devam Et →
       </button>
 
-      <button onClick={() => setStep("details")} className="block mx-auto text-xs text-muted font-medium">
+      <button onClick={() => setStep("details")} className="block mx-auto text-sm text-muted font-extrabold">
         Fotoğrafsız devam et
       </button>
     </div>
