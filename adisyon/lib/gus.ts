@@ -15,6 +15,7 @@ export interface GusOpts {
   blush?: boolean;
   extra?: GusExtra[];
   prop?: GusProp;
+  /** kept for API compatibility: Gus is always the chubby full figure; "none" only affects the app icon crop */
   body?: "bust" | "full" | "none";
   tilt?: number;
   shades?: boolean;
@@ -47,52 +48,52 @@ export const GUS_MOODS: Record<GusMood, GusOpts> = {
 };
 
 const INK = "#2B2A27", C = "#FFF8EC", S = "#E9DCC4", GR = "#1D9E75", GRS = "#0F6E56";
-const PINK = "#F5A9A4", BRW = "#4A3F33", HOOF = "#5B4636", TONGUE = "#FF6B81";
+const PINK = "#F5A9A4", BRW = "#4A3F33", HOOF = "#33312D", TONGUE = "#FF6B81", BELLY = "#F4E7D3", EYE_RIM = "#E3D6BC";
 
 function eye(type: GusEyes, x: number, y: number, dx = 0, dy = 0): string {
   switch (type) {
     case "open":
-      return `<g class="gus-blink"><ellipse cx="${x}" cy="${y}" rx="13" ry="14" fill="#fff" stroke="#E3D6BC" stroke-width="2.5"/><rect x="${x - 8.5 + dx}" y="${y - 4.5 + dy}" width="17" height="9.5" rx="4.75" fill="${INK}"/><circle cx="${x + 3 + dx}" cy="${y - 2 + dy}" r="2" fill="#fff"/></g>`;
+      return `<g class="gus-blink"><circle cx="${x}" cy="${y}" r="20" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="10.5" fill="${INK}"/><circle cx="${x + 5.5 + dx}" cy="${y - 2 + dy}" r="3.6" fill="#fff"/><circle cx="${x - 2 + dx}" cy="${y + 6 + dy}" r="1.6" fill="#fff"/></g>`;
     case "happy":
-      return `<path d="M${x - 9} ${y + 3} Q${x} ${y - 9} ${x + 9} ${y + 3}" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`;
+      return `<path d="M${x - 13} ${y + 5} Q${x} ${y - 14} ${x + 13} ${y + 5}" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/>`;
     case "sleep":
-      return `<path d="M${x - 9} ${y - 1} Q${x} ${y + 8} ${x + 9} ${y - 1}" fill="none" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>`;
+      return `<path d="M${x - 13} ${y - 2} Q${x} ${y + 12} ${x + 13} ${y - 2}" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`;
     case "heart":
-      return `<path d="M${x} ${y + 9} C${x - 15} ${y - 1} ${x - 7} ${y - 14} ${x} ${y - 5} C${x + 7} ${y - 14} ${x + 15} ${y - 1} ${x} ${y + 9} Z" fill="#FF4D6D"/>`;
+      return `<path d="M${x} ${y + 12} C${x - 20} ${y - 2} ${x - 10} ${y - 18} ${x} ${y - 7} C${x + 10} ${y - 18} ${x + 20} ${y - 2} ${x} ${y + 12} Z" fill="#FF4D6D"/>`;
     case "wide":
-      return `<circle cx="${x}" cy="${y}" r="14" fill="#fff" stroke="#E3D6BC" stroke-width="2.5"/><circle cx="${x}" cy="${y}" r="5" fill="${INK}"/>`;
+      return `<circle cx="${x}" cy="${y}" r="21" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><circle cx="${x}" cy="${y}" r="5.5" fill="${INK}"/>`;
     case "dizzy":
-      return `<path d="M${x - 7} ${y - 7} L${x + 7} ${y + 7} M${x + 7} ${y - 7} L${x - 7} ${y + 7}" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>`;
+      return `<path d="M${x - 10} ${y - 10} L${x + 10} ${y + 10} M${x + 10} ${y - 10} L${x - 10} ${y + 10}" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/>`;
     case "star":
-      return `<path d="M${x} ${y - 11} Q${x + 2} ${y - 2} ${x + 11} ${y} Q${x + 2} ${y + 2} ${x} ${y + 11} Q${x - 2} ${y + 2} ${x - 11} ${y} Q${x - 2} ${y - 2} ${x} ${y - 11} Z" fill="#FFC800" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>`;
+      return `<path d="M${x} ${y - 14} Q${x + 3} ${y - 3} ${x + 14} ${y} Q${x + 3} ${y + 3} ${x} ${y + 14} Q${x - 3} ${y + 3} ${x - 14} ${y} Q${x - 3} ${y - 3} ${x} ${y - 14} Z" fill="#FFC800" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`;
   }
 }
 
 function brows(type: GusBrows | undefined, y: number): string {
-  const L = 74, R = 126;
-  const p = (d: string) => `<path d="${d}" fill="none" stroke="${BRW}" stroke-width="4.5" stroke-linecap="round"/>`;
-  if (type === "up") return p(`M${L - 8} ${y + 2} Q${L} ${y - 5} ${L + 8} ${y + 2}`) + p(`M${R - 8} ${y + 2} Q${R} ${y - 5} ${R + 8} ${y + 2}`);
-  if (type === "sad") return p(`M${L - 8} ${y + 4} L${L + 8} ${y - 3}`) + p(`M${R - 8} ${y - 3} L${R + 8} ${y + 4}`);
-  if (type === "angry") return p(`M${L - 9} ${y - 4} L${L + 8} ${y + 5}`) + p(`M${R - 8} ${y + 5} L${R + 9} ${y - 4}`);
-  if (type === "think") return p(`M${L - 8} ${y + 2} Q${L} ${y - 6} ${L + 8} ${y + 1}`) + p(`M${R - 8} ${y + 3} L${R + 8} ${y + 3}`);
+  const L = 76, R = 124;
+  const p = (d: string) => `<path d="${d}" fill="none" stroke="${BRW}" stroke-width="5" stroke-linecap="round"/>`;
+  if (type === "up") return p(`M${L - 11} ${y + 3} Q${L} ${y - 6} ${L + 11} ${y + 3}`) + p(`M${R - 11} ${y + 3} Q${R} ${y - 6} ${R + 11} ${y + 3}`);
+  if (type === "sad") return p(`M${L - 11} ${y + 5} L${L + 11} ${y - 4}`) + p(`M${R - 11} ${y - 4} L${R + 11} ${y + 5}`);
+  if (type === "angry") return p(`M${L - 12} ${y - 5} L${L + 11} ${y + 7}`) + p(`M${R - 11} ${y + 7} L${R + 12} ${y - 5}`);
+  if (type === "think") return p(`M${L - 11} ${y + 3} Q${L} ${y - 8} ${L + 11} ${y + 2}`) + p(`M${R - 11} ${y + 4} L${R + 11} ${y + 4}`);
   return "";
 }
 
 function mouth(type: GusMouth): string {
-  const st = ` fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`;
+  const st = ` fill="none" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>`;
   switch (type) {
-    case "smile": return `<path d="M89 124 Q100 136 111 124"${st}`;
-    case "grin": return `<path d="M86 121 Q100 146 114 121 Z" fill="${INK}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><ellipse cx="100" cy="136" rx="7" ry="4.5" fill="${TONGUE}"/>`;
-    case "laugh": return `<path d="M82 119 Q100 154 118 119 Z" fill="${INK}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><ellipse cx="100" cy="139" rx="10" ry="6" fill="${TONGUE}"/>`;
-    case "o": return `<ellipse cx="100" cy="131" rx="6" ry="8" fill="${INK}"/>`;
-    case "oSmall": return `<ellipse cx="100" cy="129" rx="3.6" ry="4.4" fill="${INK}"/>`;
-    case "sad": return `<path d="M90 134 Q100 123 110 134"${st}`;
-    case "smirk": return `<path d="M91 128 Q104 135 112 122"${st}`;
-    case "flat": return `<path d="M92 128 H108"${st}`;
-    case "tongue": return `<path d="M89 124 Q100 136 111 124"${st}<ellipse cx="102" cy="137" rx="5.5" ry="7" fill="${TONGUE}"/><path d="M102 132 V140" stroke="#E2506A" stroke-width="1.6" stroke-linecap="round"/>`;
-    case "chew": return `<path d="M89 124 Q100 136 111 124"${st}<g transform="translate(112 127)" fill="none" stroke="#4FA84A" stroke-width="3.6" stroke-linecap="round"><path d="M0 0 q6 -9 14 -13"/><path d="M0 0 q2 -12 8 -19"/><path d="M0 0 q9 -4 17 -4"/></g>`;
-    case "grit": return `<path d="M85 134 Q100 120 115 134 L111 138 Q100 128 89 138 Z" fill="#fff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
-    case "wavy": return `<path d="M86 128 q7 -8 14 0 t14 0"${st}`;
+    case "smile": return `<path d="M89 124 Q100 137 111 124"${st}`;
+    case "grin": return `<path d="M86 121 Q100 148 114 121 Z" fill="${INK}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><ellipse cx="100" cy="137" rx="7.5" ry="4.8" fill="${TONGUE}"/>`;
+    case "laugh": return `<path d="M82 119 Q100 156 118 119 Z" fill="${INK}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><ellipse cx="100" cy="140" rx="10" ry="6" fill="${TONGUE}"/>`;
+    case "o": return `<ellipse cx="100" cy="131" rx="6.5" ry="8.5" fill="${INK}"/>`;
+    case "oSmall": return `<ellipse cx="100" cy="129" rx="3.8" ry="4.6" fill="${INK}"/>`;
+    case "sad": return `<path d="M90 135 Q100 123 110 135"${st}`;
+    case "smirk": return `<path d="M91 128 Q104 136 113 122"${st}`;
+    case "flat": return `<path d="M92 129 H108"${st}`;
+    case "tongue": return `<path d="M89 124 Q100 137 111 124"${st}<ellipse cx="102" cy="138" rx="5.8" ry="7.4" fill="${TONGUE}"/><path d="M102 133 V141" stroke="#E2506A" stroke-width="1.6" stroke-linecap="round"/>`;
+    case "chew": return `<path d="M89 124 Q100 137 111 124"${st}<g transform="translate(112 127)" fill="none" stroke="#4FA84A" stroke-width="3.8" stroke-linecap="round"><path d="M0 0 q6 -9 14 -13"/><path d="M0 0 q2 -12 8 -19"/><path d="M0 0 q9 -4 17 -4"/></g>`;
+    case "grit": return `<path d="M85 135 Q100 120 115 135 L111 139 Q100 129 89 139 Z" fill="#fff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
+    case "wavy": return `<path d="M86 129 q7 -8 14 0 t14 0"${st}`;
   }
 }
 
@@ -117,8 +118,8 @@ function confetti(): string {
 function extras(list: GusExtra[] = []): string {
   let s = "";
   for (const e of list) {
-    if (e === "tears") s += `<path class="gus-tear" d="M68 104 q-6 12 0 18 q6 -6 0 -18z" fill="#7CC4F5"/><path class="gus-tear" style="animation-delay:.6s" d="M132 104 q-6 12 0 18 q6 -6 0 -18z" fill="#7CC4F5"/>`;
-    if (e === "sweat") s += `<path d="M146 66 q-8 14 0 20 q8 -6 0 -20z" fill="#7CC4F5"/>`;
+    if (e === "tears") s += `<path class="gus-tear" d="M62 112 q-6 13 0 19 q6 -6 0 -19z" fill="#7CC4F5"/><path class="gus-tear" style="animation-delay:.6s" d="M138 112 q-6 13 0 19 q6 -6 0 -19z" fill="#7CC4F5"/>`;
+    if (e === "sweat") s += `<path d="M150 70 q-8 14 0 20 q8 -6 0 -20z" fill="#7CC4F5"/>`;
     if (e === "zzz") s += `<g font-family="Nunito, sans-serif" font-weight="900" fill="#7A8CE0"><text x="158" y="96" font-size="18">z</text><text x="170" y="80" font-size="24">z</text><text x="182" y="62" font-size="28">Z</text></g>`;
     if (e === "hearts") s += heartSm(162, 94, 1.2) + heartSm(180, 72, 0.9, "#FF8FA3") + heartSm(34, 94, 1) + heartSm(20, 72, 0.7, "#FF8FA3");
     if (e === "sparks") s += spark(166, 92, 1) + spark(34, 92, 0.8) + spark(180, 120, 0.6);
@@ -144,58 +145,50 @@ function prop(type: GusProp): string {
 }
 
 export function gusInner(o: GusOpts): string {
-  const full = o.body === "full", none = o.body === "none";
   const hC = o.hornC ?? GR, hS = o.hornS ?? GRS;
   let g = "";
-  if (full) {
-    g += `<path d="M138 214 q22 -6 26 -24" fill="none" stroke="${S}" stroke-width="12" stroke-linecap="round"/><path d="M138 214 q22 -6 26 -24" fill="none" stroke="${C}" stroke-width="9" stroke-linecap="round"/>`;
-    g += `<rect x="70" y="228" width="22" height="22" rx="9" fill="${HOOF}"/><rect x="108" y="228" width="22" height="22" rx="9" fill="${HOOF}"/>`;
-    g += `<rect x="52" y="172" width="17" height="42" rx="8.5" fill="${S}" transform="rotate(8 60 174)"/><rect x="52" y="170" width="17" height="42" rx="8.5" fill="${C}" transform="rotate(8 60 174)"/><ellipse cx="66" cy="214" rx="9" ry="8" fill="${HOOF}"/>`;
-    g += `<ellipse cx="100" cy="196" rx="42" ry="42" fill="${S}"/><ellipse cx="100" cy="192" rx="42" ry="42" fill="${C}"/><ellipse cx="100" cy="206" rx="22" ry="26" fill="#F4E7D3"/>`;
-    g += `<path d="M62 158 Q100 180 138 158 L142 172 Q100 194 58 172 Z" fill="${GR}"/><path d="M118 182 L130 204 L116 206 L108 186 Z" fill="${GRS}"/>`;
-  } else if (!none) {
-    g += `<ellipse cx="100" cy="200" rx="60" ry="32" fill="${S}"/><ellipse cx="100" cy="196" rx="60" ry="32" fill="${C}"/>`;
-    g += `<path d="M56 160 Q100 188 144 160 L150 178 Q100 208 50 178 Z" fill="${GR}"/><path d="M122 184 L136 208 L120 210 L112 190 Z" fill="${GRS}"/>`;
+  // horns (swept back, brand green)
+  for (const d of ["M72 62 C60 24 28 10 4 30 C36 30 56 48 62 80 Z", "M128 62 C140 24 172 10 196 30 C164 30 144 48 138 80 Z"]) {
+    g += `<path d="${d}" fill="${hS}" transform="translate(0 3)"/><path d="${d}" fill="${hC}"/>`;
   }
-  const HEAD = "M100 34 C132 34 148 60 146 96 C144 130 124 156 100 156 C76 156 56 130 54 96 C52 60 68 34 100 34 Z";
-  g += `<path d="M87 150 Q100 202 113 150 Z" fill="${S}" stroke="${S}" stroke-width="7" stroke-linejoin="round"/>`;
-  g += `<g class="gus-earL"><ellipse cx="34" cy="114" rx="24" ry="10" fill="${S}" transform="rotate(-18 34 114)"/><ellipse cx="34" cy="111" rx="24" ry="10" fill="${C}" transform="rotate(-18 34 111)"/></g>`;
-  g += `<g class="gus-earR"><ellipse cx="166" cy="114" rx="24" ry="10" fill="${S}" transform="rotate(18 166 114)"/><ellipse cx="166" cy="111" rx="24" ry="10" fill="${C}" transform="rotate(18 166 111)"/></g>`;
-  g += `<path d="M80 62 C66 24 36 12 6 34 C38 30 60 46 68 76 Z" fill="${hS}" transform="translate(0 4)"/><path d="M80 62 C66 24 36 12 6 34 C38 30 60 46 68 76 Z" fill="${hC}"/>`;
-  g += `<path d="M120 62 C134 24 164 12 194 34 C162 30 140 46 132 76 Z" fill="${hS}" transform="translate(0 4)"/><path d="M120 62 C134 24 164 12 194 34 C162 30 140 46 132 76 Z" fill="${hC}"/>`;
-  g += `<path d="${HEAD}" fill="${S}" transform="translate(0 6)"/><path d="${HEAD}" fill="${C}"/>`;
-  g += `<ellipse cx="100" cy="132" rx="24" ry="17" fill="#F2E4CC"/><ellipse cx="100" cy="119" rx="7" ry="4.6" fill="#C98B74"/>`;
-  if (o.blush !== false) g += `<ellipse cx="66" cy="116" rx="8" ry="5.5" fill="${PINK}" opacity=".7"/><ellipse cx="134" cy="116" rx="8" ry="5.5" fill="${PINK}" opacity=".7"/>`;
+  // ears
+  g += `<g class="gus-earL"><ellipse cx="28" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(-22 28 110)"/><ellipse cx="28" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(-22 28 107)"/><ellipse cx="31" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(-22 31 108)"/></g>`;
+  g += `<g class="gus-earR"><ellipse cx="172" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(22 172 110)"/><ellipse cx="172" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(22 172 107)"/><ellipse cx="169" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(22 169 108)"/></g>`;
+  // hooves + goatee
+  g += `<rect x="62" y="168" width="28" height="22" rx="11" fill="${HOOF}"/><rect x="110" y="168" width="28" height="22" rx="11" fill="${HOOF}"/>`;
+  g += `<path d="M91 166 Q100 202 109 166 Z" fill="${S}" stroke="${S}" stroke-width="7" stroke-linejoin="round"/>`;
+  // body = head
+  g += `<ellipse cx="100" cy="116" rx="66" ry="68" fill="${S}" transform="translate(0 5)"/><ellipse cx="100" cy="116" rx="66" ry="68" fill="${C}"/>`;
+  g += `<ellipse cx="100" cy="158" rx="38" ry="26" fill="${BELLY}"/>`;
+  g += `<ellipse cx="100" cy="136" rx="27" ry="19" fill="${BELLY}"/><ellipse cx="100" cy="126" rx="7" ry="5" fill="#C98B74"/>`;
+  if (o.blush !== false) g += `<ellipse cx="56" cy="124" rx="10" ry="6.5" fill="${PINK}" opacity=".75"/><ellipse cx="144" cy="124" rx="10" ry="6.5" fill="${PINK}" opacity=".75"/>`;
+  // eyes
   if (o.shades) {
-    g += `<g><rect x="50" y="74" width="45" height="28" rx="12" fill="#1B1B1B"/><rect x="105" y="74" width="45" height="28" rx="12" fill="#1B1B1B"/><path d="M95 84 H105" stroke="#1B1B1B" stroke-width="4"/><path d="M58 82 l10 -2 M113 82 l10 -2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".45"/></g>`;
+    g += `<g><rect x="46" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><rect x="104" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><path d="M96 84 H104" stroke="#1B1B1B" stroke-width="5"/><path d="M54 84 l12 -3 M112 84 l12 -3" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".45"/></g>`;
   } else {
-    g += eye(o.eyes ?? "open", 74, 88, o.dx, o.dy) + eye(o.eyeR ?? o.eyes ?? "open", 126, 88, o.dx, o.dy);
+    g += eye(o.eyes ?? "open", 76, 92, o.dx, o.dy) + eye(o.eyeR ?? o.eyes ?? "open", 124, 92, o.dx, o.dy);
   }
-  g += brows(o.brows, 64);
-  g += mouth(o.mouth ?? "smile");
+  g += brows(o.brows, 62);
+  g += `<g transform="translate(0 14)">${mouth(o.mouth ?? "smile")}</g>`;
   g += extras(o.extra);
   if (o.prop) g += prop(o.prop);
-  if (full) {
-    g += `<g transform="rotate(-150 138 180)"><g class="gus-wave"><rect x="129" y="178" width="17" height="42" rx="8.5" fill="${S}" transform="translate(0 2)"/><rect x="129" y="176" width="17" height="42" rx="8.5" fill="${C}"/><ellipse cx="137.5" cy="219" rx="9" ry="8" fill="${HOOF}"/></g></g>`;
-  }
   return g;
 }
 
 export function gusSvg(o: GusOpts = {}): string {
-  const full = o.body === "full", h = full ? 262 : 200;
-  let s = `<svg viewBox="${o.viewBox ?? `0 0 200 ${h}`}" role="img" aria-label="${o.label ?? "Gus"}" xmlns="http://www.w3.org/2000/svg">`;
-  if (!o.noShadow) s += `<ellipse class="gus-shadow" cx="100" cy="${h - 6}" rx="46" ry="5"/>`;
+  let s = `<svg viewBox="${o.viewBox ?? "0 0 200 200"}" role="img" aria-label="${o.label ?? "Gus"}" xmlns="http://www.w3.org/2000/svg">`;
+  if (!o.noShadow) s += `<ellipse class="gus-shadow" cx="100" cy="194" rx="52" ry="5"/>`;
   s += `<g class="gus-bob"><g${o.tilt ? ` transform="rotate(${o.tilt} 100 130)"` : ""}><g class="gus-char">${gusInner(o)}</g></g></g></svg>`;
   return s;
 }
 
-// Rounded-square app icon: brand green with cream horns
+// Rounded-square app icon: brand green with a gold-horned Gus
 export function gusIconSvg(px = 120): string {
-  const inner = gusInner({ eyes: "open", mouth: "smile", brows: "none", blush: false, body: "none", hornC: "#FFF3DE", hornS: "#CDB98F" });
-  return `<svg width="${px}" height="${px}" viewBox="0 0 200 200" role="img" aria-label="grazer"><rect width="200" height="200" rx="46" fill="${GR}"/><g transform="translate(100 112) scale(.92) translate(-100 -112)">${inner}</g></svg>`;
+  const inner = gusInner({ eyes: "open", mouth: "smile", brows: "none", blush: false, hornC: "#FFC800", hornS: "#D9A400" });
+  return `<svg width="${px}" height="${px}" viewBox="0 0 200 200" role="img" aria-label="grazer"><rect width="200" height="200" rx="46" fill="${GR}"/><g transform="translate(100 104) scale(.94) translate(-100 -104)">${inner}</g></svg>`;
 }
 
 // Head-only crop used for reactions and tiny stickers
 export function gusFaceSvg(o: GusOpts): string {
-  return gusSvg({ ...o, body: "none", noShadow: true, viewBox: "0 4 200 188" });
+  return gusSvg({ ...o, noShadow: true, viewBox: "0 6 200 168" });
 }

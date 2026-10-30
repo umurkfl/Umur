@@ -27,7 +27,7 @@ export function HomeHero() {
   if (!user) {
     return (
       <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-5">
-        <GusSays mood="happy" size={112} body="bust">
+        <GusSays mood="happy" size={128}>
           Selam, ben Gus! Gerçek fiyatları birlikte toplayalım.
         </GusSays>
         <p className="mt-3 text-sm font-semibold text-muted leading-relaxed">
@@ -43,7 +43,7 @@ export function HomeHero() {
   const done = stats?.weeklyGoalDone ?? false;
   return (
     <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-4">
-      <GusSays mood={done ? "laugh" : "wink"} size={104} body="bust">
+      <GusSays mood={done ? "laugh" : "wink"} size={128}>
         {done
           ? "Bu hafta fişini ekledin. Harikasın!"
           : "Bu hafta henüz fiş yok. Bugün nerede yedin?"}

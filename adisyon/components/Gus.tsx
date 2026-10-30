@@ -17,11 +17,10 @@ export function Gus({ mood = "happy", size = 140, className = "", playful = true
   const key = JSON.stringify([mood, overrides]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const html = useMemo(() => gusSvg({ ...GUS_MOODS[mood], ...overrides }), [key]);
-  const tall = overrides.body === "full";
   return (
     <div
       className={`gus ${jump ? "gus-jump" : ""} ${className}`}
-      style={{ width: size, height: tall ? size * 1.31 : size, touchAction: "manipulation" }}
+      style={{ width: size, height: size, touchAction: "manipulation" }}
       onClick={playful ? () => { setJump((n) => n + 1); haptic("tap"); } : undefined}
       onAnimationEnd={(e) => { if (e.animationName === "gus-squish") setJump(0); }}
       dangerouslySetInnerHTML={{ __html: html }}
@@ -48,5 +47,5 @@ export function GusSays({ children, mood = "happy", size = 120, className = "", 
 /** Gus's head as a sticker/emoji: our own reaction set */
 export function GusFace({ mood, size = 28, className = "" }: { mood: GusMood; size?: number; className?: string }) {
   const html = useMemo(() => gusFaceSvg({ ...GUS_MOODS[mood], label: mood }), [mood]);
-  return <span className={`gus gus-face inline-block shrink-0 ${className}`} style={{ width: size, height: size * 0.94, lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <span className={`gus gus-face inline-block shrink-0 ${className}`} style={{ width: size, height: size * 0.84, lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: html }} />;
 }
