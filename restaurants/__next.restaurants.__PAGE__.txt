@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
-2:I[47257,["/Umur/_next/static/chunks/0~2ri9iff-~0e.js","/Umur/_next/static/chunks/07.fhpr4epz-j.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"ClientPageRoot"]
-3:I[11231,["/Umur/_next/static/chunks/0~2ri9iff-~0e.js","/Umur/_next/static/chunks/07.fhpr4epz-j.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js","/Umur/_next/static/chunks/0c.4ipz6kmdfe.js","/Umur/_next/static/chunks/0uys.fig.k.ch.js"],"default"]
-6:I[97367,["/Umur/_next/static/chunks/0~2ri9iff-~0e.js","/Umur/_next/static/chunks/07.fhpr4epz-j.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
+2:I[47257,["/Umur/_next/static/chunks/0jl0mg_qocbov.js","/Umur/_next/static/chunks/07.fhpr4epz-j.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"ClientPageRoot"]
+3:I[11231,["/Umur/_next/static/chunks/0jl0mg_qocbov.js","/Umur/_next/static/chunks/07.fhpr4epz-j.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js","/Umur/_next/static/chunks/0z362pfr~449c.js","/Umur/_next/static/chunks/0y8a_zulvi29x.js"],"default"]
+6:I[97367,["/Umur/_next/static/chunks/0jl0mg_qocbov.js","/Umur/_next/static/chunks/07.fhpr4epz-j.js","/Umur/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Umur/_next/static/chunks/0c.4ipz6kmdfe.js","async":true}],["$","script","script-1",{"src":"/Umur/_next/static/chunks/0uys.fig.k.ch.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"jpry6lNAqyCGEqHwMRWRD"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Umur/_next/static/chunks/0z362pfr~449c.js","async":true}],["$","script","script-1",{"src":"/Umur/_next/static/chunks/0y8a_zulvi29x.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"JlcTI3eS2Vpfwe328JS8P"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null
