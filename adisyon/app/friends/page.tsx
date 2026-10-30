@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { ReceiptPopup } from "@/app/page";
 import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
 import { formatCurrency, timeAgo } from "@/lib/mock";
+import { Gus } from "@/components/Gus";
 
 type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
 
@@ -848,10 +849,10 @@ export default function FriendsPage() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 px-8 text-center">
-        <Users className="w-12 h-12 text-border" />
-        <h2 className="font-bold text-charcoal text-xl">Arkadaşlarını bul</h2>
-        <p className="text-muted text-sm">Arkadaşlarının adisyonlarını ve aktivitelerini görmek için giriş yap.</p>
-        <Link href="/auth" className="bg-primary text-white font-bold rounded-full px-6 py-3 text-sm">Giriş Yap</Link>
+        <Gus mood="wink" size={150} body="bust" />
+        <h2 className="font-black text-charcoal text-2xl">Arkadaşlarını bul</h2>
+        <p className="text-muted text-sm font-semibold">Arkadaşlarının adisyonlarını ve aktivitelerini görmek için giriş yap.</p>
+        <Link href="/auth" className="btn btn-primary">Giriş Yap</Link>
       </div>
     );
   }
@@ -881,14 +882,14 @@ export default function FriendsPage() {
         </div>
       )}
 
-      <div className="flex mx-4 mb-4 bg-background rounded-2xl p-1 gap-1">
+      <div className="flex mx-4 mb-4 bg-background border-2 border-border rounded-2xl p-1 gap-1">
         {([
           ["akis", "Akış"],
           ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` (${accepted.length})` : ""}`],
           ["kesfet", "Keşfet"],
           ["mesajlar", "Mesajlar"],
         ] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[11px] font-semibold rounded-xl transition-all relative ${tab === t ? "bg-surface shadow-sm text-primary" : "text-muted"}`}>
+          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all relative ${tab === t ? "bg-primary text-white" : "text-muted"}`}>
             {t === "mesajlar" && unreadCount > 0 && (
               <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />
             )}
@@ -903,10 +904,10 @@ export default function FriendsPage() {
             <div className="text-center text-muted py-12">Yükleniyor...</div>
           ) : activity.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-3 text-center">
-              <Clock className="w-10 h-10 text-border" />
-              <p className="font-semibold text-charcoal">Henüz aktivite yok</p>
-              <p className="text-sm text-muted">Arkadaş ekle, onların adisyonlarını ve check-in&apos;lerini burada gör.</p>
-              <button onClick={() => setTab("kesfet")} className="text-primary text-sm font-semibold mt-1">Arkadaş ara →</button>
+              <Gus mood="think" size={130} />
+              <p className="font-black text-charcoal text-lg">Henüz aktivite yok</p>
+              <p className="text-sm font-semibold text-muted">Arkadaş ekle, onların adisyonlarını ve check-in&apos;lerini burada gör.</p>
+              <button onClick={() => setTab("kesfet")} className="btn btn-primary btn-sm mt-1">Arkadaş ara</button>
             </div>
           ) : (
             activity.map((a) =>
@@ -932,9 +933,9 @@ export default function FriendsPage() {
         <div className="px-4 space-y-3">
           {accepted.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-3 text-center">
-              <Users className="w-10 h-10 text-border" />
-              <p className="font-semibold text-charcoal">Henüz arkadaşın yok</p>
-              <button onClick={() => setTab("kesfet")} className="text-primary text-sm font-semibold">Arkadaş ara →</button>
+              <Gus mood="sad" size={130} />
+              <p className="font-black text-charcoal text-lg">Henüz arkadaşın yok</p>
+              <button onClick={() => setTab("kesfet")} className="btn btn-primary btn-sm">Arkadaş ara</button>
             </div>
           ) : (
             accepted.map((f) => {
@@ -1060,11 +1061,9 @@ export default function FriendsPage() {
         <div className="px-4 space-y-2">
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center py-16 gap-3 text-center">
-              <div className="w-14 h-14 bg-primary-light rounded-full flex items-center justify-center">
-                <MessageCircle className="w-7 h-7 text-primary/40" />
-              </div>
-              <p className="font-semibold text-charcoal">Henüz mesaj yok</p>
-              <p className="text-sm text-muted">Arkadaşlarına adisyon gönder ya da mesaj yaz.</p>
+              <Gus mood="sleepy" size={130} />
+              <p className="font-black text-charcoal text-lg">Henüz mesaj yok</p>
+              <p className="text-sm font-semibold text-muted">Arkadaşlarına adisyon gönder ya da mesaj yaz.</p>
             </div>
           ) : (
             conversations.map(({ otherId, otherName, last, unread }) => (

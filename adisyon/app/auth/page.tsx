@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { supabase, supabaseAnonKey } from "@/lib/supabase";
 import { store } from "@/lib/store";
 import Link from "next/link";
+import { Gus, GusSays } from "@/components/Gus";
+import { haptic } from "@/lib/haptics";
 
 function validateUsername(u: string): string | null {
   if (u.length < 3) return "En az 3 karakter olmalı";
@@ -129,8 +131,8 @@ export default function AuthPage() {
   if (confirmSent) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center text-center space-y-4 px-4">
-        <CheckCircle className="w-16 h-16 text-primary" />
-        <h2 className="text-xl font-bold text-charcoal">E-postanı doğrula</h2>
+        <Gus mood="love" size={150} body="bust" />
+        <h2 className="text-2xl font-black text-charcoal">E-postanı doğrula</h2>
         <p className="text-sm text-muted max-w-xs">
           <strong>{email}</strong> adresine doğrulama bağlantısı gönderdik. Bağlantıya tıkladıktan sonra giriş yapabilirsin.
         </p>
@@ -147,14 +149,20 @@ export default function AuthPage() {
         <Link href="/" className="inline-flex items-center gap-1 text-muted text-sm mb-6">
           <ArrowLeft className="w-4 h-4" /> Ana Sayfa
         </Link>
-        <h1 className="text-2xl font-bold text-charcoal font-display">grazer</h1>
-        <p className="text-sm text-muted mt-1">Topluluğa katıl, deneyimini paylaş</p>
       </div>
+
+      <GusSays mood={error ? "sad" : tab === "login" ? "happy" : "laugh"} size={116} body="bust">
+        {error
+          ? "Hımm, bir şeyler ters gitti. Bir daha dener misin?"
+          : tab === "login"
+            ? "Tekrar hoş geldin! Giriş yap, serini sürdür."
+            : "Aramıza katıl! İlk fişinle 50 XP kazanırsın."}
+      </GusSays>
 
       <button
         onClick={handleGoogle}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-3 bg-surface border border-border rounded-2xl py-3.5 text-sm font-semibold text-ink shadow-sm active:bg-background disabled:opacity-50 transition-colors"
+        className="btn btn-ghost btn-block !text-ink gap-3"
       >
         <GoogleIcon />
         Google ile devam et
@@ -166,10 +174,10 @@ export default function AuthPage() {
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      <div className="flex bg-background rounded-xl p-1">
+      <div className="flex rounded-2xl border-2 border-border bg-background p-1 gap-1">
         {(["login", "register"] as const).map((t) => (
-          <button key={t} onClick={() => { setTab(t); setError(""); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === t ? "bg-surface text-charcoal shadow-sm" : "text-muted"}`}>
+          <button key={t} onClick={() => { setTab(t); setError(""); haptic("tap"); }}
+            className={`flex-1 py-2 rounded-xl text-sm font-extrabold transition-all ${tab === t ? "bg-primary text-white" : "text-muted"}`}>
             {t === "login" ? "Giriş Yap" : "Kayıt Ol"}
           </button>
         ))}
@@ -180,7 +188,7 @@ export default function AuthPage() {
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
             <input type="text" placeholder="Adın Soyadın" value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full pl-9 pr-4 py-3.5 rounded-2xl border border-border bg-surface text-base font-bold focus:outline-none focus:border-primary focus:ring-0" />
           </div>
         )}
 
@@ -196,7 +204,7 @@ export default function AuthPage() {
                 setUsername(val);
                 setUsernameAvailable(val.length >= 3 ? store.isUsernameAvailable("@" + val) : null);
               }}
-              className="w-full pl-7 pr-10 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full pl-7 pr-10 py-3.5 rounded-2xl border border-border bg-surface text-base font-bold focus:outline-none focus:border-primary focus:ring-0"
             />
             {username.length >= 3 && (
               <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold ${usernameAvailable ? "text-primary" : "text-red-500"}`}>
@@ -209,19 +217,19 @@ export default function AuthPage() {
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
           <input type="email" placeholder="E-posta adresin" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            className="w-full pl-9 pr-4 py-3.5 rounded-2xl border border-border bg-surface text-base font-bold focus:outline-none focus:border-primary focus:ring-0" />
         </div>
 
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
           <input type="password" placeholder={tab === "register" ? "Şifre (en az 6 karakter)" : "Şifre"} value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-9 pr-4 py-3.5 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            className="w-full pl-9 pr-4 py-3.5 rounded-2xl border border-border bg-surface text-base font-bold focus:outline-none focus:border-primary focus:ring-0" />
         </div>
 
-        {error && <p className="text-sm text-red-500 font-medium px-1">{error}</p>}
+        {error && <p className="text-sm text-red-500 font-extrabold px-1">{error}</p>}
 
         <button type="submit" disabled={loading}
-          className="w-full bg-primary disabled:bg-primary-light disabled:text-primary text-white font-bold rounded-2xl py-4 text-sm active:bg-primary-dark transition-colors mt-2 flex items-center justify-center gap-2">
+          className="btn btn-primary btn-block mt-2">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {tab === "login" ? "Giriş Yap" : "Hesap Oluştur"}
         </button>

@@ -8,6 +8,9 @@ import { TR_CITIES, TR_DISTRICTS } from "@/lib/turkey-locations";
 import { useAuth } from "@/lib/auth";
 import { CropModal } from "@/components/CropModal";
 import Link from "next/link";
+import { Gus } from "@/components/Gus";
+import { computeStats, GameStats, XP_PER_RECEIPT } from "@/lib/gamify";
+import { haptic } from "@/lib/haptics";
 
 interface Suggestion {
   key: string;
@@ -75,6 +78,7 @@ function calcPerPerson(total: string, people: string): string | null {
 export default function UploadPage() {
   const { user } = useAuth();
   const [step, setStep] = useState<"photo" | "details" | "done">("photo");
+  const [reward, setReward] = useState<{ before: GameStats; after: GameStats } | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string>("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -185,6 +189,7 @@ export default function UploadPage() {
     const p = parseInt(people);
     const receiptId = crypto.randomUUID();
     const photo = await store.uploadReceiptPhoto(receiptId, photoBase64);
+    const before = computeStats(await store.getUserReceipts(user.id));
     await store.addReceipt({
       id: receiptId,
       userId: user.id,
@@ -202,10 +207,15 @@ export default function UploadPage() {
       lat: selectedLat,
       lng: selectedLng,
     });
+    const after = computeStats(await store.getUserReceipts(user.id));
+    setReward({ before, after });
+    haptic("success");
+    window.dispatchEvent(new CustomEvent("adisyon:receipt-added"));
     setStep("done");
   }
 
   function reset() {
+    setReward(null);
     setStep("photo");
     setPhotoUrl(null);
     setPhotoBase64("");
@@ -229,10 +239,10 @@ export default function UploadPage() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4">
-        <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center text-3xl">🧾</div>
-        <h2 className="text-lg font-bold text-charcoal">Adisyon paylaşmak için giriş yap</h2>
-        <p className="text-sm text-muted">Topluluğa katkıda bulunmak için bir hesap oluştur veya giriş yap.</p>
-        <Link href="/auth" className="bg-primary text-white font-bold rounded-full px-6 py-3 text-sm">
+        <Gus mood="wink" size={150} body="bust" prop="receipt" />
+        <h2 className="text-xl font-black text-charcoal">Fiş paylaşmak için giriş yap</h2>
+        <p className="text-sm font-semibold text-muted">Her fiş sana {XP_PER_RECEIPT} XP kazandırır. Hadi başlayalım!</p>
+        <Link href="/auth" className="btn btn-primary">
           Giriş Yap / Kayıt Ol
         </Link>
       </div>
@@ -240,24 +250,39 @@ export default function UploadPage() {
   }
 
   if (step === "done") {
+    const leveledUp = !!reward && reward.after.level > reward.before.level;
+    const newStreak = !!reward && reward.after.weekStreak > reward.before.weekStreak;
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4">
-        <CheckCircle className="w-16 h-16 text-primary" />
-        <h2 className="text-xl font-bold text-charcoal">Adisyon Paylaşıldı!</h2>
-        <p className="text-sm text-muted">
+      <div className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 gap-3">
+        <Gus mood="laugh" size={170} body="bust" prop="trophy" extra={["confetti"]} />
+        <h2 className="text-2xl font-black text-charcoal">Harika! Fiş paylaşıldı</h2>
+        <p className="text-sm font-semibold text-muted">
           {name} · {formatCurrency(parseFloat(total))} · {people} kişi
+          {perPerson ? ` · kişi başı ${perPerson}` : ""}
         </p>
-        {perPerson && <p className="text-sm font-semibold text-primary">Kişi başı {perPerson}</p>}
-        <div className="flex gap-3 mt-2">
-          <Link href="/" className="bg-surface border border-border text-ink font-bold rounded-full px-5 py-2.5 text-sm">
-            Ana Sayfa
-          </Link>
-          <button
-            onClick={reset}
-            className="bg-primary text-white font-bold rounded-full px-5 py-2.5 text-sm active:bg-primary-dark"
-          >
-            Yeni Ekle
-          </button>
+
+        <div className="flex gap-2 w-full max-w-xs mt-1">
+          <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-gold-shade bg-gold/20 py-2.5" style={{ animationDelay: ".15s" }}>
+            <p className="text-xl font-black text-gold-shade">+{XP_PER_RECEIPT}</p>
+            <p className="text-[11px] font-extrabold text-muted">XP</p>
+          </div>
+          {newStreak && reward && (
+            <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-flame bg-flame/15 py-2.5" style={{ animationDelay: ".3s" }}>
+              <p className="text-xl font-black text-flame"><span className="flame">🔥</span> {reward.after.weekStreak}</p>
+              <p className="text-[11px] font-extrabold text-muted">hafta serisi</p>
+            </div>
+          )}
+          {leveledUp && reward && (
+            <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-primary-shade bg-primary-light py-2.5" style={{ animationDelay: ".45s" }}>
+              <p className="text-xl font-black text-primary">⭐ {reward.after.level}</p>
+              <p className="text-[11px] font-extrabold text-muted">yeni seviye!</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 w-full max-w-xs mt-3">
+          <button onClick={reset} className="btn btn-primary btn-block">Yeni fiş ekle</button>
+          <Link href="/" className="btn btn-ghost btn-block">Ana sayfaya dön</Link>
         </div>
       </div>
     );

@@ -6,6 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users, Bell, Check, X, Settings, MessageCircle, ThumbsUp } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { store, StoredFriendship, StoredNotification, StoredReceipt } from "@/lib/store";
+import { GusIcon } from "@/components/Gus";
+import { computeStats, GameStats } from "@/lib/gamify";
+import { haptic } from "@/lib/haptics";
 
 const MENU_ITEMS = [
   {
@@ -233,6 +236,17 @@ export function Navigation() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [dmCount, setDmCount] = useState(0);
+  const [stats, setStats] = useState<GameStats | null>(null);
+
+  // Weekly streak + XP come from the user's own receipts
+  useEffect(() => {
+    if (!user) { setStats(null); return; }
+    const load = () => store.getUserReceipts(user.id).then((r) => setStats(computeStats(r)));
+    load();
+    window.addEventListener("focus", load);
+    window.addEventListener("adisyon:receipt-added", load);
+    return () => { window.removeEventListener("focus", load); window.removeEventListener("adisyon:receipt-added", load); };
+  }, [user]);
 
   // Clear badge the moment the user taps Arkadaşlar
   useEffect(() => {
@@ -284,30 +298,23 @@ export function Navigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-surface border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 h-14 grid grid-cols-3 items-center">
+      <header className="sticky top-0 z-50 bg-surface border-b-2 border-border">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
 
-          {/* Sol: logo */}
-          <div className="justify-self-start">
-            <Link href="/">
-              <svg width="30" height="30" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="36" height="36" rx="9" fill="#1D9E75" />
-                <text x="18" y="18" textAnchor="middle" dy="0.35em"
-                  fontSize="22" fontWeight="700"
-                  fontFamily="'Arial Rounded MT Bold', Nunito, sans-serif"
-                  fill="white">g</text>
-                <circle cx="28" cy="8" r="5" fill="#D85A30" />
-              </svg>
-            </Link>
-          </div>
-
-          {/* Orta: wordmark */}
-          <Link href="/" className="justify-self-center font-display text-[22px] font-bold text-primary tracking-[-0.3px]">
-            grazer
+          {/* Sol: Gus + wordmark */}
+          <Link href="/" aria-label="grazer ana sayfa" className="flex items-center gap-2 active:scale-95 transition-transform">
+            <GusIcon size={34} />
+            <span className="font-display text-[24px] font-black text-primary tracking-[-0.5px]">grazer</span>
           </Link>
 
           {/* Sağ: bildirim + avatar */}
-          <div className="justify-self-end flex items-center gap-1.5 relative">
+          <div className="flex items-center gap-1.5 relative">
+            {ready && user && stats && (
+              <Link href="/badges" className="pill-stat text-flame" aria-label={`${stats.weekStreak} haftalık seri`} onClick={() => haptic("tap")}>
+                <span className={stats.weekStreak > 0 ? "flame" : "opacity-40"}>🔥</span>
+                <span className={stats.weekStreak > 0 ? "" : "text-muted"}>{stats.weekStreak}</span>
+              </Link>
+            )}
             {ready && user && (
               <button
                 onClick={() => { setNotifOpen((v) => !v); setDropdownOpen(false); }}
@@ -338,7 +345,7 @@ export function Navigation() {
                     className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
                     aria-label="Hesap menüsü"
                   >
-                    <span className="text-sm font-semibold text-charcoal">
+                    <span className="hidden sm:inline text-sm font-extrabold text-charcoal">
                       {user.name.split(" ")[0]}
                     </span>
                     <div className="w-8 h-8 bg-primary-light rounded-full overflow-hidden flex items-center justify-center text-sm font-bold text-primary">
@@ -364,28 +371,40 @@ export function Navigation() {
         </div>
       </header>
 
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-surface border-t border-border safe-area-pb">
-        <div className="max-w-2xl mx-auto flex">
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-surface border-t-2 border-border safe-area-pb">
+        <div className="max-w-2xl mx-auto flex items-end justify-around px-2 pt-2 pb-2">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href));
             const showBadge = href === "/friends" && dmCount > 0 && !pathname.startsWith("/friends");
+            if (href === "/upload") {
+              return (
+                <Link
+                  key={label}
+                  href={href}
+                  aria-label="Adisyon ekle"
+                  onClick={() => haptic("tap")}
+                  className="btn btn-primary !p-0 w-14 h-12 !rounded-2xl -mt-5 shadow-sm"
+                >
+                  <Icon className="w-7 h-7" strokeWidth={3} />
+                </Link>
+              );
+            }
             return (
               <Link
                 key={label}
                 href={href}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-                  active ? "text-primary" : "text-muted hover:text-ink"
+                aria-label={label}
+                onClick={() => haptic("tap")}
+                className={`relative w-14 h-12 flex items-center justify-center rounded-2xl border-2 transition-all active:scale-90 ${
+                  active ? "bg-primary-light border-primary text-primary" : "border-transparent text-muted"
                 }`}
               >
-                <div className="relative">
-                  <Icon className={`w-6 h-6 ${active ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
-                  {showBadge && (
-                    <span className="absolute -top-0.5 -right-1 min-w-[14px] h-3.5 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center px-0.5">
-                      {dmCount > 9 ? "9+" : dmCount}
-                    </span>
-                  )}
-                </div>
-                <span>{label}</span>
+                <Icon className="w-7 h-7" strokeWidth={active ? 2.75 : 2.25} />
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 border-2 border-surface rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5">
+                    {dmCount > 9 ? "9+" : dmCount}
+                  </span>
+                )}
               </Link>
             );
           })}

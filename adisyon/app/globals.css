@@ -10,16 +10,22 @@
   --color-charcoal:      #2C2C2A;
   --color-ink:           #444441;
   --color-muted:         #888780;
-  --color-background:    #F1EFE8;
+  --color-background:    #F6F4EC;
   --color-surface:       #FFFFFF;
-  --color-border:        #D3D1C7;
+  --color-border:        #DDDAD0;
   --color-dark:          #1A1A18;
+  /* Duolingo-style 3D button shades + reward colours */
+  --color-primary-shade: #16825F;
+  --color-accent-shade:  #B8461F;
+  --color-gold:          #FFC800;
+  --color-gold-shade:    #D9A400;
+  --color-flame:         #FF8A2B;
 }
 
 @theme inline {
-  --font-sans:    var(--font-inter), 'SF Pro Text', -apple-system, sans-serif;
-  --font-body:    var(--font-inter), 'SF Pro Text', -apple-system, sans-serif;
-  --font-display: 'Arial Rounded MT Bold', var(--font-nunito), sans-serif;
+  --font-sans:    var(--font-nunito), 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-body:    var(--font-nunito), 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-display: var(--font-nunito), 'Arial Rounded MT Bold', system-ui, sans-serif;
 }
 
 /* ── Design-system raw tokens (for direct var() usage) ── */
@@ -51,4 +57,97 @@ body {
   --color-muted:         #7A7870;
   --color-primary-light: #1A3A2D;
   --color-dark:          #F0EEE7;
+}
+
+
+/* ═══ Duolingo-style system ═══════════════════════════════════════════════ */
+
+body { font-weight: 600; }
+h1, h2, h3 { font-weight: 800; letter-spacing: -0.01em; }
+strong, b { font-weight: 800; }
+
+/* Page enter */
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+main > * { animation: page-in .32s ease-out both; }
+
+/* Chunky 3D buttons: .btn + a colour variant */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  font-weight: 800; font-size: .95rem; line-height: 1.2;
+  padding: .8rem 1.4rem; border-radius: 16px;
+  border: 2px solid transparent; border-bottom-width: 5px;
+  cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+  transition: transform .08s ease, border-bottom-width .08s ease, filter .15s;
+}
+.btn:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 2px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary-shade); }
+.btn-accent  { background: var(--color-accent);  color: #fff; border-color: var(--color-accent-shade); }
+.btn-gold    { background: var(--color-gold);    color: #4A3A00; border-color: var(--color-gold-shade); }
+.btn-ghost   { background: var(--color-surface); color: var(--color-primary); border-color: var(--color-border); }
+.btn-block { display: flex; width: 100%; }
+.btn-sm { padding: .5rem 1rem; font-size: .8rem; border-radius: 14px; border-bottom-width: 4px; }
+
+/* Existing text buttons pick up the 3D look without touching every file */
+:is(a, button).bg-primary.text-white:is(.rounded-full, .rounded-xl, .rounded-2xl)[class*="px-"] {
+  border-radius: 14px; border: 2px solid var(--color-primary-shade); border-bottom-width: 4px; font-weight: 800;
+  transition: transform .08s ease, border-bottom-width .08s ease;
+}
+:is(a, button).bg-primary.text-white:is(.rounded-full, .rounded-xl, .rounded-2xl)[class*="px-"]:active {
+  transform: translateY(2px); border-bottom-width: 2px;
+}
+
+/* Cards: thicker outline with a heavier base */
+.bg-surface:is(.rounded-2xl, .rounded-3xl).border {
+  border-width: 2px; border-bottom-width: 4px; border-color: var(--color-border);
+}
+:is(input, select, textarea).border { border-width: 2px; border-radius: 14px; }
+
+/* Reward UI */
+.pill-stat {
+  display: inline-flex; align-items: center; gap: .3rem; font-weight: 800; font-size: .85rem;
+  padding: .25rem .65rem; border-radius: 12px; border: 2px solid var(--color-border); background: var(--color-surface);
+}
+.xp-bar { height: 14px; border-radius: 99px; background: var(--color-border); overflow: hidden; position: relative; }
+.xp-fill { height: 100%; border-radius: 99px; background: var(--color-gold); position: relative; transition: width .8s cubic-bezier(.2,.9,.3,1.2); }
+.xp-fill::after { content: ""; position: absolute; left: 8px; right: 8px; top: 3px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.45); }
+.gus-bubble {
+  position: relative; background: var(--color-surface); border: 2px solid var(--color-border); border-bottom-width: 4px;
+  border-radius: 18px; padding: .7rem .9rem; font-weight: 800; color: var(--color-charcoal); font-size: .95rem; line-height: 1.3;
+}
+.gus-bubble::before {
+  content: ""; position: absolute; left: -9px; top: 50%; width: 14px; height: 14px; margin-top: -7px;
+  background: var(--color-surface); border-left: 2px solid var(--color-border); border-bottom: 2px solid var(--color-border);
+  transform: rotate(45deg);
+}
+@keyframes pop-in { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+.pop-in { animation: pop-in .45s cubic-bezier(.2,.9,.3,1.3) both; }
+@keyframes flame-flicker { 0%,100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.12) rotate(3deg); } }
+.flame { animation: flame-flicker 1.2s ease-in-out infinite; display: inline-block; transform-origin: 50% 90%; }
+
+/* ═══ Gus animations ═════════════════════════════════════════════════════ */
+.gus { display: block; }
+.gus svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.gus-shadow { fill: #000; opacity: .12; }
+.gus-bob { animation: gus-bob 3.2s ease-in-out infinite; }
+.gus-char, .gus-earL, .gus-earR, .gus-wave, .gus-conf > *, .gus-tear { transform-box: view-box; }
+.gus-char { transform-origin: 100px 190px; }
+.gus-jump .gus-char { animation: gus-squish .55s ease-out; }
+.gus-blink { transform-box: fill-box; transform-origin: 50% 50%; animation: gus-blink 4.6s infinite; }
+.gus-earL { transform-origin: 56px 104px; animation: gus-twL 6s ease-in-out infinite; }
+.gus-earR { transform-origin: 144px 104px; animation: gus-twR 6s ease-in-out infinite 1.4s; }
+.gus-wave { transform-origin: 138px 180px; animation: gus-wave 1.1s ease-in-out infinite; }
+.gus-conf > * { transform-box: fill-box; animation: gus-fall 1.8s ease-in infinite; animation-delay: var(--d, 0s); }
+.gus-tear { transform-box: fill-box; transform-origin: 50% 0; animation: gus-drip 1.8s ease-in infinite; }
+@keyframes gus-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes gus-blink { 0%,92%,100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes gus-squish { 0% { transform: scale(1,1); } 30% { transform: scale(1.1,.86); } 60% { transform: scale(.95,1.08) translateY(-10px); } 100% { transform: scale(1,1); } }
+@keyframes gus-twL { 0%,86%,100% { transform: rotate(0); } 90% { transform: rotate(-14deg); } 94% { transform: rotate(4deg); } }
+@keyframes gus-twR { 0%,86%,100% { transform: rotate(0); } 90% { transform: rotate(14deg); } 94% { transform: rotate(-4deg); } }
+@keyframes gus-wave { 0%,100% { transform: rotate(-10deg); } 50% { transform: rotate(14deg); } }
+@keyframes gus-fall { 0% { opacity: 0; transform: translateY(-14px) rotate(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(46px) rotate(220deg); } }
+@keyframes gus-drip { 0% { transform: scaleY(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(14px) scaleY(1); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  main > *, .gus *, .flame, .pop-in { animation: none !important; }
 }

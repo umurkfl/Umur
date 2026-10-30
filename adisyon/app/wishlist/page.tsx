@@ -7,6 +7,7 @@ import { store, WishlistItem, WishlistList, WISHLIST_SUGGESTIONS } from "@/lib/s
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/mock";
+import { Gus } from "@/components/Gus";
 
 function ListSection({
   list,
@@ -205,10 +206,8 @@ export default function WishlistPage() {
 
       {lists.length === 0 && !creating ? (
         <div className="flex flex-col items-center justify-center py-14 text-center space-y-3">
-          <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center">
-            <Bookmark className="w-8 h-8 text-primary/30" />
-          </div>
-          <p className="font-semibold text-ink">Henüz listeniz yok</p>
+          <Gus mood="chew" size={130} />
+          <p className="font-black text-charcoal text-lg">Henüz listeniz yok</p>
           <p className="text-sm text-muted max-w-xs">
             Restoran sayfalarındaki <Bookmark className="w-3.5 h-3.5 inline text-muted" /> ikonuna basarak listeler oluşturabilirsin.
           </p>

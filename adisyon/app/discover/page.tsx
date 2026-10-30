@@ -10,6 +10,7 @@ import { ReceiptModal } from "@/components/ReceiptModal";
 import { CommentSection, ReceiptPopup } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
+import { Gus } from "@/components/Gus";
 
 const DISCOVERY_LIST = "Keşfetten Gelenler";
 
@@ -585,7 +586,7 @@ function DiscoverPageInner() {
         <button
           onClick={() => setTab("swipe")}
           className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === "swipe" ? "bg-surface shadow-sm text-primary" : "text-muted"
+            tab === "swipe" ? "bg-primary text-white" : "text-muted"
           }`}
         >
           Adisyonlar
@@ -593,7 +594,7 @@ function DiscoverPageInner() {
         <button
           onClick={() => setTab("list")}
           className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-            tab === "list" ? "bg-surface shadow-sm text-primary" : "text-muted"
+            tab === "list" ? "bg-primary text-white" : "text-muted"
           }`}
         >
           Restoranlar
@@ -667,9 +668,9 @@ function DiscoverPageInner() {
 
           {filteredUser.length === 0 ? (
             <div className="text-center py-16 text-muted">
-              <Search className="w-12 h-12 mx-auto mb-3 text-border" />
-              <p className="font-medium">Sonuç bulunamadı</p>
-              {hasActiveFilters && <button onClick={clearFilters} className="mt-3 text-sm text-primary font-semibold">Filtreleri temizle</button>}
+              <Gus mood="dizzy" size={130} className="mx-auto mb-2" />
+              <p className="font-black text-charcoal text-lg">Sonuç bulunamadı</p>
+              {hasActiveFilters && <button onClick={clearFilters} className="btn btn-primary btn-sm mt-3">Filtreleri temizle</button>}
             </div>
           ) : (
             <div className="space-y-3 pb-4">

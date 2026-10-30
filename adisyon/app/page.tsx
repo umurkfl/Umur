@@ -8,6 +8,7 @@ import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/stor
 import { useAuth } from "@/lib/auth";
 import { WishlistButton } from "@/components/WishlistButton";
 import { ShareSheet } from "@/components/ShareSheet";
+import { HomeHero, FeedEmpty } from "@/components/HomeHero";
 
 function PinIcon({ className }: { className?: string }) {
   return (
@@ -946,15 +947,9 @@ export default function HomePage() {
 
   return (
     <div className="space-y-0">
-      {/* Hero CTA */}
-      <div className="bg-gradient-to-br from-primary to-primary-dark mx-4 mt-4 mb-5 rounded-3xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-1">Adisyonunu paylaş</h1>
-        <p className="text-white/80 text-sm mb-4 leading-relaxed">Gerçek fiyatları topluluğunla paylaş, başkalarının deneyimini kolaylaştır.</p>
-        <Link href={user ? "/upload" : "/auth"} className="inline-flex items-center gap-2 bg-white text-primary font-bold rounded-full px-5 py-2.5 text-sm active:scale-95 transition-transform">
-          <Camera className="w-4 h-4" />
-          {user ? "Adisyon Ekle" : "Katıl & Paylaş"}
-        </Link>
-      </div>
+      <HomeHero />
+
+      {ready && userReceipts.length === 0 && <FeedEmpty />}
 
       {/* Feed */}
       {userReceipts.length > 0 && (
