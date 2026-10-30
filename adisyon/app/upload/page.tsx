@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Gus } from "@/components/Gus";
 import { computeStats, GameStats, XP_PER_RECEIPT } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
+import { StarIcon } from "@/components/Icons";
 
 interface Suggestion {
   key: string;
@@ -251,7 +252,6 @@ export default function UploadPage() {
 
   if (step === "done") {
     const leveledUp = !!reward && reward.after.level > reward.before.level;
-    const newStreak = !!reward && reward.after.weekStreak > reward.before.weekStreak;
     return (
       <div className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 gap-3">
         <Gus mood="laugh" size={170} body="bust" prop="trophy" extra={["confetti"]} />
@@ -266,15 +266,9 @@ export default function UploadPage() {
             <p className="text-xl font-black text-gold-shade">+{XP_PER_RECEIPT}</p>
             <p className="text-[11px] font-extrabold text-muted">XP</p>
           </div>
-          {newStreak && reward && (
-            <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-flame bg-flame/15 py-2.5" style={{ animationDelay: ".3s" }}>
-              <p className="text-xl font-black text-flame"><span className="flame">🔥</span> {reward.after.weekStreak}</p>
-              <p className="text-[11px] font-extrabold text-muted">hafta serisi</p>
-            </div>
-          )}
           {leveledUp && reward && (
             <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-primary-shade bg-primary-light py-2.5" style={{ animationDelay: ".45s" }}>
-              <p className="text-xl font-black text-primary">⭐ {reward.after.level}</p>
+              <p className="text-xl font-black text-primary flex items-center justify-center gap-1"><StarIcon size={20} /> {reward.after.level}</p>
               <p className="text-[11px] font-extrabold text-muted">yeni seviye!</p>
             </div>
           )}
@@ -459,9 +453,10 @@ export default function UploadPage() {
                 <button
                   key={s}
                   onClick={() => setRating(rating === s ? 0 : s)}
-                  className={`text-3xl transition-all active:scale-110 ${s <= rating ? "opacity-100" : "opacity-25"}`}
+                  aria-label={`${s} yıldız`}
+                  className={`transition-all active:scale-110 ${s <= rating ? "opacity-100 scale-105" : "opacity-30 grayscale"}`}
                 >
-                  ⭐
+                  <StarIcon size={40} />
                 </button>
               ))}
             </div>

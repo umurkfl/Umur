@@ -348,7 +348,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
             lastAction === "save" ? "bg-primary text-white" : "bg-charcoal text-white"
           }`}
         >
-          {lastAction === "save" ? "🔖 Keşfetten Gelenler'e eklendi" : "✕ Geçildi"}
+          {lastAction === "save" ? "Keşfetten Gelenler'e eklendi" : "Geçildi"}
         </div>
       )}
 

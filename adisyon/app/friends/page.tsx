@@ -8,23 +8,37 @@ import { useAuth } from "@/lib/auth";
 import { ReceiptPopup } from "@/app/page";
 import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { Gus } from "@/components/Gus";
+import { Gus, GusFace } from "@/components/Gus";
+import type { GusMood } from "@/lib/gus";
 
 type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
 
 // ─── DM components ───────────────────────────────────────────────────────────
 
-const REACTION_EMOJIS = ["❤️", "😂", "😮", "😢", "😡", "👍"];
+// Our own reaction set: Gus faces instead of system emoji. Values are stored as the key.
+const REACTIONS: { key: string; mood: GusMood; label: string }[] = [
+  { key: "love", mood: "love", label: "Aşık" },
+  { key: "laugh", mood: "laugh", label: "Kahkaha" },
+  { key: "shock", mood: "shock", label: "Şaşkın" },
+  { key: "sad", mood: "sad", label: "Üzgün" },
+  { key: "angry", mood: "angry", label: "Kızgın" },
+  { key: "cool", mood: "cool", label: "Havalı" },
+];
+
+function ReactionFace({ value, size = 28 }: { value: string; size?: number }) {
+  const r = REACTIONS.find((x) => x.key === value);
+  return r ? <GusFace mood={r.mood} size={size} /> : <span>{value}</span>; // legacy emoji reactions
+}
 
 function EmojiPicker({ onSelect, onClose }: { onSelect: (e: string) => void; onClose: () => void }) {
   return (
     <>
       <div className="fixed inset-0 z-[200]" onClick={onClose} />
       <div className="relative z-[201] bg-surface border border-border rounded-2xl shadow-xl px-2 py-1.5 flex gap-1">
-        {REACTION_EMOJIS.map((e) => (
-          <button key={e} onClick={() => { onSelect(e); onClose(); }}
-            className="text-xl leading-none p-1.5 rounded-xl active:bg-primary-light transition-colors">
-            {e}
+        {REACTIONS.map((r) => (
+          <button key={r.key} aria-label={r.label} onClick={() => { onSelect(r.key); onClose(); }}
+            className="p-1 rounded-xl active:bg-primary-light active:scale-90 transition-transform">
+            <GusFace mood={r.mood} size={34} />
           </button>
         ))}
       </div>
@@ -82,7 +96,7 @@ function MessageBubble({
   function handleTouchEnd() {
     if (swipeX >= 40 && !didReply.current) {
       didReply.current = true;
-      const replyText = msg.type === "receipt" ? `📋 ${msg.restaurantName}` : (msg.text ?? "");
+      const replyText = msg.type === "receipt" ? `Adisyon: ${msg.restaurantName}` : (msg.text ?? "");
       onReply(msg.id, replyText);
     }
     setSwipeX(0);
@@ -159,7 +173,7 @@ function MessageBubble({
               className={`text-xs rounded-full px-2 py-0.5 border ${
                 users.includes(currentUserId) ? "bg-primary-light border-primary/30" : "bg-background border-border"
               }`}>
-              {emoji}{users.length > 1 ? ` ${users.length}` : ""}
+              <ReactionFace value={emoji} size={20} />{users.length > 1 ? ` ${users.length}` : ""}
             </button>
           ))}
         </div>
@@ -531,7 +545,7 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-3xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-center mb-4"><div className="w-10 h-1 bg-border rounded-full" /></div>
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-lg font-bold text-charcoal">📍 Şu an neredeyim?</h2>
+          <h2 className="text-lg font-black text-charcoal flex items-center gap-1.5"><MapPin className="w-5 h-5 text-primary" /> Şu an neredeyim?</h2>
           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
             locStatus === "ok" && !nearbyLoading ? "bg-green-100 text-green-700" :
             locStatus === "ok" && nearbyLoading ? "bg-yellow-100 text-yellow-700" :
@@ -951,8 +965,8 @@ export default function FriendsPage() {
                     <UserAvatar userId={friendId} name={friendName} />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-ink">{friendName}</p>
-                      {latestCheckIn && <p className="text-xs text-muted truncate">📍 {latestCheckIn.restaurantName}{latestCheckIn.district ? `, ${latestCheckIn.district}` : latestCheckIn.city ? `, ${latestCheckIn.city}` : ""} · {timeAgo(latestCheckIn.createdAt)}</p>}
-                      {!latestCheckIn && latestReceipt && <p className="text-xs text-muted truncate">🧾 {latestReceipt.restaurantName} · {timeAgo(latestReceipt.createdAt)}</p>}
+                      {latestCheckIn && <p className="text-xs text-muted truncate"><MapPin className="w-3 h-3 inline -mt-0.5 mr-0.5" />{latestCheckIn.restaurantName}{latestCheckIn.district ? `, ${latestCheckIn.district}` : latestCheckIn.city ? `, ${latestCheckIn.city}` : ""} · {timeAgo(latestCheckIn.createdAt)}</p>}
+                      {!latestCheckIn && latestReceipt && <p className="text-xs text-muted truncate"><Receipt className="w-3 h-3 inline -mt-0.5 mr-0.5" />{latestReceipt.restaurantName} · {timeAgo(latestReceipt.createdAt)}</p>}
                     </div>
                   </Link>
                   {isConfirming ? (
@@ -1098,7 +1112,7 @@ export default function FriendsPage() {
                   </div>
                   <p className={`text-xs mt-1 truncate ${unread > 0 ? "text-primary font-medium" : "text-muted"}`}>
                     {last.fromUserId === user?.id ? "Sen: " : ""}
-                    {last.type === "receipt" ? `📋 ${last.restaurantName}` : last.text}
+                    {last.type === "receipt" ? `Adisyon: ${last.restaurantName}` : last.text}
                   </p>
                 </div>
               </div>

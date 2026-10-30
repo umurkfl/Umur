@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { gusSvg, gusIconSvg, GUS_MOODS, GusMood, GusOpts } from "@/lib/gus";
+import { gusSvg, gusIconSvg, gusFaceSvg, GUS_MOODS, GusMood, GusOpts } from "@/lib/gus";
 import { haptic } from "@/lib/haptics";
 
 interface GusProps extends GusOpts {
@@ -43,4 +43,10 @@ export function GusSays({ children, mood = "happy", size = 120, className = "", 
       <div className="gus-bubble flex-1 min-w-0">{children}</div>
     </div>
   );
+}
+
+/** Gus's head as a sticker/emoji: our own reaction set */
+export function GusFace({ mood, size = 28, className = "" }: { mood: GusMood; size?: number; className?: string }) {
+  const html = useMemo(() => gusFaceSvg({ ...GUS_MOODS[mood], label: mood }), [mood]);
+  return <span className={`gus gus-face inline-block shrink-0 ${className}`} style={{ width: size, height: size * 0.94, lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: html }} />;
 }

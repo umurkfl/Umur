@@ -8,15 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { store } from "@/lib/store";
 import { computeStats, GameStats, XP_PER_LEVEL } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
-
-function Tile({ icon, value, label, tone }: { icon: React.ReactNode; value: React.ReactNode; label: string; tone: string }) {
-  return (
-    <div className="flex-1 min-w-0 rounded-2xl border-2 border-b-4 border-border bg-surface px-2 py-2.5 text-center">
-      <div className={`text-xl font-black leading-none ${tone}`}>{icon}{value}</div>
-      <p className="mt-1 text-[11px] font-extrabold text-muted leading-tight">{label}</p>
-    </div>
-  );
-}
+import { FlameIcon, StarIcon, GoalIcon } from "@/components/Icons";
 
 export function HomeHero() {
   const { user, ready } = useAuth();
@@ -53,27 +45,34 @@ export function HomeHero() {
     <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-4">
       <GusSays mood={done ? "laugh" : "wink"} size={104} body="bust">
         {done
-          ? "Bu hafta fişini ekledin. Seri devam ediyor!"
+          ? "Bu hafta fişini ekledin. Harikasın!"
           : "Bu hafta henüz fiş yok. Bugün nerede yedin?"}
       </GusSays>
 
       {stats && (
-        <>
-          <div className="mt-4 flex gap-2">
-            <Tile icon={<span className={stats.weekStreak > 0 ? "flame mr-1" : "mr-1 opacity-40"}>🔥</span>} value={stats.weekStreak} label="hafta serisi" tone="text-flame" />
-            <Tile icon={<span className="mr-1">⭐</span>} value={stats.level} label="seviye" tone="text-gold-shade" />
-            <Tile icon={<span className="mr-1">{done ? "✅" : "🎯"}</span>} value={`${Math.min(stats.thisWeekCount, 1)}/1`} label="haftalık hedef" tone="text-primary" />
-          </div>
-          <div className="mt-4">
-            <div className="flex justify-between text-xs font-extrabold text-muted mb-1.5">
-              <span>Seviye {stats.level}</span>
-              <span>{stats.xpIntoLevel} / {XP_PER_LEVEL} XP</span>
-            </div>
-            <div className="xp-bar" role="progressbar" aria-valuenow={stats.xpIntoLevel} aria-valuemin={0} aria-valuemax={XP_PER_LEVEL}>
-              <div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} />
+        <div className="mt-4">
+          <div className="flex items-center gap-2.5">
+            <StarIcon size={26} />
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between text-xs font-extrabold text-muted mb-1">
+                <span>Seviye {stats.level}</span>
+                <span>{stats.xpIntoLevel} / {XP_PER_LEVEL} XP</span>
+              </div>
+              <div className="xp-bar" role="progressbar" aria-valuenow={stats.xpIntoLevel} aria-valuemin={0} aria-valuemax={XP_PER_LEVEL}>
+                <div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} />
+              </div>
             </div>
           </div>
-        </>
+          <div className="mt-3 flex items-center justify-between text-xs font-extrabold text-muted">
+            <span className="flex items-center gap-1.5">
+              <GoalIcon size={18} done={done} />
+              {done ? "Bu hafta fiş eklendi" : "Bu hafta henüz fiş yok"}
+            </span>
+            {stats.weekStreak >= 2 && (
+              <span className="flex items-center gap-1"><FlameIcon size={14} />{stats.weekStreak} hafta üst üste</span>
+            )}
+          </div>
+        </div>
       )}
 
       <Link href="/upload" onClick={() => haptic("tap")} className="btn btn-primary btn-block mt-4">

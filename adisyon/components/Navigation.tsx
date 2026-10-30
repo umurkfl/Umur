@@ -7,7 +7,6 @@ import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDow
 import { useAuth } from "@/lib/auth";
 import { store, StoredFriendship, StoredNotification, StoredReceipt } from "@/lib/store";
 import { GusIcon } from "@/components/Gus";
-import { computeStats, GameStats } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
 
 const MENU_ITEMS = [
@@ -236,17 +235,6 @@ export function Navigation() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [dmCount, setDmCount] = useState(0);
-  const [stats, setStats] = useState<GameStats | null>(null);
-
-  // Weekly streak + XP come from the user's own receipts
-  useEffect(() => {
-    if (!user) { setStats(null); return; }
-    const load = () => store.getUserReceipts(user.id).then((r) => setStats(computeStats(r)));
-    load();
-    window.addEventListener("focus", load);
-    window.addEventListener("adisyon:receipt-added", load);
-    return () => { window.removeEventListener("focus", load); window.removeEventListener("adisyon:receipt-added", load); };
-  }, [user]);
 
   // Clear badge the moment the user taps Arkadaşlar
   useEffect(() => {
@@ -309,12 +297,6 @@ export function Navigation() {
 
           {/* Sağ: bildirim + avatar */}
           <div className="flex items-center gap-1.5 relative">
-            {ready && user && stats && (
-              <Link href="/badges" className="pill-stat text-flame" aria-label={`${stats.weekStreak} haftalık seri`} onClick={() => haptic("tap")}>
-                <span className={stats.weekStreak > 0 ? "flame" : "opacity-40"}>🔥</span>
-                <span className={stats.weekStreak > 0 ? "" : "text-muted"}>{stats.weekStreak}</span>
-              </Link>
-            )}
             {ready && user && (
               <button
                 onClick={() => { setNotifOpen((v) => !v); setDropdownOpen(false); }}
