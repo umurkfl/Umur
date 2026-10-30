@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, Star, User, Users, Bell, Check, X, Settings, MessageCircle, ThumbsUp } from "lucide-react";
+import { Home, Search, PlusCircle, Bookmark, Receipt, Trophy, LogOut, ChevronDown, User, Users, Bell, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { store, StoredFriendship, StoredNotification, StoredReceipt } from "@/lib/store";
+import { store } from "@/lib/store";
 import { GusIcon } from "@/components/Gus";
 import { haptic } from "@/lib/haptics";
 
@@ -22,144 +22,6 @@ const MENU_ITEMS = [
     ],
   },
 ];
-
-function NotificationPanel({ userId, onClose, onCountChange }: {
-  userId: string;
-  onClose: () => void;
-  onCountChange: (n: number) => void;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [requests, setRequests] = useState<StoredFriendship[]>([]);
-  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const ref = useRef<HTMLDivElement>(null);
-  const receiptCache = useRef<Map<string, StoredReceipt>>(new Map());
-
-  const openReceipt = useCallback((receiptId: string) => {
-    if (!receiptId) { onClose(); return; }
-    const receipt = receiptCache.current.get(receiptId) ?? null;
-    const payload = JSON.stringify({ id: receiptId, receipt });
-    sessionStorage.setItem("adisyon_open_receipt", payload);
-    onClose();
-    if (pathname === "/") {
-      window.dispatchEvent(new CustomEvent("adisyon:open-receipt", { detail: { id: receiptId, receipt } }));
-    } else {
-      router.push("/");
-    }
-  }, [pathname, router, onClose]);
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-
-  useEffect(() => {
-    Promise.all([
-      store.getFriendships(userId),
-      store.getNotifications(userId),
-    ]).then(([fs, notifs]) => {
-      setRequests(fs.filter((f) => f.status === "pending" && f.friendId === userId));
-      setNotifications(notifs);
-      setLoading(false);
-      store.markNotificationsRead(userId);
-      onCountChange(fs.filter((f) => f.status === "pending" && f.friendId === userId).length);
-      // Prefetch receipts so tapping a notification opens instantly
-      const ids = [...new Set(notifs.map((n) => n.receiptId).filter(Boolean))];
-      ids.forEach((id) => {
-        store.getReceiptById(id).then((r) => { if (r) receiptCache.current.set(id, r); });
-      });
-    });
-  }, [userId]);
-
-  async function accept(f: StoredFriendship) {
-    await store.acceptFriendRequest(f.id);
-    const updated = requests.filter((r) => r.id !== f.id);
-    setRequests(updated);
-    onCountChange(updated.length);
-  }
-
-  async function reject(f: StoredFriendship) {
-    await store.removeFriendship(f.id);
-    const updated = requests.filter((r) => r.id !== f.id);
-    setRequests(updated);
-    onCountChange(updated.length);
-  }
-
-  const isEmpty = !loading && requests.length === 0 && notifications.length === 0;
-
-  return (
-    <div ref={ref} className="absolute top-full right-0 mt-2 w-80 bg-surface rounded-2xl shadow-xl border border-border overflow-hidden z-50">
-      <div className="px-4 py-3 border-b border-border bg-background">
-        <p className="font-semibold text-charcoal text-sm">Bildirimler</p>
-      </div>
-      {loading ? (
-        <div className="px-4 py-6 text-center text-sm text-muted">Yükleniyor...</div>
-      ) : isEmpty ? (
-        <div className="px-4 py-6 text-center text-sm text-muted">Yeni bildirim yok</div>
-      ) : (
-        <div className="max-h-96 overflow-y-auto">
-          {/* Friend requests */}
-          {requests.map((f) => (
-            <div key={f.id} className="px-4 py-3 border-b border-border/50">
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                  {f.userName.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-ink truncate">{f.userName}</p>
-                  <p className="text-xs text-muted">sana arkadaşlık isteği gönderdi</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => accept(f)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-primary text-white text-xs font-semibold rounded-xl active:scale-95 transition-transform">
-                  <Check className="w-3.5 h-3.5" /> Kabul Et
-                </button>
-                <button onClick={() => reject(f)} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-background border border-border text-muted text-xs font-semibold rounded-xl active:scale-95 transition-transform">
-                  <X className="w-3.5 h-3.5" /> Reddet
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {/* Comment & reaction notifications */}
-          {notifications.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => openReceipt(n.receiptId)}
-              className={`w-full text-left px-4 py-3 border-b border-border/50 last:border-0 flex items-start gap-2.5 active:bg-primary-light/50 transition-colors ${!n.read ? "bg-primary-light/30" : ""}`}
-            >
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${n.type === "comment" ? "bg-primary-light text-primary" : "bg-yellow-50 text-yellow-600"}`}>
-                {n.type === "comment"
-                  ? <MessageCircle className="w-4 h-4" />
-                  : <ThumbsUp className="w-4 h-4" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-ink leading-snug">
-                  <span className="font-semibold">{n.actorName}</span>
-                  {n.type === "comment" ? " adisyonuna yorum yaptı" : " yorumunu beğendi"}
-                </p>
-                {n.type === "comment" && n.text && (
-                  <p className="text-xs text-muted mt-0.5 truncate">"{n.text}"</p>
-                )}
-                <p className="text-[10px] text-muted mt-1">{new Date(n.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="border-t border-border">
-        <Link href="/friends" onClick={onClose} className="block px-4 py-2.5 text-xs text-primary font-semibold text-center active:bg-primary-light">
-          Tüm arkadaş isteklerini gör →
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 function UserDropdown({ user, onClose }: { user: { name: string; email: string; avatar?: string | null }; onClose: () => void }) {
   const router = useRouter();
@@ -232,7 +94,6 @@ export function Navigation() {
   const pathname = usePathname();
   const { user, ready } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [dmCount, setDmCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -305,32 +166,25 @@ export function Navigation() {
           {/* Sağ: bildirim + avatar */}
           <div className="flex items-center gap-1.5 relative">
             {ready && user && (
-              <button
-                onClick={() => { setNotifOpen((v) => !v); setDropdownOpen(false); }}
-                className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-background active:bg-background transition-colors"
+              <Link
+                href="/notifications"
+                onClick={() => haptic("tap")}
+                className="relative w-10 h-10 flex items-center justify-center rounded-xl active:scale-90 transition-transform"
                 aria-label="Bildirimler"
               >
-                <Bell className="w-5 h-5 text-muted" />
+                <Bell className="w-6 h-6 text-muted" strokeWidth={2.5} />
                 {pendingCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] bg-red-500 border-2 border-page rounded-full text-white text-[10px] font-black flex items-center justify-center px-0.5">
                     {pendingCount > 9 ? "9+" : pendingCount}
                   </span>
                 )}
-              </button>
+              </Link>
             )}
-            {notifOpen && user && (
-              <NotificationPanel
-                userId={user.id}
-                onClose={() => setNotifOpen(false)}
-                onCountChange={setPendingCount}
-              />
-            )}
-
             <div className="relative">
               {ready && (
                 user ? (
                   <button
-                    onClick={() => { setDropdownOpen((v) => !v); setNotifOpen(false); }}
+                    onClick={() => setDropdownOpen((v) => !v)}
                     className="flex items-center gap-1.5 active:opacity-70 transition-opacity"
                     aria-label="Hesap menüsü"
                   >

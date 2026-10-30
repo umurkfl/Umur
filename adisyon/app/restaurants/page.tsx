@@ -9,6 +9,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { WishlistButton } from "@/components/WishlistButton";
+import { StarIcon } from "@/components/Icons";
+import { ListSkeleton } from "@/components/Skeleton";
 import { CommentSection } from "@/app/page";
 import { Gus } from "@/components/Gus";
 
@@ -67,6 +69,8 @@ function RestaurantContent() {
     return { visibleReceipts: visible, hiddenCount: allReceipts.length - visible.length };
   }, [allReceipts, privacyMap, mutualIds, user?.id]);
 
+  const cover = visibleReceipts.find((r) => r.photo)?.photo ?? null;
+
   // Stats calculated from ALL receipts (including private — for accuracy)
   const stats = useMemo(() => {
     if (!allReceipts.length) return null;
@@ -89,60 +93,64 @@ function RestaurantContent() {
 
   return (
     <div className="space-y-4 pb-8">
-      {/* Header */}
-      <div className="flex items-center gap-3 pt-2">
-        <button onClick={() => history.back()} className="w-8 h-8 flex items-center justify-center rounded-full bg-surface border border-border shrink-0">
-          <ArrowLeft className="w-4 h-4 text-ink" />
+      {/* Cover: the newest photo, or Gus when nobody has uploaded one */}
+      <div className="-mx-4 -mt-4 relative">
+        {cover ? (
+          <img src={cover} alt={name} className="w-full object-cover" style={{ height: "34vh", minHeight: 210 }} />
+        ) : (
+          <div className="w-full bg-primary-light flex items-end justify-center" style={{ height: 170 }}>
+            <Gus mood="chew" size={120} />
+          </div>
+        )}
+        {cover && <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/25 pointer-events-none" />}
+        <button onClick={() => history.back()} aria-label="Geri" className="absolute top-3 left-4 w-10 h-10 rounded-2xl bg-white border-2 border-b-4 border-border flex items-center justify-center text-charcoal active:translate-y-0.5 active:border-b-2 transition-all">
+          <ArrowLeft className="w-5 h-5" strokeWidth={3} />
         </button>
-        <h1 className="font-bold text-charcoal text-lg truncate">{name}</h1>
-        <div className="ml-auto shrink-0">
+        <div className="absolute top-3 right-4 h-10 px-1 rounded-2xl bg-white border-2 border-b-4 border-border flex items-center">
           <WishlistButton restaurantName={name} size="sm" />
         </div>
+        {cover && (
+          <div className="absolute bottom-4 left-4 right-4">
+            <h1 className="!text-white drop-shadow-lg leading-tight">{name}</h1>
+          </div>
+        )}
       </div>
+      {!cover && <h1 className="!mt-2">{name}</h1>}
 
       {loading ? (
-        <div className="text-center text-muted py-16">Yükleniyor…</div>
+        <ListSkeleton rows={3} />
       ) : allReceipts.length === 0 ? (
-        <div className="text-center py-16 bg-surface rounded-2xl border border-border">
-          <Receipt className="w-10 h-10 mx-auto mb-2 text-border" />
-          <p className="text-sm text-muted">Bu restoran için henüz adisyon paylaşılmamış</p>
+        <div className="flex flex-col items-center text-center py-10 gap-2">
+          <Gus mood="think" size={130} />
+          <p className="text-lg font-black text-charcoal">Burası daha keşfedilmemiş</p>
+          <p className="text-sm font-semibold text-muted">İlk adisyonu sen paylaş, haritaya sen ekle.</p>
+          <Link href="/upload" className="btn btn-primary btn-sm mt-1">Adisyon ekle</Link>
         </div>
       ) : (
         <>
-          {/* Stats card */}
-          <div className="bg-surface rounded-2xl border border-border shadow-sm p-4">
-            <div className="grid grid-cols-3 gap-0 divide-x divide-border">
-              <div className="text-center px-2">
-                <p className="text-xl font-bold text-primary">{formatCurrency(stats!.avgPerPerson)}</p>
-                <p className="text-[11px] text-muted mt-0.5">Kişi başı ort.</p>
-              </div>
-              <div className="text-center px-2">
-                {stats!.avgRating > 0 ? (
-                  <>
-                    <p className="text-xl font-bold text-yellow-500">{stats!.avgRating.toFixed(1)}</p>
-                    <p className="text-[11px] text-muted mt-0.5">Ortalama puan</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xl font-bold text-muted">—</p>
-                    <p className="text-[11px] text-muted mt-0.5">Puan yok</p>
-                  </>
-                )}
-              </div>
-              <div className="text-center px-2">
-                <p className="text-xl font-bold text-charcoal">{stats!.total}</p>
-                <p className="text-[11px] text-muted mt-0.5">Adisyon</p>
-              </div>
+          {/* Price summary */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border-2 border-b-4 border-border bg-surface py-3.5 text-center">
+              <p className="text-2xl font-black text-primary leading-none">{formatCurrency(stats!.avgPerPerson)}</p>
+              <p className="text-[11px] font-extrabold text-muted mt-1.5">kişi başı ort.</p>
             </div>
-            {stats!.typical2 > 0 && (
-              <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
-                <Users className="w-4 h-4 text-muted shrink-0" />
-                <p className="text-xs text-muted">
-                  Tipik 2 kişilik hesap: <span className="font-semibold text-ink">~{formatCurrency(stats!.typical2)}</span>
-                </p>
-              </div>
-            )}
+            <div className="rounded-2xl border-2 border-b-4 border-border bg-surface py-3.5 text-center">
+              <p className="text-2xl font-black text-charcoal leading-none flex items-center justify-center gap-1">
+                {stats!.avgRating > 0 ? <><StarIcon size={22} />{stats!.avgRating.toFixed(1)}</> : "—"}
+              </p>
+              <p className="text-[11px] font-extrabold text-muted mt-1.5">{stats!.avgRating > 0 ? "ortalama puan" : "puan yok"}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-b-4 border-border bg-surface py-3.5 text-center">
+              <p className="text-2xl font-black text-charcoal leading-none">{stats!.total}</p>
+              <p className="text-[11px] font-extrabold text-muted mt-1.5">adisyon</p>
+            </div>
           </div>
+          {stats!.typical2 > 0 && (
+            <div className="rounded-2xl bg-primary-light px-4 py-3 flex items-center gap-2.5">
+              <Users className="w-5 h-5 text-primary shrink-0" strokeWidth={2.5} />
+              <p className="text-sm font-bold text-primary-dark">İki kişilik tipik hesap <span className="font-black">~{formatCurrency(stats!.typical2)}</span></p>
+            </div>
+          )}
 
           {/* Hidden receipts notice */}
           {hiddenCount > 0 && (
@@ -161,7 +169,7 @@ function RestaurantContent() {
           ) : (
             <div className="space-y-3">
               {visibleReceipts.map((r) => (
-                <div key={r.id} className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+                <div key={r.id} className="bg-surface rounded-3xl border-2 border-b-4 border-border overflow-hidden">
                   <div className="p-4">
                     {/* User row */}
                     <Link
@@ -195,7 +203,7 @@ function RestaurantContent() {
 
                     {/* Photo */}
                     {r.photo && (
-                      <img src={r.photo} alt={r.restaurantName} className="w-full max-h-52 object-contain rounded-xl mb-2 bg-dark" />
+                      <img src={r.photo} alt={r.restaurantName} className="w-full aspect-[4/3] object-cover rounded-2xl mb-2" />
                     )}
 
                     {/* Total + expand comments */}
@@ -227,7 +235,7 @@ function RestaurantContent() {
 
 export default function RestaurantPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center py-24 text-muted">Yükleniyor…</div>}>
+    <Suspense fallback={<ListSkeleton rows={3} />}>
       <RestaurantContent />
     </Suspense>
   );

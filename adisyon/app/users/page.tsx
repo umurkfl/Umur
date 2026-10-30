@@ -3,6 +3,9 @@
 import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Gus } from "@/components/Gus";
+import { StarIcon } from "@/components/Icons";
+import { computeStats } from "@/lib/gamify";
 import { ArrowLeft, Star, Lock, MapPin, Receipt, Trophy, Users, Trash2 } from "lucide-react";
 import { store, StoredReceipt, StoredFriendship, StoredCheckIn, deriveUsername, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -155,65 +158,75 @@ function ProfileContent() {
 
   return (
     <div className="space-y-4 pb-8">
-      {/* Header */}
-      <div className="flex items-center gap-3 pt-2">
-        <Link href="/" className="w-8 h-8 flex items-center justify-center rounded-full bg-surface border border-border">
-          <ArrowLeft className="w-4 h-4 text-ink" />
-        </Link>
-        <h1 className="font-bold text-charcoal text-lg">Profil</h1>
-      </div>
+      <Link href="/" aria-label="Geri" className="w-9 h-9 -ml-2 flex items-center justify-center rounded-xl text-muted active:scale-90 transition-transform">
+        <ArrowLeft className="w-6 h-6" strokeWidth={3} />
+      </Link>
 
-      {/* ── Hero card ── */}
-      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="h-20 bg-gradient-to-br from-primary to-primary-dark" />
-        <div className="px-5 pb-5">
-          <div className="flex items-end justify-between -mt-9 mb-4">
-            <div className="rounded-full border-4 border-surface bg-primary-light overflow-hidden flex items-center justify-center text-2xl font-bold text-primary shadow-sm shrink-0" style={{ width: 72, height: 72 }}>
+      {/* ── Character card ── */}
+      <div className="relative rounded-[32px] border-2 border-b-[6px] border-primary-shade bg-primary text-white overflow-hidden">
+        <div className="absolute inset-0 opacity-[.12] pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)", backgroundSize: "34px 34px" }} />
+        <div className="absolute right-3 top-3 pointer-events-none">
+          <Gus mood={friendStatus === "friend" ? "love" : "happy"} size={92} playful={false} />
+        </div>
+        <div className="relative px-5 pt-5 pb-5">
+          <div className="flex items-start gap-4">
+            <div className="w-24 h-24 rounded-full border-4 border-white bg-primary-light overflow-hidden flex items-center justify-center text-4xl font-black text-primary shrink-0">
               {avatar
                 ? <img src={avatar} className="w-full h-full object-cover" alt={userName} />
                 : (stillLoadingAccess ? "?" : userName.charAt(0).toUpperCase())
               }
             </div>
-            {user && user.id !== userId && !stillLoadingAccess && (
-              <div className="pb-1">
-                {friendStatus === "friend" ? (
-                  confirmRemove ? (
-                    <div className="flex gap-1.5">
-                      <button onClick={removeFriend} className="text-xs font-semibold text-red-500 border border-red-200 bg-red-50 px-2.5 py-1.5 rounded-full active:scale-95 transition-transform">Evet, çıkar</button>
-                      <button onClick={() => setConfirmRemove(false)} className="text-xs font-semibold text-muted border border-border bg-background px-2.5 py-1.5 rounded-full active:scale-95 transition-transform">İptal</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmRemove(true)} className="text-xs font-semibold px-3 py-1.5 rounded-full bg-primary-light text-primary active:scale-95 transition-transform">Arkadaş ✓</button>
-                  )
-                ) : (
-                  <button onClick={addFriend} disabled={friendStatus === "pending"}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${friendStatus === "pending" ? "bg-background border border-border text-muted" : "bg-primary text-white active:scale-95"}`}>
-                    {friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
-                  </button>
-                )}
+            <div className="flex-1 min-w-0 pt-1 pr-20">
+              {!stillLoadingAccess && canSeeReceipts && (
+                <span className="inline-flex items-center gap-1 bg-white/20 rounded-full pl-1.5 pr-2.5 py-0.5 text-xs font-black">
+                  <StarIcon size={16} /> Seviye {computeStats(receipts).level}
+                </span>
+              )}
+              <h1 className="mt-1.5 !text-[1.6rem] !leading-tight text-white truncate">{stillLoadingAccess ? "Yükleniyor…" : userName}</h1>
+              {!stillLoadingAccess && displayUsername && <p className="text-sm font-bold text-white/80 truncate">{displayUsername}</p>}
+            </div>
+          </div>
+          {!stillLoadingAccess && canSeeReceipts && (() => {
+            const g = computeStats(receipts);
+            return (
+              <div className="mt-5">
+                <div className="flex justify-between text-xs font-extrabold text-white/85 mb-1.5"><span>{g.xp} XP</span><span>{receipts.length} adisyon</span></div>
+                <div className="bg-black/20 rounded-full h-4 overflow-hidden"><div className="xp-fill" style={{ width: `${Math.max(g.levelProgress * 100, 4)}%` }} /></div>
               </div>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-charcoal">{stillLoadingAccess ? "Yükleniyor…" : userName}</h2>
-            {!stillLoadingAccess && displayUsername && <p className="text-xs text-muted mt-0.5">{displayUsername}</p>}
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-3 border border-border rounded-xl overflow-hidden">
-            {[
-              { label: "Restoran", value: stillLoadingAccess ? "—" : canSeeReceipts ? String(visitedRestaurants.length) : "—" },
-              { label: "Adisyon",  value: stillLoadingAccess ? "—" : canSeeReceipts ? String(receipts.length) : "—" },
-              { label: "Puan",     value: stillLoadingAccess ? "—" : canSeeReceipts && stats?.avgRating ? stats.avgRating.toFixed(1) : "—" },
-            ].map(({ label, value }, i) => (
-              <div key={label} className={`py-3 text-center ${i > 0 ? "border-l border-border" : ""}`}>
-                <p className="text-xl font-bold text-charcoal">{value}</p>
-                <p className="text-[11px] text-muted mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
+      </div>
+
+      {user && user.id !== userId && !stillLoadingAccess && (
+        friendStatus === "friend" ? (
+          confirmRemove ? (
+            <div className="flex gap-3">
+              <button onClick={removeFriend} className="btn btn-ghost flex-1 !text-red-500">Evet, çıkar</button>
+              <button onClick={() => setConfirmRemove(false)} className="btn btn-ghost flex-1 !text-muted">İptal</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmRemove(true)} className="btn btn-ghost btn-block">Arkadaşsınız</button>
+          )
+        ) : (
+          <button onClick={addFriend} disabled={friendStatus === "pending"} className="btn btn-primary btn-block">
+            {friendStatus === "pending" ? "İstek gönderildi" : "Arkadaş ekle"}
+          </button>
+        )
+      )}
+
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Restoran", value: stillLoadingAccess ? "—" : canSeeReceipts ? String(visitedRestaurants.length) : "—" },
+          { label: "Adisyon",  value: stillLoadingAccess ? "—" : canSeeReceipts ? String(receipts.length) : "—" },
+          { label: "Puan",     value: stillLoadingAccess ? "—" : canSeeReceipts && stats?.avgRating ? stats.avgRating.toFixed(1) : "—" },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-2xl border-2 border-b-4 border-border bg-surface py-3.5 text-center">
+            <p className="text-2xl font-black text-charcoal leading-none">{value}</p>
+            <p className="text-xs font-extrabold text-muted mt-1.5">{label}</p>
+          </div>
+        ))}
       </div>
 
       {/* ── Aktif Check-in ── */}
@@ -244,10 +257,8 @@ function ProfileContent() {
       {/* ── Locked wall ── */}
       {!stillLoadingAccess && !canSeeReceipts && (
         <div className="bg-surface rounded-2xl border border-border p-8 flex flex-col items-center gap-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-border/40 flex items-center justify-center">
-            <Lock className="w-5 h-5 text-muted" />
-          </div>
-          <p className="font-semibold text-charcoal">Gizli Profil</p>
+          <Gus mood="cool" size={110} />
+          <p className="text-lg font-black text-charcoal">Gizli profil</p>
           <p className="text-sm text-muted max-w-xs">Bu kişinin adisyonlarını ve aktivitesini görmek için arkadaş olman gerekiyor.</p>
           {friendStatus === "none" && user && (
             <button onClick={addFriend} className="mt-1 bg-primary text-white text-sm font-semibold px-5 py-2 rounded-full active:scale-95 transition-transform">

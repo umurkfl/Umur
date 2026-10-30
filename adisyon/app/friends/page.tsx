@@ -10,6 +10,7 @@ import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locati
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { Gus, GusFace } from "@/components/Gus";
 import { ListSkeleton } from "@/components/Skeleton";
+import { haptic } from "@/lib/haptics";
 import type { GusMood } from "@/lib/gus";
 
 type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
@@ -139,7 +140,7 @@ function MessageBubble({
           </div>
         )}
         {msg.type === "receipt" ? (
-          <div className="max-w-[78%] bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          <div className="max-w-[78%] bg-surface border-2 border-b-4 border-border rounded-3xl overflow-hidden">
             {receiptPhoto && (
               <img src={receiptPhoto} alt={msg.restaurantName ?? ""} className="w-full object-cover" style={{ maxHeight: 110 }} />
             )}
@@ -158,8 +159,8 @@ function MessageBubble({
             <p className="px-3 pb-2 text-[9px] text-muted text-right">{timeStr}</p>
           </div>
         ) : (
-          <div className={`max-w-[78%] px-4 py-2 rounded-2xl text-sm leading-snug break-words ${
-            isMine ? "bg-primary text-white rounded-br-md" : "bg-[#f0f0f0] dark:bg-surface border border-border text-ink rounded-bl-md"
+          <div className={`max-w-[78%] px-4 py-2.5 rounded-[22px] text-[15px] font-semibold leading-snug break-words ${
+            isMine ? "bg-primary text-white rounded-br-md" : "bg-background text-ink rounded-bl-md"
           }`}>
             {replyPreview}
             <span>{msg.text}</span>
@@ -264,27 +265,28 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
   }
 
   return (
-    <div className="fixed inset-0 z-[120] bg-background flex flex-col">
+    <div className="fixed inset-0 z-[120] bg-page flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface shrink-0">
-        <button onClick={onClose} className="p-1 -ml-1">
-          <ChevronLeft className="w-5 h-5 text-charcoal" />
+      <div className="flex items-center gap-3 px-3 py-2.5 border-b-2 border-border bg-page shrink-0">
+        <button onClick={onClose} aria-label="Geri" className="w-10 h-10 flex items-center justify-center rounded-xl text-charcoal active:scale-90 transition-transform">
+          <ChevronLeft className="w-6 h-6" strokeWidth={3} />
         </button>
         <Link href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`} className="shrink-0">
-          <UserAvatar userId={otherId} name={otherName} size="sm" />
+          <UserAvatar userId={otherId} name={otherName} size="md" />
         </Link>
         <Link href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`} className="flex-1 min-w-0">
-          <p className="font-semibold text-charcoal text-sm leading-tight">{otherName}</p>
-          <p className="text-[10px] text-muted">{deriveUsername(otherName, otherId)}</p>
+          <p className="font-black text-charcoal text-base leading-tight truncate">{otherName}</p>
+          <p className="text-xs font-bold text-muted">{deriveUsername(otherName, otherId)}</p>
         </Link>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5 min-h-0">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-2 opacity-50">
-            <MessageCircle className="w-10 h-10 text-border" />
-            <p className="text-sm text-muted">Henüz mesaj yok. İlk mesajı gönder!</p>
+          <div className="flex flex-col items-center justify-center h-full text-center gap-2">
+            <Gus mood="wink" size={120} />
+            <p className="text-base font-black text-charcoal">Henüz mesaj yok</p>
+            <p className="text-sm font-semibold text-muted">İlk mesajı sen at, utanma.</p>
           </div>
         )}
         {messages.map((msg) => (
@@ -334,22 +336,23 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
       )}
 
       {/* Input */}
-      <div className="flex items-end gap-2 px-4 py-3 border-t border-border bg-surface shrink-0">
+      <div className="flex items-end gap-2 px-3 pt-3 border-t-2 border-border bg-page shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
         <input
           type="text"
           value={text}
           onChange={(e) => { setText(e.target.value); if (sendError) setSendError(null); }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           placeholder="Mesaj yaz..."
-          className="flex-1 min-w-0 px-4 py-2.5 rounded-full border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 min-w-0 px-4 py-3 rounded-2xl border-2 border-border bg-page font-semibold focus:outline-none focus:border-primary"
           style={{ fontSize: 16 }}
         />
         <button
           onClick={handleSend}
           disabled={!text.trim() || sending}
-          className="w-10 h-10 shrink-0 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform"
+          aria-label="Gönder"
+          className="btn btn-primary !p-0 w-12 h-12 shrink-0 !rounded-2xl disabled:!bg-border disabled:!border-[#C9C6BB]"
         >
-          <Send className="w-4 h-4 text-white" />
+          <Send className="w-5 h-5" strokeWidth={2.75} />
         </button>
       </div>
 
@@ -358,9 +361,9 @@ function ConversationView({ userId, userName, otherId, otherName, onClose, onMes
   );
 }
 
-function UserAvatar({ userId, name, size = "md" }: { userId: string; name: string; size?: "sm" | "md" }) {
+function UserAvatar({ userId, name, size = "md" }: { userId: string; name: string; size?: "sm" | "md" | "lg" }) {
   const [avatar, setAvatar] = useState<string | null>(null);
-  const dim = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
+  const dim = size === "sm" ? "w-8 h-8 text-xs" : size === "lg" ? "w-14 h-14 text-xl" : "w-11 h-11 text-base";
   useEffect(() => { store.getPublicAvatar(userId).then(setAvatar); }, [userId]);
   if (avatar) return <img src={avatar} className={`${dim} rounded-full object-cover shrink-0`} alt={name} />;
   return (
@@ -901,11 +904,11 @@ export default function FriendsPage() {
       <div className="flex mx-4 mb-4 bg-background border-2 border-border rounded-2xl p-1 gap-1">
         {([
           ["akis", "Akış"],
-          ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` (${accepted.length})` : ""}`],
+          ["arkadaslar", `Arkadaşlar${accepted.length > 0 ? ` ${accepted.length}` : ""}`],
           ["kesfet", "Keşfet"],
           ["mesajlar", "Mesajlar"],
         ] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-all relative ${tab === t ? "bg-primary text-white" : "text-muted"}`}>
+          <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[13px] font-extrabold rounded-xl transition-all relative ${tab === t ? "bg-primary text-white" : "text-muted"}`}>
             {t === "mesajlar" && unreadCount > 0 && (
               <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full" />
             )}
@@ -1074,7 +1077,7 @@ export default function FriendsPage() {
       )}
 
       {tab === "mesajlar" && (
-        <div className="px-4 space-y-2">
+        <div className="px-4">
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center py-16 gap-3 text-center">
               <Gus mood="sleepy" size={130} />
@@ -1085,37 +1088,26 @@ export default function FriendsPage() {
             conversations.map(({ otherId, otherName, last, unread }) => (
               <div
                 key={otherId}
-                onClick={() => setOpenConversation({ otherId, otherName })}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface border border-border active:bg-background transition-colors cursor-pointer"
+                onClick={() => { haptic("tap"); setOpenConversation({ otherId, otherName }); }}
+                className="w-full flex items-center gap-3.5 px-1 py-3.5 border-b-2 border-border/70 last:border-0 active:bg-background transition-colors cursor-pointer"
               >
-                <Link
-                  href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="relative shrink-0"
-                >
-                  <UserAvatar userId={otherId} name={otherName} />
-                  {unread > 0 && (
-                    <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-white">{unread}</span>
-                    </div>
-                  )}
+                <Link href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
+                  <UserAvatar userId={otherId} name={otherName} size="lg" />
                 </Link>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/users?id=${otherId}&n=${encodeURIComponent(otherName)}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="min-w-0"
-                    >
-                      <p className={`text-sm ${unread > 0 ? "font-bold text-charcoal" : "font-medium text-ink"}`}>{otherName}</p>
-                      <p className="text-[10px] text-muted">{deriveUsername(otherName, otherId)}</p>
-                    </Link>
-                    <p className="text-[10px] text-muted shrink-0">{timeAgo(last.createdAt)}</p>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className={`text-base truncate ${unread > 0 ? "font-black text-charcoal" : "font-extrabold text-ink"}`}>{otherName}</p>
+                    <p className={`text-xs shrink-0 ${unread > 0 ? "font-black text-primary" : "font-bold text-muted"}`}>{timeAgo(last.createdAt)}</p>
                   </div>
-                  <p className={`text-xs mt-1 truncate ${unread > 0 ? "text-primary font-medium" : "text-muted"}`}>
-                    {last.fromUserId === user?.id ? "Sen: " : ""}
-                    {last.type === "receipt" ? `Adisyon: ${last.restaurantName}` : last.text}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <p className={`text-sm truncate ${unread > 0 ? "font-extrabold text-charcoal" : "font-semibold text-muted"}`}>
+                      {last.fromUserId === user?.id ? "Sen: " : ""}
+                      {last.type === "receipt" ? `Adisyon: ${last.restaurantName}` : last.text}
+                    </p>
+                    {unread > 0 && (
+                      <span className="shrink-0 min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-white text-xs font-black flex items-center justify-center">{unread}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
