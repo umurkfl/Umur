@@ -8,6 +8,12 @@ import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, WishlistList } from "@/lib/store";
 import { ReceiptPopup } from "@/app/page";
 import { StarIcon } from "@/components/Icons";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { usePro } from "@/lib/pro";
+import { ProChip } from "@/components/Pro";
+
+const PlacesMap = dynamic(() => import("@/components/PlacesMap"), { ssr: false, loading: () => <div className="skeleton rounded-3xl" style={{ height: "58vh" }} /> });
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 import { Gus } from "@/components/Gus";
@@ -470,6 +476,10 @@ function DiscoverPageInner() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [allReceipts, setAllReceipts] = useState<StoredReceipt[]>([]);
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [view, setView] = useState<"list" | "map">("list");
+  const router = useRouter();
+  const { pro } = usePro(user?.id);
 
   // Switch to list tab if ?q= param was provided
   useEffect(() => {
@@ -525,12 +535,13 @@ function DiscoverPageInner() {
     [userRestaurants, city]
   );
 
-  const hasActiveFilters = city !== "" || district !== "" || nearMe;
-  const activeFilterCount = [city !== "", district !== "", nearMe].filter(Boolean).length;
+  const hasActiveFilters = city !== "" || district !== "" || nearMe || maxPrice > 0;
+  const activeFilterCount = [city !== "", district !== "", nearMe, maxPrice > 0].filter(Boolean).length;
 
-  function clearFilters() { setCity(""); setDistrict(""); setNearMe(false); }
+  function clearFilters() { setCity(""); setDistrict(""); setNearMe(false); setMaxPrice(0); }
 
   function toggleNearMe() {
+    if (!pro) { router.push("/pro"); return; }
     if (nearMe) { setNearMe(false); return; }
     if (userGeo) { setNearMe(true); return; }
     setGeoLoading(true);
@@ -546,6 +557,7 @@ function DiscoverPageInner() {
       if (q && !r.name.toLowerCase().includes(q.toLowerCase())) return false;
       if (city && r.city !== city) return false;
       if (district && r.district !== district) return false;
+      if (maxPrice && r.avgSpendPerPerson > maxPrice) return false;
       if (nearMe && userGeo) {
         if (!r.lat || !r.lng) return false;
         if (haversine(userGeo.lat, userGeo.lng, r.lat, r.lng) > 5) return false;
@@ -604,6 +616,11 @@ function DiscoverPageInner() {
             />
           </div>
 
+          <div className="flex gap-1 rounded-2xl border-2 border-border bg-background p-1">
+            <button onClick={() => setView("list")} className={`flex-1 py-2 rounded-xl text-sm font-extrabold ${view === "list" ? "bg-primary text-white" : "text-muted"}`}>Liste</button>
+            <button onClick={() => (pro ? setView("map") : router.push("/pro"))} className={`flex-1 py-2 rounded-xl text-sm font-extrabold flex items-center justify-center gap-1.5 ${view === "map" ? "bg-primary text-white" : "text-muted"}`}>Harita {!pro && <ProChip />}</button>
+          </div>
+
           {/* Sort + Filter */}
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
@@ -631,6 +648,7 @@ function DiscoverPageInner() {
             <div className="bg-surface rounded-2xl border border-border p-3 space-y-2.5">
               <div className="flex flex-wrap gap-2 items-center">
                 <FilterPill label={geoLoading ? "Konum alınıyor..." : "Yakınımda"} active={nearMe} onClick={toggleNearMe} />
+                {!pro && <ProChip />}
                 {availableCities.length > 0 && (
                   <select value={city} onChange={(e) => setCity(e.target.value)} className="text-xs border border-border rounded-xl px-3 py-1.5 bg-background text-ink focus:outline-none focus:ring-2 focus:ring-primary">
                     <option value="">Tüm Şehirler</option>
@@ -644,10 +662,22 @@ function DiscoverPageInner() {
                   </select>
                 )}
               </div>
+              <div className="flex flex-wrap gap-2 items-center pt-0.5">
+                <span className="text-xs font-extrabold text-muted">Kişi başı en fazla</span>
+                {[300, 600, 1000].map((v) => (
+                  <FilterPill key={v} label={`₺${v}`} active={maxPrice === v} onClick={() => (pro ? setMaxPrice(maxPrice === v ? 0 : v) : router.push("/pro"))} />
+                ))}
+                {!pro && <ProChip />}
+              </div>
             </div>
           )}
 
-          {filteredUser.length === 0 ? (
+          {view === "map" ? (
+            <PlacesMap
+              places={filteredUser.filter((r) => r.lat != null && r.lng != null).map((r) => ({ name: r.name, lat: r.lat as number, lng: r.lng as number, price: r.avgSpendPerPerson }))}
+              onOpen={(name) => router.push(`/restaurants?name=${encodeURIComponent(name)}`)}
+            />
+          ) : filteredUser.length === 0 ? (
             <div className="text-center py-16 text-muted">
               <Gus mood="dizzy" size={130} className="mx-auto mb-2" />
               <p className="font-black text-charcoal text-lg">Sonuç bulunamadı</p>

@@ -7,7 +7,7 @@ import { CrownIcon } from "@/components/Icons";
 export function ProChip({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-full bg-gold text-[#4A3A00] border-b-2 border-gold-shade px-2 py-0.5 text-[10px] font-black tracking-wide leading-none ${className}`}>
-      <CrownIcon size={11} /> PRO
+      PRO
     </span>
   );
 }

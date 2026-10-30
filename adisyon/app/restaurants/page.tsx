@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { WishlistButton } from "@/components/WishlistButton";
 import { StarIcon } from "@/components/Icons";
+import { PriceInsights } from "@/components/PriceInsights";
 import { ListSkeleton } from "@/components/Skeleton";
 import { CommentSection } from "@/app/page";
 import { Gus } from "@/components/Gus";
@@ -151,6 +152,8 @@ function RestaurantContent() {
               <p className="text-sm font-bold text-primary-dark">İki kişilik tipik hesap <span className="font-black">~{formatCurrency(stats!.typical2)}</span></p>
             </div>
           )}
+
+          <PriceInsights receipts={allReceipts} name={name} />
 
           {/* Hidden receipts notice */}
           {hiddenCount > 0 && (

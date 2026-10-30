@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/mock";
 import { SavedIcon } from "@/components/Icons";
+import { usePro, FREE_LIST_LIMIT } from "@/lib/pro";
+import { ProChip } from "@/components/Pro";
 
 function ListSection({
   list,
@@ -155,6 +157,7 @@ export default function WishlistPage() {
   const router = useRouter();
   const [lists, setLists] = useState<WishlistList[]>([]);
   const [creating, setCreating] = useState(false);
+  const { pro } = usePro(user?.id);
   const [newListName, setNewListName] = useState("");
 
   useEffect(() => {
@@ -173,6 +176,7 @@ export default function WishlistPage() {
   function createList(name: string) {
     const trimmed = name.trim();
     if (!trimmed) return;
+    if (!pro && lists.length >= FREE_LIST_LIMIT) { router.push("/pro"); return; }
     const list: WishlistList = {
       id: crypto.randomUUID(), userId: user!.id, name: trimmed,
       createdAt: new Date().toISOString(),
@@ -236,7 +240,7 @@ export default function WishlistPage() {
             className="flex items-center gap-1.5 text-sm font-semibold text-primary mt-1"
           >
             <Plus className="w-4 h-4" />
-            Yeni liste oluştur
+            Yeni liste oluştur {!pro && lists.length >= FREE_LIST_LIMIT && <ProChip />}
           </button>
           <Link href="/discover" className="bg-primary text-white font-bold rounded-full px-5 py-2.5 text-sm active:bg-primary-dark">
             Restoran Keşfet
