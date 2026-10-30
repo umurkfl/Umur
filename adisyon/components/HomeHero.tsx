@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Camera } from "lucide-react";
-import { Gus, GusSays } from "@/components/Gus";
+import { Gus } from "@/components/Gus";
 import { useAuth } from "@/lib/auth";
 import { store } from "@/lib/store";
-import { computeStats, GameStats, XP_PER_LEVEL } from "@/lib/gamify";
+import { computeStats, GameStats, LEVELS } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
-import { FlameIcon, StarIcon, GoalIcon } from "@/components/Icons";
+import { FlameIcon, GoalIcon, CloverIcon, LevelIcon } from "@/components/Icons";
 
 export function HomeHero() {
   const { user, ready } = useAuth();
@@ -22,19 +22,15 @@ export function HomeHero() {
     return () => window.removeEventListener("adisyon:receipt-added", load);
   }, [user]);
 
-  if (!ready) return <div className="mx-4 mt-4 mb-5 h-44" />;
+  if (!ready) return <div className="mx-4 mt-2 mb-5 h-44" />;
 
   if (!user) {
     return (
-      <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-5">
-        <GusSays mood="happy" size={128}>
-          Selam, ben Gus! Hesaplar acımasız, gerçek fiyatları birlikte toplayalım.
-        </GusSays>
-        <p className="mt-3 text-sm font-semibold text-muted leading-relaxed">
-          Adisyonunu paylaş, başkalarının nerede ne kadar ödediğini gör. Her fiş sana XP kazandırır.
-        </p>
-        <Link href="/auth" onClick={() => haptic("tap")} className="btn btn-primary btn-block mt-4">
-          <Camera className="w-5 h-5" /> Katıl & Paylaş
+      <section className="mx-4 mb-5 rounded-3xl bg-primary text-white border-2 border-b-[6px] border-primary-shade p-5">
+        <p className="text-xl font-black leading-tight">Gerçek fiyatlar, gerçek adisyonlar.</p>
+        <p className="mt-1.5 text-sm font-semibold text-white/85 leading-relaxed">Adisyonunu paylaş, yonca topla, Gus'la birlikte zirveye tırman.</p>
+        <Link href="/auth" onClick={() => haptic("tap")} className="btn btn-block mt-4 bg-white !text-primary-dark !border-white/70">
+          Katıl & paylaş
         </Link>
       </section>
     );
@@ -42,41 +38,36 @@ export function HomeHero() {
 
   const done = stats?.weeklyGoalDone ?? false;
   return (
-    <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-4">
-      <GusSays mood={done ? "laugh" : "wink"} size={128}>
-        {done
-          ? "Bu hafta fişini ekledin. Hem doydun hem seviye kazandın!"
-          : "Bu hafta fiş yok ama karnın doymuş görünüyor. Nerede yedin?"}
-      </GusSays>
-
+    <section className="mx-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-4">
       {stats && (
-        <div className="mt-4">
-          <div className="flex items-center gap-2.5">
-            <StarIcon size={26} />
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between text-xs font-extrabold text-muted mb-1">
-                <span>Seviye {stats.level}</span>
-                <span>{stats.xpIntoLevel} / {XP_PER_LEVEL} XP</span>
-              </div>
-              <div className="xp-bar" role="progressbar" aria-valuenow={stats.xpIntoLevel} aria-valuemin={0} aria-valuemax={XP_PER_LEVEL}>
-                <div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} />
-              </div>
+        <>
+          <Link href="/levels" className="flex items-center gap-3.5 active:opacity-80">
+            <div className="w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center shrink-0"><LevelIcon index={stats.level - 1} size={40} /></div>
+            <div className="flex-1 min-w-0 leading-tight">
+              <p className="text-lg font-black text-charcoal">{stats.levelName}</p>
+              <p className="text-xs font-bold text-muted">Seviye {stats.level} · Gus'ın tırmanışı</p>
             </div>
+            <div className="text-right shrink-0">
+              <p className="flex items-center justify-end gap-1 text-xl font-black text-primary"><CloverIcon size={22} />{stats.points}</p>
+              <p className="text-[11px] font-extrabold text-muted -mt-0.5">yonca</p>
+            </div>
+          </Link>
+          <div className="mt-3.5">
+            <div className="xp-bar" role="progressbar" aria-valuenow={stats.pointsIntoLevel} aria-valuemin={0} aria-valuemax={stats.nextMin ? stats.nextMin - stats.levelMin : 1}>
+              <div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} />
+            </div>
+            <p className="mt-1.5 text-xs font-extrabold text-muted">
+              {stats.nextMin ? `${stats.pointsToNext} yonca sonra ${LEVELS[stats.level].name}` : "Zirvedesin!"}
+            </p>
           </div>
           <div className="mt-3 flex items-center justify-between text-xs font-extrabold text-muted">
-            <span className="flex items-center gap-1.5">
-              <GoalIcon size={18} done={done} />
-              {done ? "Bu hafta fiş eklendi" : "Bu hafta henüz fiş yok"}
-            </span>
-            {stats.weekStreak >= 2 && (
-              <span className="flex items-center gap-1"><FlameIcon size={14} />{stats.weekStreak} hafta üst üste</span>
-            )}
+            <span className="flex items-center gap-1.5"><GoalIcon size={18} done={done} />{done ? "Bu hafta fiş eklendi" : "Bu hafta henüz fiş yok"}</span>
+            {stats.weekStreak >= 2 && <span className="flex items-center gap-1"><FlameIcon size={14} />{stats.weekStreak} hafta üst üste</span>}
           </div>
-        </div>
+        </>
       )}
-
       <Link href="/upload" onClick={() => haptic("tap")} className="btn btn-primary btn-block mt-4">
-        <Camera className="w-5 h-5" /> Adisyon ekle · +50 XP
+        <Camera className="w-5 h-5" /> Adisyon ekle · +10 yonca
       </Link>
     </section>
   );

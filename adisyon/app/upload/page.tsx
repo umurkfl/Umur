@@ -8,11 +8,11 @@ import { TR_CITIES, TR_DISTRICTS } from "@/lib/turkey-locations";
 import { useAuth } from "@/lib/auth";
 import { CropModal } from "@/components/CropModal";
 import Link from "next/link";
-import { Gus, GusSays } from "@/components/Gus";
-import { computeStats, GameStats, XP_PER_RECEIPT } from "@/lib/gamify";
+import { Gus } from "@/components/Gus";
+import { computeStats, GameStats, POINT_RULES, LEVELS } from "@/lib/gamify";
 import { haptic } from "@/lib/haptics";
 import { playSfx } from "@/lib/sfx";
-import { StarIcon } from "@/components/Icons";
+import { StarIcon, CloverIcon, LevelIcon } from "@/components/Icons";
 
 interface Suggestion {
   key: string;
@@ -266,7 +266,7 @@ export default function UploadPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4 px-4">
         <Gus mood="wink" size={150} body="bust" prop="receipt" />
         <h2 className="text-xl font-black text-charcoal">Fiş paylaşmak için giriş yap</h2>
-        <p className="text-sm font-semibold text-muted">Her fiş sana {XP_PER_RECEIPT} XP kazandırır. Hadi başlayalım!</p>
+        <p className="text-sm font-semibold text-muted">Her fiş yonca kazandırır, yoncayla Gus tırmanır. Hadi başlayalım!</p>
         <Link href="/auth" className="btn btn-primary">
           Giriş Yap / Kayıt Ol
         </Link>
@@ -275,28 +275,41 @@ export default function UploadPage() {
   }
 
   if (step === "done") {
+    const gained = reward ? reward.after.points - reward.before.points : 0;
     const leveledUp = !!reward && reward.after.level > reward.before.level;
+    const rows = reward
+      ? POINT_RULES.map((r) => ({ r, pts: reward.after.breakdown[r.key] - reward.before.breakdown[r.key] })).filter((x) => x.pts > 0)
+      : [];
     return (
       <div className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 gap-3">
-        <Gus mood="laugh" size={170} body="bust" prop="trophy" extra={["confetti"]} />
+        <Gus mood="laugh" size={150} prop="trophy" extra={["confetti"]} />
         <h2 className="text-2xl font-black text-charcoal">Eline sağlık, fiş yayında!</h2>
         <p className="text-sm font-semibold text-muted">
-          {name} · {formatCurrency(parseFloat(total))} · {people} kişi
-          {perPerson ? ` · kişi başı ${perPerson}` : ""}
+          {name} · {formatCurrency(parseFloat(total))} · {people} kişi{perPerson ? ` · kişi başı ${perPerson}` : ""}
         </p>
 
-        <div className="flex gap-2 w-full max-w-xs mt-1">
-          <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-gold-shade bg-gold/20 py-2.5" style={{ animationDelay: ".15s" }}>
-            <p className="text-xl font-black text-gold-shade">+{XP_PER_RECEIPT}</p>
-            <p className="text-[11px] font-extrabold text-muted">XP</p>
-          </div>
-          {leveledUp && reward && (
-            <div className="pop-in flex-1 rounded-2xl border-2 border-b-4 border-primary-shade bg-primary-light py-2.5" style={{ animationDelay: ".45s" }}>
-              <p className="text-xl font-black text-primary flex items-center justify-center gap-1"><StarIcon size={20} /> {reward.after.level}</p>
-              <p className="text-[11px] font-extrabold text-muted">yeni seviye!</p>
-            </div>
+        <div className="pop-in w-full max-w-xs rounded-3xl border-2 border-b-4 border-primary/30 bg-primary-light px-5 py-4" style={{ animationDelay: ".15s" }}>
+          <p className="flex items-center justify-center gap-2 text-3xl font-black text-primary"><CloverIcon size={30} /> +{gained}</p>
+          <p className="text-xs font-extrabold text-muted -mt-0.5">yonca kazandın</p>
+          {rows.length > 0 && (
+            <ul className="mt-3 space-y-1.5 text-left">
+              {rows.map(({ r, pts }) => (
+                <li key={r.key} className="flex items-center justify-between text-sm font-bold text-ink"><span>{r.label}</span><span className="font-black text-primary">+{pts}</span></li>
+              ))}
+            </ul>
           )}
         </div>
+
+        {leveledUp && reward && (
+          <div className="pop-in w-full max-w-xs rounded-3xl border-2 border-b-4 border-gold-shade bg-gold/20 px-5 py-4 flex items-center gap-3 text-left" style={{ animationDelay: ".4s" }}>
+            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shrink-0"><LevelIcon index={reward.after.level - 1} size={42} /></div>
+            <div>
+              <p className="text-xs font-extrabold text-muted uppercase tracking-wide">Yeni seviye</p>
+              <p className="text-xl font-black text-charcoal leading-tight">{LEVELS[reward.after.level - 1].name}</p>
+              <p className="text-xs font-bold text-muted">Gus bir adım daha yukarıda</p>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2 w-full max-w-xs mt-3">
           <button onClick={reset} className="btn btn-primary btn-block">Yeni fiş ekle</button>
@@ -319,7 +332,7 @@ export default function UploadPage() {
         {/* ── 0 · Place ── */}
         {sub === 0 && (
           <>
-            <GusSays mood="think" size={104}>Nerede yedin? Mekanın adını yaz, gerisini bana bırak.</GusSays>
+            <div><h1>Nerede yedin?</h1><p className="mt-1 text-base font-bold text-muted">Mekanın adını yaz, gerisini biz hallederiz.</p></div>
             <div className="relative">
               {!userGeo ? (
                 <button type="button" onClick={requestGeo} disabled={geoLoading} className="flex items-center gap-1.5 text-sm text-primary font-extrabold mb-2.5">
@@ -373,7 +386,7 @@ export default function UploadPage() {
         {/* ── 1 · Amount & people ── */}
         {sub === 1 && (
           <>
-            <GusSays mood={amountOk ? "shock" : "wink"} size={104}>Hesap ne kadar tuttu? Merak ettim, dürüst ol.</GusSays>
+            <div><h1>Hesap ne kadar tuttu?</h1><p className="mt-1 text-base font-bold text-muted">Dürüst ol, Gus merak ediyor.</p></div>
             <div className="rounded-3xl border-2 border-b-4 border-border px-4 py-5 text-center">
               <p className="text-xs font-extrabold text-muted uppercase tracking-wide">Toplam tutar</p>
               <div className="flex items-center justify-center gap-1 mt-1">
@@ -408,7 +421,7 @@ export default function UploadPage() {
         {/* ── 2 · Rating ── */}
         {sub === 2 && (
           <>
-            <GusSays mood={rating >= 4 ? "love" : rating > 0 && rating <= 2 ? "sad" : "happy"} size={104}>Peki lezzeti nasıldı? Yıldızlara dokun.</GusSays>
+            <div><h1>Lezzeti nasıldı?</h1><p className="mt-1 text-base font-bold text-muted">Yıldızlara dokun.</p></div>
             <div className="rounded-3xl border-2 border-b-4 border-border px-3 py-7 text-center">
               <div className="flex justify-center gap-1.5">
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -425,7 +438,7 @@ export default function UploadPage() {
         {/* ── 3 · Comment + summary ── */}
         {sub === 3 && (
           <>
-            <GusSays mood="wink" size={104}>Son olarak, istersen iki kelime yaz. Herkes merak ediyor.</GusSays>
+            <div><h1>Bir şey eklemek ister misin?</h1><p className="mt-1 text-base font-bold text-muted">İki kelime yeter, herkes merak ediyor.</p></div>
             <textarea
               value={comment} onChange={(e) => setComment(e.target.value)} rows={4}
               placeholder="Yemekler nasıldı? Servis, ambiyans..."
@@ -449,7 +462,7 @@ export default function UploadPage() {
           </div>
         ) : (
           <button onClick={submit} disabled={!name.trim() || !amountOk} className="btn btn-primary btn-block mt-1 disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted">
-            Adisyonu Paylaş · +50 XP
+            Adisyonu paylaş
           </button>
         )}
       </div>
@@ -460,11 +473,7 @@ export default function UploadPage() {
     <div className="space-y-5">
       <WizardProgress current={1} total={5} />
       <h1>Adisyon ekle</h1>
-      {!photoUrl && (
-        <GusSays mood="wink" size={96}>
-          Fişi buraya göster, ben de 50 XP vereyim. Anlaştık mı?
-        </GusSays>
-      )}
+      <p className="-mt-2 text-base font-bold text-muted">Fişin net görünmesi yeterli. Fotoğraf eklersen <span className="inline-flex items-center gap-0.5 text-primary font-black"><CloverIcon size={16} />+5</span> bonus.</p>
 
       <input id="input-camera" type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
       <input id="input-gallery" type="file" accept="image/*" onChange={handlePhoto} className="hidden" />

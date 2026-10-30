@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Bookmark, Trash2, MapPin, Plus, Check, X, ChevronDown, ChevronUp, MoreVertical } from "lucide-react";
+import { Bookmark, Trash2, MapPin, Plus, Check, X, ChevronDown, ChevronUp, MoreVertical , ArrowLeft } from "lucide-react";
 import { store, WishlistItem, WishlistList, WISHLIST_SUGGESTIONS } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/mock";
-import { Gus } from "@/components/Gus";
+import { SavedIcon } from "@/components/Icons";
 
 function ListSection({
   list,
@@ -194,19 +194,21 @@ export default function WishlistPage() {
 
   return (
     <div className="space-y-4 pb-6">
-      <div className="flex items-center gap-2">
-        <Bookmark className="w-5 h-5 text-primary fill-primary" />
-        <h1 className="text-xl font-bold text-charcoal">Gitmek İstediklerim</h1>
-        {totalItems > 0 && (
-          <span className="ml-auto text-xs bg-primary-light text-primary font-semibold px-2 py-0.5 rounded-full">
-            {totalItems} mekan
-          </span>
-        )}
+      <div className="-mb-1">
+        <Link href="/profile" aria-label="Geri" className="w-9 h-9 -ml-2 flex items-center justify-center rounded-xl text-muted active:scale-90 transition-transform">
+          <ArrowLeft className="w-6 h-6" strokeWidth={3} />
+        </Link>
+        <div className="flex items-end justify-between gap-3">
+          <h1>Kaydedilenler</h1>
+          {totalItems > 0 && (
+            <span className="mb-1.5 shrink-0 text-xs bg-primary-light text-primary font-extrabold px-2.5 py-1 rounded-full">{totalItems} mekan</span>
+          )}
+        </div>
       </div>
 
       {lists.length === 0 && !creating ? (
         <div className="flex flex-col items-center justify-center py-14 text-center space-y-3">
-          <Gus mood="chew" size={130} />
+          <div className="w-24 h-24 rounded-3xl bg-primary-light flex items-center justify-center"><SavedIcon size={52} /></div>
           <p className="font-black text-charcoal text-lg">Henüz listeniz yok</p>
           <p className="text-sm text-muted max-w-xs">
             Restoran sayfalarındaki <Bookmark className="w-3.5 h-3.5 inline text-muted" /> ikonuna basarak listeler oluşturabilirsin.

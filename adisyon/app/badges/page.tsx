@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock, Star } from "lucide-react";
+import { Lock } from "lucide-react";
 import { ALL_BADGES, BadgeDef, Badge, calcBadges, StoredReceipt, store } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import { BADGE_ICONS } from "@/lib/badge-icons";
+import { BadgeArt } from "@/components/BadgeArt";
 
 function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: BadgeDef; earned: boolean; earnedBadge?: Badge; onClose: () => void }) {
-  const Icon = BADGE_ICONS[badge.id] ?? Star;
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
@@ -17,8 +16,8 @@ function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: Badg
           <div className="w-10 h-1 bg-border rounded-full" />
         </div>
         <div className="flex flex-col items-center gap-4">
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center relative border-4 border-b-[9px] ${earned ? "bg-primary border-primary-shade pop-in" : "bg-border border-[#C9C6BB]"}`}>
-            <Icon className="w-11 h-11 text-white" strokeWidth={2.25} />
+          <div className="relative">
+            <BadgeArt id={badge.id} size={112} locked={!earned} />
             {!earned && (
               <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-muted rounded-full flex items-center justify-center border-2 border-surface">
                 <Lock className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
@@ -49,15 +48,13 @@ function BadgeDetailSheet({ badge, earned, earnedBadge, onClose }: { badge: Badg
 }
 
 function BadgeCoin({ badge, earned, label, onClick }: { badge: BadgeDef; earned: boolean; label: string; onClick: () => void }) {
-  const Icon = BADGE_ICONS[badge.id] ?? Star;
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2.5 active:scale-95 transition-transform">
-      <div className={`w-20 h-20 rounded-full flex items-center justify-center relative border-4 border-b-[8px] ${earned ? "bg-primary border-primary-shade pop-in" : "bg-border border-[#C9C6BB]"}`}>
-        {earned && <span className="absolute top-2 left-3.5 w-5 h-2 rounded-full bg-white/40 -rotate-[28deg]" />}
-        <Icon className={`w-9 h-9 ${earned ? "text-white" : "text-white/80"}`} strokeWidth={2.25} />
+      <div className="relative">
+        <BadgeArt id={badge.id} size={84} locked={!earned} className={earned ? "pop-in" : ""} />
         {!earned && (
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-muted rounded-full flex items-center justify-center border-2 border-surface">
-            <Lock className="w-3 h-3 text-white" strokeWidth={2.5} />
+          <div className="absolute -bottom-0.5 -right-0.5 w-7 h-7 bg-muted rounded-full flex items-center justify-center border-2 border-surface">
+            <Lock className="w-3.5 h-3.5 text-white" strokeWidth={3} />
           </div>
         )}
       </div>

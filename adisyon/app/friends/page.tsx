@@ -650,7 +650,7 @@ function CheckInModal({ onClose, recentRestaurants }: { onClose: () => void; rec
             <button
               onClick={submit}
               disabled={!restaurantName.trim()}
-              className="w-full mt-4 py-3 bg-primary text-white font-bold rounded-2xl text-sm disabled:opacity-50"
+              className="btn btn-primary btn-block mt-4 disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted"
             >
               Check-in Yap
             </button>
@@ -777,6 +777,15 @@ export default function FriendsPage() {
     return () => { window.removeEventListener("focus", onFocus); window.removeEventListener("grazer:refresh", onFocus); clearInterval(interval); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    const valid: Tab[] = ["akis", "arkadaslar", "kesfet", "mesajlar"];
+    const fromUrl = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (fromUrl && valid.includes(fromUrl)) setTab(fromUrl);
+    const open = (e: Event) => { const t = (e as CustomEvent<Tab>).detail; if (valid.includes(t)) setTab(t); };
+    window.addEventListener("grazer:open-tab", open);
+    return () => window.removeEventListener("grazer:open-tab", open);
+  }, []);
 
   useEffect(() => {
     if (tab === "mesajlar" && dmTableReady === null) {

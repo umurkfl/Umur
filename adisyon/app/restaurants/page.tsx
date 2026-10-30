@@ -98,8 +98,8 @@ function RestaurantContent() {
         {cover ? (
           <img src={cover} alt={name} className="w-full object-cover" style={{ height: "34vh", minHeight: 210 }} />
         ) : (
-          <div className="w-full bg-primary-light flex items-end justify-center" style={{ height: 170 }}>
-            <Gus mood="chew" size={120} />
+          <div className="w-full bg-primary-light flex items-center justify-center" style={{ height: 170 }}>
+            <Receipt className="w-16 h-16 text-primary/30" strokeWidth={1.5} />
           </div>
         )}
         {cover && <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/25 pointer-events-none" />}

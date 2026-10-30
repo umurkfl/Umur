@@ -20,9 +20,9 @@ interface Step extends GusOpts {
 const STEPS: Step[] = [
   { mood: "happy", title: "Selam, ben Gus!", text: "grazer'a hoş geldin. Restoranların gerçek fiyatlarını birlikte keşfedeceğiz.", tint: "var(--color-primary-light)", chips: ["Gerçek adisyonlar", "Gerçek fiyatlar"] },
   { mood: "think", prop: "magnifier", title: "Gitmeden önce bil", text: "Gideceğin yerin adisyonlarını önceden incele. Hesap geldiğinde sürpriz yaşama.", tint: "#FDF1C9", chips: ["Kişi başı tutar", "Yorumlar"] },
-  { mood: "happy", prop: "receipt", title: "Adisyonunu paylaş", text: "Fişin fotoğrafını çek, tutarı gir, bitti. Her paylaşım sana 50 XP kazandırır.", tint: "#FBE6DC", chips: ["+50 XP", "Fotoğraf yeter"] },
+  { mood: "happy", prop: "receipt", title: "Adisyonunu paylaş", text: "Fişin fotoğrafını çek, tutarı gir, bitti. Her paylaşım Gus için bir yonca demeti.", tint: "#FBE6DC", chips: ["+10 yonca", "Fotoğraf yeter"] },
   { mood: "love", extra: ["hearts"], title: "Arkadaşlarınla paylaş", text: "Arkadaşlarını ekle, adisyon gönder, mesajlaş. Kimin nerede olduğunu gör.", tint: "#E4E8FB", chips: ["Mesajlaş", "Adisyon gönder"] },
-  { mood: "laugh", prop: "trophy", extra: ["confetti"], title: "Seviye atla, rozet kazan", text: "Haftalık hedefini tut, XP topla, rozetleri aç. Hazırsan başlayalım!", tint: "#FCE8D2", chips: ["Seviyeler", "Rozetler"] },
+  { mood: "laugh", prop: "trophy", extra: ["confetti"], title: "Gus'la zirveye tırman", text: "Yonca topla, Gus'ı Çimen'den GOAT zirvesine çıkar, rozetleri aç. Hazırsan başlayalım!", tint: "#FCE8D2", chips: ["Yonca", "Seviyeler", "Rozetler"] },
 ];
 
 export function Onboarding() {

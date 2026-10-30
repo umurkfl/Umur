@@ -11,10 +11,9 @@ import { store, StoredReceipt, StoredFriendship, StoredCheckIn, calcBadges, deri
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
-import { BADGE_ICONS } from "@/lib/badge-icons";
-import { Gus } from "@/components/Gus";
-import { StarIcon } from "@/components/Icons";
-import { computeStats, XP_PER_LEVEL } from "@/lib/gamify";
+import { CloverIcon, LevelIcon, SavedIcon, GearIcon } from "@/components/Icons";
+import { BadgeArt } from "@/components/BadgeArt";
+import { computeStats, LEVELS } from "@/lib/gamify";
 
 // Sofra Pusulası — özel ikonlar
 function IconBill() {
@@ -178,9 +177,6 @@ export default function ProfilePage() {
       <div className="relative rounded-[32px] border-2 border-b-[6px] border-primary-shade bg-primary text-white overflow-hidden">
         <div className="absolute inset-0 opacity-[.12] pointer-events-none"
           style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)", backgroundSize: "34px 34px" }} />
-        <div className="absolute right-3 top-3 pointer-events-none">
-          <Gus mood="laugh" size={92} playful={false} />
-        </div>
 
         <div className="relative px-5 pt-5 pb-5">
           <div className="flex items-start gap-4">
@@ -201,10 +197,10 @@ export default function ProfilePage() {
               <input ref={photoInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </div>
 
-            <div className="flex-1 min-w-0 pt-1 pr-20">
-              <span className="inline-flex items-center gap-1 bg-white/20 rounded-full pl-1.5 pr-2.5 py-0.5 text-xs font-black">
-                <StarIcon size={16} /> Seviye {gstats.level}
-              </span>
+            <div className="flex-1 min-w-0 pt-1">
+              <Link href="/levels" className="inline-flex items-center gap-1.5 bg-white/20 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-black active:opacity-80">
+                <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><LevelIcon index={gstats.level - 1} size={16} /></span> {gstats.levelName}
+              </Link>
               <h1 className="mt-1.5 !text-[1.6rem] !leading-tight text-white truncate">
                 {showName ? user.name : (user.username ?? deriveUsername(user.name, user.id))}
               </h1>
@@ -216,9 +212,9 @@ export default function ProfilePage() {
           </div>
 
           <div className="mt-5">
-            <div className="flex justify-between text-xs font-extrabold text-white/85 mb-1.5">
-              <span>{gstats.xp} XP</span>
-              <span>{XP_PER_LEVEL - gstats.xpIntoLevel} XP sonra seviye {gstats.level + 1}</span>
+            <div className="flex justify-between items-center text-xs font-extrabold text-white/90 mb-1.5">
+              <span className="flex items-center gap-1"><span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><CloverIcon size={14} /></span>{gstats.points} yonca</span>
+              <Link href="/levels" className="underline decoration-white/40 underline-offset-2">{gstats.nextMin ? `${gstats.pointsToNext} yonca sonra ${LEVELS[gstats.level].name}` : "Zirvedesin"}</Link>
             </div>
             <div className="bg-black/20 rounded-full h-4 overflow-hidden">
               <div className="xp-fill" style={{ width: `${Math.max(gstats.levelProgress * 100, 4)}%` }} />
@@ -240,8 +236,18 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/wishlist" className="rounded-2xl border-2 border-b-4 border-border bg-surface px-4 py-3.5 flex items-center gap-3 active:translate-y-0.5 active:border-b-2 transition-all">
+          <span className="w-11 h-11 rounded-xl bg-primary-light flex items-center justify-center shrink-0"><SavedIcon size={26} /></span>
+          <span className="leading-tight"><span className="block text-base font-black text-charcoal">Kaydedilenler</span><span className="block text-xs font-bold text-muted">Gitmek istediklerin</span></span>
+        </Link>
+        <Link href="/levels" className="rounded-2xl border-2 border-b-4 border-border bg-surface px-4 py-3.5 flex items-center gap-3 active:translate-y-0.5 active:border-b-2 transition-all">
+          <span className="w-11 h-11 rounded-xl bg-gold/25 flex items-center justify-center shrink-0"><LevelIcon index={gstats.level - 1} size={30} /></span>
+          <span className="leading-tight"><span className="block text-base font-black text-charcoal">Tırmanış</span><span className="block text-xs font-bold text-muted">Yonca ve seviyeler</span></span>
+        </Link>
+      </div>
       <div className="flex gap-3">
-        <Link href="/upload" className="btn btn-primary flex-1"><Receipt className="w-5 h-5" /> Adisyon ekle</Link>
+        <Link href="/settings" className="btn btn-ghost flex-1 !text-charcoal"><GearIcon size={22} /> Ayarlar</Link>
         <button onClick={handleLogout} aria-label="Çıkış yap" className="btn btn-ghost !px-4 !text-muted"><LogOut className="w-5 h-5" /></button>
       </div>
 
@@ -270,23 +276,23 @@ export default function ProfilePage() {
 
       {/* ── Sofra Pusulası ── */}
       {receipts.length > 0 && (
-        <div className="bg-surface rounded-2xl p-4 border border-border shadow-sm">
+        <div className="px-1">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-charcoal text-sm">Aktivite</h2>
-            <span className="text-[10px] text-muted bg-background px-2 py-0.5 rounded-full">{receipts.length} adisyon</span>
+            <h2 className="text-xl font-black text-charcoal">Aktivite</h2>
+            <span className="text-xs font-extrabold text-muted bg-background px-2.5 py-1 rounded-full">{receipts.length} adisyon</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { Icon: IconBill,      label: "Toplam Harcama",  value: formatCurrency(totalSpend),      color: "text-primary" },
-              { Icon: IconForkPerson,label: "Kişi Başı Ort.",  value: formatCurrency(avgPerPerson),    color: "text-accent" },
-              { Icon: IconPlate,     label: "Deneyim Puanı",   value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "—", color: "text-yellow-500" },
-              { Icon: IconCompass,   label: "Keşfedilen Mekan",value: `${visitedRestaurants.length} mekan`, color: "text-primary" },
-            ].map(({ Icon, label, value, color }) => (
-              <div key={label} className="bg-background rounded-xl p-3.5 flex gap-2.5 items-start">
-                <div className={`mt-0.5 shrink-0 ${color}`}><Icon /></div>
+              { art: "ekonomik", label: "Toplam harcama",  value: formatCurrency(totalSpend) },
+              { art: "gurme",    label: "Kişi başı ort.",  value: formatCurrency(avgPerPerson) },
+              { art: "aktif",    label: "Deneyim puanı",   value: avgRating > 0 ? `${avgRating.toFixed(1)} / 5` : "—" },
+              { art: "gezgin",   label: "Keşfedilen mekan", value: `${visitedRestaurants.length} mekan` },
+            ].map(({ art, label, value }) => (
+              <div key={label} className="rounded-2xl border-2 border-b-4 border-border p-3 flex gap-3 items-center">
+                <BadgeArt id={art} size={44} className="shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-bold text-charcoal text-sm leading-tight">{value}</p>
-                  <p className="text-[11px] text-muted mt-0.5 leading-tight">{label}</p>
+                  <p className="font-black text-charcoal text-base leading-tight truncate">{value}</p>
+                  <p className="text-xs font-bold text-muted mt-0.5 leading-tight">{label}</p>
                 </div>
               </div>
             ))}
@@ -297,10 +303,7 @@ export default function ProfilePage() {
       {/* ── Gittiğim Yerler ── */}
       <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-primary" />
-            <h2 className="font-bold text-charcoal text-sm">Gittiğim Yerler</h2>
-          </div>
+          <h2 className="text-xl font-black text-charcoal">Gittiğim yerler</h2>
           {visitedRestaurants.length > 0 && (
             <span className="text-[11px] text-muted bg-background px-2 py-0.5 rounded-full">
               {visitedRestaurants.length} mekan
@@ -317,9 +320,7 @@ export default function ProfilePage() {
           <div className="divide-y divide-border">
             {visitedRestaurants.slice(0, 6).map((r) => (
               <div key={r.name} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-9 h-9 bg-primary-light rounded-xl flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
+                <BadgeArt id="gezgin" size={38} className="shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-charcoal text-sm truncate">{r.name}</p>
                   <p className="text-xs text-muted mt-0.5">{timeAgo(r.lastVisit)}</p>
@@ -378,20 +379,15 @@ export default function ProfilePage() {
       {/* ── Rozetlerim ── */}
       <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-primary" />
-            <h2 className="font-bold text-charcoal text-sm">Rozetlerim</h2>
-          </div>
+          <h2 className="text-xl font-black text-charcoal">Rozetlerim</h2>
           <Link href="/badges" className="flex items-center gap-0.5 text-xs text-primary font-semibold">
             Tümü <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <div className="px-4 pb-4">
           {badges.length === 0 ? (
-            <div className="flex items-center gap-3 bg-background rounded-xl p-3">
-              <div className="w-12 h-12 rounded-full bg-border/50 flex items-center justify-center shrink-0">
-                <Trophy className="w-6 h-6 text-border" strokeWidth={1.5} />
-              </div>
+            <div className="flex items-center gap-3 bg-background rounded-2xl p-3">
+              <BadgeArt id="aktif" size={48} locked className="shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-ink">Henüz rozet kazanılmadı</p>
                 <p className="text-xs text-muted mt-0.5">Adisyon paylaş, rozet kazan!</p>
@@ -400,13 +396,10 @@ export default function ProfilePage() {
           ) : (
             <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
               {badges.map((b) => {
-                const Icon = BADGE_ICONS[b.id] ?? Star;
                 return (
                   <Link key={b.id} href="/badges" className="shrink-0 flex flex-col items-center gap-1.5">
-                    <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
-                      <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
-                    </div>
-                    <p className="text-[10px] font-bold text-ink text-center w-14 leading-tight truncate">
+                    <BadgeArt id={b.id} size={64} />
+                    <p className="text-[11px] font-extrabold text-charcoal text-center w-16 leading-tight truncate">
                       {b.dynamicLabel ?? b.label}
                     </p>
                   </Link>

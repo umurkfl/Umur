@@ -21,7 +21,7 @@ function applyTheme(t: Theme) {
 }
 
 function SectionHeader({ title }: { title: string }) {
-  return <p className="text-xs font-semibold text-muted uppercase tracking-wide px-4 pt-5 pb-1.5">{title}</p>;
+  return <p className="text-sm font-black text-muted uppercase tracking-wide px-4 pt-6 pb-2">{title}</p>;
 }
 
 function SettingRow({ icon: Icon, label, value, onClick, danger }: {
@@ -34,7 +34,7 @@ function SettingRow({ icon: Icon, label, value, onClick, danger }: {
       className={`w-full flex items-center gap-3 px-4 py-3.5 bg-surface border-b border-border/50 last:border-0 active:opacity-70 transition-opacity text-left ${danger ? "text-red-500" : ""}`}
     >
       <Icon className={`w-4.5 h-4.5 shrink-0 ${danger ? "text-red-500" : "text-muted"}`} />
-      <span className={`flex-1 text-sm ${danger ? "font-semibold" : "text-ink"}`}>{label}</span>
+      <span className={`flex-1 text-base ${danger ? "font-extrabold" : "font-bold text-ink"}`}>{label}</span>
       {value && <span className="text-xs text-muted">{value}</span>}
       {onClick && !danger && <ChevronRight className="w-4 h-4 text-border shrink-0" />}
     </button>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
       <SectionHeader title="Görünüm" />
       <div className="mx-4 rounded-2xl overflow-hidden border border-border bg-surface">
         <div className="px-4 py-3.5">
-          <p className="text-sm text-ink mb-3">Tema</p>
+          <p className="text-base font-bold text-ink mb-3">Tema</p>
           <div className="flex gap-2">
             {([
               { value: "light", icon: Sun, label: "Açık" },
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs font-semibold">{label}</span>
+                <span className="text-sm font-extrabold">{label}</span>
               </button>
             ))}
           </div>
@@ -282,7 +282,7 @@ export default function SettingsPage() {
           className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-border/50 text-left"
           role="switch" aria-checked={sfx}
         >
-          <span className="flex-1 text-sm text-ink">Ses efektleri</span>
+          <span className="flex-1 text-base font-bold text-ink">Ses efektleri</span>
           <span className={`w-12 h-7 rounded-full p-0.5 transition-colors ${sfx ? "bg-primary" : "bg-border"}`}>
             <span className={`block w-6 h-6 rounded-full bg-white shadow transition-transform ${sfx ? "translate-x-5" : ""}`} />
           </span>

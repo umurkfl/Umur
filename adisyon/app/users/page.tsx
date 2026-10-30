@@ -4,13 +4,13 @@ import { Suspense, useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Gus } from "@/components/Gus";
-import { StarIcon } from "@/components/Icons";
+import { CloverIcon, LevelIcon } from "@/components/Icons";
 import { computeStats } from "@/lib/gamify";
 import { ArrowLeft, Star, Lock, MapPin, Receipt, Trophy, Users, Trash2 } from "lucide-react";
 import { store, StoredReceipt, StoredFriendship, StoredCheckIn, deriveUsername, calcBadges } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, timeAgo } from "@/lib/mock";
-import { BADGE_ICONS } from "@/lib/badge-icons";
+import { BadgeArt } from "@/components/BadgeArt";
 
 // ── Mini stat icons (same as profile page) ────────────────────────────────────
 function IconBill() {
@@ -166,9 +166,6 @@ function ProfileContent() {
       <div className="relative rounded-[32px] border-2 border-b-[6px] border-primary-shade bg-primary text-white overflow-hidden">
         <div className="absolute inset-0 opacity-[.12] pointer-events-none"
           style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)", backgroundSize: "34px 34px" }} />
-        <div className="absolute right-3 top-3 pointer-events-none">
-          <Gus mood={friendStatus === "friend" ? "love" : "happy"} size={92} playful={false} />
-        </div>
         <div className="relative px-5 pt-5 pb-5">
           <div className="flex items-start gap-4">
             <div className="w-24 h-24 rounded-full border-4 border-white bg-primary-light overflow-hidden flex items-center justify-center text-4xl font-black text-primary shrink-0">
@@ -177,10 +174,10 @@ function ProfileContent() {
                 : (stillLoadingAccess ? "?" : userName.charAt(0).toUpperCase())
               }
             </div>
-            <div className="flex-1 min-w-0 pt-1 pr-20">
+            <div className="flex-1 min-w-0 pt-1">
               {!stillLoadingAccess && canSeeReceipts && (
-                <span className="inline-flex items-center gap-1 bg-white/20 rounded-full pl-1.5 pr-2.5 py-0.5 text-xs font-black">
-                  <StarIcon size={16} /> Seviye {computeStats(receipts).level}
+                <span className="inline-flex items-center gap-1.5 bg-white/20 rounded-full pl-1 pr-2.5 py-0.5 text-xs font-black">
+                  <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><LevelIcon index={computeStats(receipts).level - 1} size={16} /></span> {computeStats(receipts).levelName}
                 </span>
               )}
               <h1 className="mt-1.5 !text-[1.6rem] !leading-tight text-white truncate">{stillLoadingAccess ? "Yükleniyor…" : userName}</h1>
@@ -191,7 +188,7 @@ function ProfileContent() {
             const g = computeStats(receipts);
             return (
               <div className="mt-5">
-                <div className="flex justify-between text-xs font-extrabold text-white/85 mb-1.5"><span>{g.xp} XP</span><span>{receipts.length} adisyon</span></div>
+                <div className="flex justify-between text-xs font-extrabold text-white/90 mb-1.5"><span className="flex items-center gap-1"><span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><CloverIcon size={14} /></span>{g.points} yonca</span><span>{receipts.length} adisyon</span></div>
                 <div className="bg-black/20 rounded-full h-4 overflow-hidden"><div className="xp-fill" style={{ width: `${Math.max(g.levelProgress * 100, 4)}%` }} /></div>
               </div>
             );
@@ -271,23 +268,23 @@ function ProfileContent() {
 
       {/* ── Activity stats ── */}
       {!stillLoadingAccess && canSeeReceipts && stats && (
-        <div className="bg-surface rounded-2xl p-4 border border-border shadow-sm">
+        <div className="px-1">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-charcoal text-sm">Aktivite</h3>
-            <span className="text-[10px] text-muted bg-background px-2 py-0.5 rounded-full">{receipts.length} adisyon</span>
+            <h3 className="text-xl font-black text-charcoal">Aktivite</h3>
+            <span className="text-xs font-extrabold text-muted bg-background px-2.5 py-1 rounded-full">{receipts.length} adisyon</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { Icon: IconBill,       label: "Toplam Harcama",  value: formatCurrency(stats.totalSpend),  color: "text-primary" },
-              { Icon: IconForkPerson, label: "Kişi Başı Ort.",  value: formatCurrency(stats.avgPerPerson), color: "text-accent" },
-              { Icon: IconPlate,      label: "Deneyim Puanı",   value: stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} / 5` : "—", color: "text-yellow-500" },
-              { Icon: IconCompass,    label: "Keşfedilen Mekan", value: `${visitedRestaurants.length} mekan`, color: "text-primary" },
-            ].map(({ Icon, label, value, color }) => (
-              <div key={label} className="bg-background rounded-xl p-3.5 flex gap-2.5 items-start">
-                <div className={`mt-0.5 shrink-0 ${color}`}><Icon /></div>
+              { art: "ekonomik", label: "Toplam harcama",  value: formatCurrency(stats.totalSpend) },
+              { art: "gurme",    label: "Kişi başı ort.",  value: formatCurrency(stats.avgPerPerson) },
+              { art: "aktif",    label: "Deneyim puanı",   value: stats.avgRating > 0 ? `${stats.avgRating.toFixed(1)} / 5` : "—" },
+              { art: "gezgin",   label: "Keşfedilen mekan", value: `${visitedRestaurants.length} mekan` },
+            ].map(({ art, label, value }) => (
+              <div key={label} className="rounded-2xl border-2 border-b-4 border-border p-3 flex gap-3 items-center">
+                <BadgeArt id={art} size={44} className="shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-bold text-charcoal text-sm leading-tight">{value}</p>
-                  <p className="text-[11px] text-muted mt-0.5 leading-tight">{label}</p>
+                  <p className="font-black text-charcoal text-base leading-tight truncate">{value}</p>
+                  <p className="text-xs font-bold text-muted mt-0.5 leading-tight">{label}</p>
                 </div>
               </div>
             ))}
@@ -299,10 +296,7 @@ function ProfileContent() {
       {!stillLoadingAccess && canSeeReceipts && visitedRestaurants.length > 0 && (
         <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 pt-4 pb-3">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              <h3 className="font-bold text-charcoal text-sm">Gittiği Yerler</h3>
-            </div>
+            <h3 className="text-xl font-black text-charcoal">Gittiği yerler</h3>
             <span className="text-[11px] text-muted bg-background px-2 py-0.5 rounded-full">{visitedRestaurants.length} mekan</span>
           </div>
           <div className="divide-y divide-border">
@@ -312,9 +306,7 @@ function ProfileContent() {
                 href={`/restaurants?name=${encodeURIComponent(r.name)}`}
                 className="flex items-center gap-3 px-4 py-3 active:bg-primary-light"
               >
-                <div className="w-9 h-9 bg-primary-light rounded-xl flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
+                <BadgeArt id="gezgin" size={38} className="shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-charcoal text-sm truncate">{r.name}</p>
                   <p className="text-xs text-muted mt-0.5">{timeAgo(r.lastVisit)}</p>
@@ -332,19 +324,15 @@ function ProfileContent() {
       {/* ── Rozetler ── */}
       {!stillLoadingAccess && canSeeReceipts && badges.length > 0 && (
         <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-            <Trophy className="w-4 h-4 text-primary" />
-            <h3 className="font-bold text-charcoal text-sm">Rozetler</h3>
+          <div className="px-4 pt-4 pb-3">
+            <h3 className="text-xl font-black text-charcoal">Rozetler</h3>
           </div>
           <div className="px-4 pb-4 flex gap-4 overflow-x-auto no-scrollbar">
             {badges.map((b) => {
-              const Icon = BADGE_ICONS[b.id] ?? Star;
               return (
                 <div key={b.id} className="shrink-0 flex flex-col items-center gap-1.5">
-                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
-                  </div>
-                  <p className="text-[10px] font-bold text-ink text-center w-14 leading-tight truncate">{b.dynamicLabel ?? b.label}</p>
+                  <BadgeArt id={b.id} size={64} />
+                  <p className="text-[11px] font-extrabold text-charcoal text-center w-16 leading-tight truncate">{b.dynamicLabel ?? b.label}</p>
                 </div>
               );
             })}

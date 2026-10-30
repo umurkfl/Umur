@@ -156,7 +156,7 @@ export default function AuthPage() {
           ? "Hımm, bir şeyler ters gitti. Bir daha deneyelim mi?"
           : tab === "login"
             ? "Hoş geldin! Seni bekliyordum, hadi içeri."
-            : "Aramıza katıl! İlk fişinle 50 XP benden."}
+            : "Aramıza katıl! İlk fişinle ilk yoncalarını kazanırsın."}
       </GusSays>
 
       <button

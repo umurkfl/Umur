@@ -7,6 +7,7 @@ import { Search, Star, SlidersHorizontal, X, Bookmark, Layers } from "lucide-rea
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, WishlistList } from "@/lib/store";
 import { ReceiptPopup } from "@/app/page";
+import { StarIcon } from "@/components/Icons";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 import { Gus } from "@/components/Gus";
@@ -333,9 +334,8 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
 
       {/* Feedback toast */}
       {lastAction && (
-        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 pop-in pointer-events-none flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-2xl bg-surface border-2 border-b-4 border-border">
-          <Gus mood={lastAction === "save" ? "love" : "wink"} size={44} playful={false} />
-          <span className="text-sm font-extrabold text-charcoal">{lastAction === "save" ? "Listene eklendi!" : "Tamam, geçtik."}</span>
+        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 pop-in pointer-events-none px-5 py-2.5 rounded-2xl bg-charcoal text-white text-sm font-extrabold shadow-lg">
+          {lastAction === "save" ? "Kaydedilenlere eklendi" : "Geçildi"}
         </div>
       )}
 
@@ -386,12 +386,12 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
 
   return (
     <>
-      <div className="bg-surface rounded-2xl p-4 shadow-sm border border-primary-light">
+      <div className="bg-surface rounded-3xl p-4 border-2 border-b-4 border-border">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-            <Link href={`/restaurants?name=${encodeURIComponent(r.name)}`} className="font-semibold text-charcoal hover:text-primary transition-colors">{r.name}</Link>
+            <Link href={`/restaurants?name=${encodeURIComponent(r.name)}`} className="text-xl font-black text-charcoal leading-tight">{r.name}</Link>
             {(r.city || r.district) && (
-              <span className="text-xs text-muted font-medium flex items-center gap-0.5">
+              <span className="text-xs text-muted font-bold flex items-center gap-0.5">
                 <PinIcon className="w-2 h-2.5 shrink-0" />
                 {[r.district, r.city].filter(Boolean).join(", ")}
               </span>
@@ -399,14 +399,14 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
           </div>
           <WishlistButton restaurantName={r.name} size="sm" />
         </div>
-        <div className="flex items-center gap-4 text-sm mb-3">
-          <span className="text-muted">Kişi başı <span className="font-semibold text-ink">~{formatCurrency(r.avgSpendPerPerson)}</span></span>
-          {r.avgRating > 0 && <span className="text-yellow-500 font-semibold">★ {r.avgRating.toFixed(1)}</span>}
-          <span className="text-muted ml-auto text-xs">{r.receiptCount} adisyon</span>
+        <div className="flex items-end gap-4 mb-3.5">
+          <div className="leading-none"><span className="text-[26px] font-black text-primary">~{formatCurrency(r.avgSpendPerPerson)}</span><span className="block text-xs font-extrabold text-muted mt-1">kişi başı</span></div>
+          {r.avgRating > 0 && <span className="flex items-center gap-1 text-base font-black text-charcoal pb-0.5"><StarIcon size={20} />{r.avgRating.toFixed(1)}</span>}
+          <span className="text-muted ml-auto text-xs font-extrabold pb-0.5">{r.receiptCount} adisyon</span>
         </div>
         <button
           onClick={() => setOpen(!open)}
-          className="w-full text-xs text-primary font-semibold border border-primary-light rounded-xl py-2 active:bg-primary-light"
+          className="btn btn-ghost btn-sm btn-block"
         >
           {open ? "Adisyonları Gizle" : `${r.receiptCount} Adisyonu Gör`}
         </button>
@@ -416,10 +416,10 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
               <button
                 key={receipt.id}
                 onClick={() => setActiveReceipt(receipt)}
-                className="w-full text-left bg-background rounded-xl p-3 flex items-center justify-between active:bg-primary-light"
+                className="w-full text-left bg-background rounded-2xl p-3.5 flex items-center justify-between active:bg-primary-light"
               >
                 <div>
-                  <p className="text-xs font-semibold text-ink">{receipt.userName}</p>
+                  <p className="text-sm font-extrabold text-ink">{receipt.userName}</p>
                   {receipt.rating > 0 && (
                     <div className="flex gap-0.5 mt-0.5">
                       {[1,2,3,4,5].map((s) => (
@@ -429,8 +429,8 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-ink">{formatCurrency(receipt.total)}</p>
-                  <p className="text-xs text-primary">{receipt.people} kişi</p>
+                  <p className="text-base font-black text-ink">{formatCurrency(receipt.total)}</p>
+                  <p className="text-xs font-bold text-primary">{receipt.people} kişi</p>
                 </div>
               </button>
             ))}

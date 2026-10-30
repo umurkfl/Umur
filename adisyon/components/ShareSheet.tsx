@@ -97,7 +97,7 @@ export function ShareSheet({ receipt, onClose }: { receipt: StoredReceipt; onClo
             <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30">
               <Check className="w-7 h-7 text-white" />
             </div>
-            <p className="font-semibold text-charcoal">Gönderildi!</p>
+            <p className="text-xl font-black text-charcoal">Gönderildi!</p>
           </div>
         ) : (
           <>
