@@ -213,3 +213,7 @@ main h1 { font-size: 1.9rem; line-height: 1.12; font-weight: 900; letter-spacing
   background-size: 480px 100%; animation: shimmer 1.3s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) { .route-enter, .rounded-t-3xl, .skeleton { animation: none !important; } }
+
+/* number inputs: no browser spinners */
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }

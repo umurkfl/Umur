@@ -91,3 +91,19 @@ export function FeedEmpty() {
     </div>
   );
 }
+
+const SUBS = ["Bugün ne yiyoruz?", "Hesap gelmeden önce bak.", "Karnın ne diyor?", "Fiyatlar burada, sürpriz yok."];
+
+/** Big friendly page title, like a native large-title header */
+export function Greeting() {
+  const { user, ready } = useAuth();
+  if (!ready) return <div className="h-[72px]" />;
+  const first = user?.name.split(" ")[0];
+  const sub = SUBS[new Date().getDate() % SUBS.length];
+  return (
+    <header className="px-4 pt-1 pb-4">
+      <h1 className="text-charcoal">{user ? `Merhaba, ${first}` : "Selam!"}</h1>
+      <p className="mt-1 text-base font-bold text-muted">{user ? sub : "Gerçek restoran fiyatlarını keşfet."}</p>
+    </header>
+  );
+}

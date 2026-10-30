@@ -6,8 +6,7 @@ import Link from "next/link";
 import { Search, Star, SlidersHorizontal, X, Bookmark, Layers } from "lucide-react";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { store, StoredReceipt, WishlistList } from "@/lib/store";
-import { ReceiptModal } from "@/components/ReceiptModal";
-import { CommentSection, ReceiptPopup } from "@/app/page";
+import { ReceiptPopup } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 import { Gus } from "@/components/Gus";
@@ -342,9 +341,7 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
 
       {lightboxPhoto && <PhotoLightbox src={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />}
       {tappedReceipt && (
-        <ReceiptModal receipt={tappedReceipt} onClose={() => setTappedReceipt(null)}>
-          <CommentSection receiptId={tappedReceipt.id} />
-        </ReceiptModal>
+        <ReceiptPopup r={tappedReceipt} onClose={() => setTappedReceipt(null)} />
       )}
       {popupReceipt && <ReceiptPopup r={popupReceipt} onClose={() => setPopupReceipt(null)} />}
     </div>
@@ -440,11 +437,7 @@ function UserRestaurantCard({ r }: { r: UserRestaurant }) {
           </div>
         )}
       </div>
-      {activeReceipt && (
-        <ReceiptModal receipt={activeReceipt} onClose={() => setActiveReceipt(null)}>
-          <CommentSection receiptId={activeReceipt.id} />
-        </ReceiptModal>
-      )}
+      {activeReceipt && <ReceiptPopup r={activeReceipt} onClose={() => setActiveReceipt(null)} />}
     </>
   );
 }

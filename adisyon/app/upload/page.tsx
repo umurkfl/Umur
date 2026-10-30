@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2, MessageSquare, Scissors } from "lucide-react";
+import { Camera, ImageIcon, MapPin, Users, CheckCircle, X, Loader2, MessageSquare, Scissors, ChevronLeft, Minus, Plus } from "lucide-react";
 import { RESTAURANTS, formatCurrency } from "@/lib/mock";
 import { store, compressImage } from "@/lib/store";
 import { TR_CITIES, TR_DISTRICTS } from "@/lib/turkey-locations";
@@ -77,9 +77,30 @@ function calcPerPerson(total: string, people: string): string | null {
   return formatCurrency(t / p);
 }
 
+/** Duolingo-style lesson bar: back arrow + segmented progress */
+function WizardProgress({ current, total, onBack }: { current: number; total: number; onBack?: () => void }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={onBack} disabled={!onBack} aria-label="Geri" className={`w-9 h-9 -ml-2 flex items-center justify-center rounded-xl text-muted active:scale-90 transition-transform ${onBack ? "" : "opacity-0"}`}>
+        <ChevronLeft className="w-6 h-6" strokeWidth={3} />
+      </button>
+      <div className="flex-1 flex gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={total} aria-valuenow={current}>
+        {Array.from({ length: total }).map((_, i) => (
+          <div key={i} className="flex-1 h-3 rounded-full bg-border overflow-hidden">
+            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: i < current ? "100%" : "0%" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const RATING_WORDS = ["Dokun, puanla", "Hiç iyi değil", "Eh işte", "İdare eder", "Güzeldi", "Muhteşem!"];
+
 export default function UploadPage() {
   const { user } = useAuth();
   const [step, setStep] = useState<"photo" | "details" | "done">("photo");
+  const [sub, setSub] = useState(0); // wizard step inside "details": 0 place, 1 amount, 2 rating, 3 comment
   const [reward, setReward] = useState<{ before: GameStats; after: GameStats } | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string>("");
@@ -219,6 +240,7 @@ export default function UploadPage() {
 
   function reset() {
     setReward(null);
+    setSub(0);
     setStep("photo");
     setPhotoUrl(null);
     setPhotoBase64("");
@@ -285,216 +307,159 @@ export default function UploadPage() {
   }
 
   if (step === "details") {
+    const amountOk = !!total && parseFloat(total) > 0;
+    const canNext = sub === 0 ? !!name.trim() : sub === 1 ? amountOk : true;
+    const inputCls = "w-full rounded-2xl border-2 border-border bg-surface px-4 py-3.5 text-base font-bold focus:outline-none focus:border-primary";
+    const next = () => { haptic("tap"); setSub((n) => Math.min(3, n + 1)); };
+
     return (
-      <div className="space-y-4 pb-10">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setStep("photo")} className="text-muted text-xl leading-none">←</button>
-          <h1 className="text-xl font-bold text-charcoal">Adisyon Bilgileri</h1>
-        </div>
+      <div className="flex flex-col gap-5 pb-6">
+        <WizardProgress current={sub + 2} total={5} onBack={() => (sub === 0 ? setStep("photo") : setSub(sub - 1))} />
 
-        {photoUrl && (
-          <div className="bg-dark rounded-2xl overflow-hidden">
-            <img src={photoUrl} alt="Adisyon" className="w-full max-h-72 object-contain" />
-          </div>
-        )}
-
-        <div className="bg-surface rounded-2xl p-4 shadow-sm border border-border space-y-5">
-          {/* Restaurant name */}
-          <div className="relative">
-            <label className="block text-xs text-muted mb-1.5 font-semibold uppercase tracking-wide">
-              Mekan Adı
-            </label>
-            {/* Geo assist */}
-            {!userGeo && (
-              <button
-                type="button"
-                onClick={requestGeo}
-                disabled={geoLoading}
-                className="flex items-center gap-1.5 text-xs text-primary font-semibold mb-2"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                {geoLoading ? "Konum alınıyor..." : "Yakınımdaki restoranları göster"}
-              </button>
-            )}
-            {userGeo && (
-              <p className="text-xs text-primary font-semibold flex items-center gap-1 mb-2">
-                <MapPin className="w-3.5 h-3.5" /> Konum aktif — yakın restoranlar önceliklendiriliyor
-              </p>
-            )}
+        {/* ── 0 · Place ── */}
+        {sub === 0 && (
+          <>
+            <GusSays mood="think" size={104}>Nerede yedin? Mekanın adını yaz, gerisini bana bırak.</GusSays>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                onFocus={() => suggestions.length > 0 && setShowSugg(true)}
-                onBlur={() => setTimeout(() => setShowSugg(false), 160)}
-                placeholder="Restoranın adını yaz..."
-                autoComplete="off"
-                className="w-full pl-9 pr-9 py-3 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted animate-spin" />}
-              {!searching && name && (
-                <button
-                  onMouseDown={(e) => { e.preventDefault(); setName(""); setSuggestions([]); setShowSugg(false); setSelectedCity(""); setSelectedDistrict(""); setSelectedLat(undefined); setSelectedLng(undefined); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                >
-                  <X className="w-4 h-4 text-muted" />
+              {!userGeo ? (
+                <button type="button" onClick={requestGeo} disabled={geoLoading} className="flex items-center gap-1.5 text-sm text-primary font-extrabold mb-2.5">
+                  <MapPin className="w-4 h-4" /> {geoLoading ? "Konum alınıyor..." : "Yakınımdaki restoranları göster"}
                 </button>
+              ) : (
+                <p className="text-sm text-primary font-extrabold flex items-center gap-1 mb-2.5"><MapPin className="w-4 h-4" /> Konum açık, yakın mekanlar önde</p>
               )}
-            </div>
-            {showSugg && suggestions.length > 0 && (
-              <div className="absolute z-30 left-0 right-0 mt-1 bg-surface rounded-xl border border-border shadow-xl overflow-hidden">
-                {suggestions.map((s) => (
-                  <button
-                    key={s.key}
-                    onMouseDown={() => selectSuggestion(s)}
-                    className="w-full text-left px-4 py-3 hover:bg-primary-light border-b border-border last:border-0 transition-colors"
-                  >
-                    <p className="text-sm font-semibold text-charcoal">{s.name}</p>
-                    {s.address && <p className="text-xs text-muted mt-0.5 truncate">{s.address}</p>}
+              <div className="relative">
+                <input
+                  type="text" value={name} autoFocus autoComplete="off"
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  onFocus={() => suggestions.length > 0 && setShowSugg(true)}
+                  onBlur={() => setTimeout(() => setShowSugg(false), 160)}
+                  placeholder="Restoranın adı..."
+                  className={`${inputCls} pr-11`}
+                />
+                {searching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted animate-spin" />}
+                {!searching && name && (
+                  <button onMouseDown={(e) => { e.preventDefault(); setName(""); setSuggestions([]); setShowSugg(false); setSelectedCity(""); setSelectedDistrict(""); setSelectedLat(undefined); setSelectedLng(undefined); }} className="absolute right-4 top-1/2 -translate-y-1/2" aria-label="Temizle">
+                    <X className="w-5 h-5 text-muted" />
                   </button>
-                ))}
+                )}
               </div>
-            )}
-          </div>
-
-          {/* City / District */}
-          <div>
-            <label className="block text-xs text-muted mb-1.5 font-semibold uppercase tracking-wide">
-              Konum
-            </label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <select
-                  value={selectedCity}
-                  onChange={(e) => { setSelectedCity(e.target.value); setSelectedDistrict(""); }}
-                  className="w-full py-3 px-3 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary text-ink"
-                >
-                  <option value="">Şehir seç</option>
-                  {TR_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              {selectedCity && TR_DISTRICTS[selectedCity] && (
-                <div className="flex-1">
-                  <select
-                    value={selectedDistrict}
-                    onChange={(e) => setSelectedDistrict(e.target.value)}
-                    className="w-full py-3 px-3 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary text-ink"
-                  >
-                    <option value="">İlçe seç</option>
-                    {TR_DISTRICTS[selectedCity].map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
+              {showSugg && suggestions.length > 0 && (
+                <div className="absolute z-30 left-0 right-0 mt-2 bg-surface rounded-2xl border-2 border-b-4 border-border overflow-hidden">
+                  {suggestions.map((sg) => (
+                    <button key={sg.key} onMouseDown={() => selectSuggestion(sg)} className="w-full text-left px-4 py-3 active:bg-primary-light border-b border-border last:border-0 transition-colors">
+                      <p className="text-[15px] font-extrabold text-charcoal">{sg.name}</p>
+                      {sg.address && <p className="text-xs font-semibold text-muted mt-0.5 truncate">{sg.address}</p>}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Total */}
-          <div>
-            <label className="block text-xs text-muted mb-1.5 font-semibold uppercase tracking-wide">
-              Toplam Tutar
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-bold pointer-events-none">₺</span>
-              <input
-                type="number"
-                value={total}
-                onChange={(e) => setTotal(e.target.value)}
-                placeholder="0,00"
-                inputMode="decimal"
-                min="0"
-                className="w-full pl-7 pr-4 py-3 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+            <div className="flex gap-2">
+              <select value={selectedCity} onChange={(e) => { setSelectedCity(e.target.value); setSelectedDistrict(""); }} className={`${inputCls} flex-1 !py-3 !text-sm`}>
+                <option value="">Şehir seç</option>
+                {TR_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {selectedCity && TR_DISTRICTS[selectedCity] && (
+                <select value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)} className={`${inputCls} flex-1 !py-3 !text-sm`}>
+                  <option value="">İlçe seç</option>
+                  {TR_DISTRICTS[selectedCity].map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              )}
             </div>
-          </div>
+          </>
+        )}
 
-          {/* People */}
-          <div>
-            <label className="block text-xs text-muted mb-2 font-semibold uppercase tracking-wide">
-              Kişi Sayısı
-            </label>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setPeople((p) => String(Math.max(1, parseInt(p) - 1)))}
-                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-xl text-ink active:bg-background select-none"
-              >−</button>
-              <div className="flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-muted" />
-                <span className="text-2xl font-bold text-charcoal w-6 text-center">{people}</span>
+        {/* ── 1 · Amount & people ── */}
+        {sub === 1 && (
+          <>
+            <GusSays mood={amountOk ? "shock" : "wink"} size={104}>Hesap ne kadar tuttu? Merak ettim, dürüst ol.</GusSays>
+            <div className="rounded-3xl border-2 border-b-4 border-border px-4 py-5 text-center">
+              <p className="text-xs font-extrabold text-muted uppercase tracking-wide">Toplam tutar</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <span className="text-3xl font-black text-muted">₺</span>
+                <input
+                  type="number" inputMode="decimal" min="0" value={total} autoFocus
+                  onChange={(e) => setTotal(e.target.value)} placeholder="0"
+                  className="w-44 text-center text-5xl font-black text-charcoal bg-transparent focus:outline-none placeholder:text-border"
+                />
               </div>
-              <button
-                onClick={() => setPeople((p) => String(parseInt(p) + 1))}
-                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-xl text-ink active:bg-background select-none"
-              >+</button>
-              <span className="text-sm text-muted">kişi</span>
             </div>
-          </div>
-
-          {perPerson && (
-            <div className="bg-primary-light rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-primary font-semibold">Kişi başı tutar</p>
-                <p className="text-xs text-primary/70 mt-0.5">
-                  {total && parseFloat(total) > 0 ? `${formatCurrency(parseFloat(total))} ÷ ${people}` : ""}
-                </p>
+            <div className="rounded-3xl border-2 border-b-4 border-border px-4 py-4">
+              <p className="text-center text-xs font-extrabold text-muted uppercase tracking-wide">Kaç kişiydiniz?</p>
+              <div className="mt-3 flex items-center justify-center gap-6">
+                <button onClick={() => { haptic("tap"); setPeople((n) => String(Math.max(1, parseInt(n) - 1))); }} aria-label="Azalt" className="btn btn-ghost !p-0 w-14 h-14 !rounded-2xl"><Minus className="w-6 h-6" strokeWidth={3} /></button>
+                <div className="flex items-center gap-2 min-w-[72px] justify-center"><Users className="w-5 h-5 text-muted" /><span className="text-4xl font-black text-charcoal">{people}</span></div>
+                <button onClick={() => { haptic("tap"); setPeople((n) => String(parseInt(n) + 1)); }} aria-label="Artır" className="btn btn-ghost !p-0 w-14 h-14 !rounded-2xl"><Plus className="w-6 h-6" strokeWidth={3} /></button>
               </div>
-              <p className="text-2xl font-bold text-primary-dark">{perPerson}</p>
             </div>
-          )}
-        </div>
+            {perPerson && (
+              <div className="pop-in rounded-3xl bg-primary-light border-2 border-b-4 border-primary/25 px-5 py-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-extrabold text-primary">Kişi başı</p>
+                  <p className="text-xs font-bold text-primary/70 mt-0.5">{formatCurrency(parseFloat(total))} ÷ {people}</p>
+                </div>
+                <p className="text-3xl font-black text-primary">{perPerson}</p>
+              </div>
+            )}
+          </>
+        )}
 
-        {/* Rating */}
-        <div className="bg-surface rounded-2xl p-4 shadow-sm border border-border space-y-4">
-          <div>
-            <label className="block text-xs text-muted mb-2.5 font-semibold uppercase tracking-wide">
-              Değerlendirme (isteğe bağlı)
-            </label>
-            <div className="flex gap-3">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setRating(rating === s ? 0 : s)}
-                  aria-label={`${s} yıldız`}
-                  className={`transition-all active:scale-110 ${s <= rating ? "opacity-100 scale-105" : "opacity-30 grayscale"}`}
-                >
-                  <StarIcon size={40} />
-                </button>
-              ))}
+        {/* ── 2 · Rating ── */}
+        {sub === 2 && (
+          <>
+            <GusSays mood={rating >= 4 ? "love" : rating > 0 && rating <= 2 ? "sad" : "happy"} size={104}>Peki lezzeti nasıldı? Yıldızlara dokun.</GusSays>
+            <div className="rounded-3xl border-2 border-b-4 border-border px-3 py-7 text-center">
+              <div className="flex justify-center gap-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} onClick={() => { haptic("tap"); setRating(rating === n ? 0 : n); }} aria-label={`${n} yıldız`} className={`transition-all active:scale-110 ${n <= rating ? "scale-105" : "opacity-30 grayscale"}`}>
+                    <StarIcon size={54} />
+                  </button>
+                ))}
+              </div>
+              <p className="mt-4 text-lg font-black text-charcoal">{RATING_WORDS[rating]}</p>
             </div>
+          </>
+        )}
+
+        {/* ── 3 · Comment + summary ── */}
+        {sub === 3 && (
+          <>
+            <GusSays mood="wink" size={104}>Son olarak, istersen iki kelime yaz. Herkes merak ediyor.</GusSays>
+            <textarea
+              value={comment} onChange={(e) => setComment(e.target.value)} rows={4}
+              placeholder="Yemekler nasıldı? Servis, ambiyans..."
+              className={`${inputCls} resize-none font-semibold`}
+            />
+            <div className="rounded-3xl border-2 border-b-4 border-border px-4 py-3.5 flex items-center gap-3">
+              {photoUrl && <img src={photoUrl} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />}
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="text-base font-black text-charcoal truncate">{name}</p>
+                <p className="text-sm font-bold text-muted mt-0.5">{people} kişi · {formatCurrency(parseFloat(total) || 0)}</p>
+              </div>
+              <p className="text-lg font-black text-primary shrink-0">{perPerson}</p>
+            </div>
+          </>
+        )}
+
+        {sub < 3 ? (
+          <div className="flex flex-col gap-2 mt-1">
+            <button onClick={next} disabled={!canNext} className="btn btn-primary btn-block disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted">Devam</button>
+            {sub === 2 && <button onClick={next} className="text-sm font-extrabold text-muted py-1">Puanlamadan geç</button>}
           </div>
-
-          <div>
-            <label className="block text-xs text-muted mb-1.5 font-semibold uppercase tracking-wide">
-              Yorum (isteğe bağlı)
-            </label>
-            <div className="relative">
-              <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-muted pointer-events-none" />
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Yemekler nasıldı? Servis, ambiyans... paylaş!"
-                rows={3}
-                className="w-full pl-9 pr-4 py-3 rounded-xl border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={submit}
-          disabled={!name.trim() || !total || parseFloat(total) <= 0}
-          className="btn btn-primary btn-block disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted"
-        >
-          Adisyonu Paylaş · +50 XP
-        </button>
+        ) : (
+          <button onClick={submit} disabled={!name.trim() || !amountOk} className="btn btn-primary btn-block mt-1 disabled:!bg-border disabled:!border-[#C9C6BB] disabled:!text-muted">
+            Adisyonu Paylaş · +50 XP
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-charcoal">Adisyon Ekle</h1>
+      <WizardProgress current={1} total={5} />
+      <h1>Adisyon ekle</h1>
       {!photoUrl && (
         <GusSays mood="wink" size={96}>
           Fişi buraya göster, ben de 50 XP vereyim. Anlaştık mı?

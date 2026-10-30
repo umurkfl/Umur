@@ -12,6 +12,9 @@ import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { CropModal } from "@/components/CropModal";
 import { BADGE_ICONS } from "@/lib/badge-icons";
+import { Gus } from "@/components/Gus";
+import { StarIcon } from "@/components/Icons";
+import { computeStats, XP_PER_LEVEL } from "@/lib/gamify";
 
 // Sofra Pusulası — özel ikonlar
 function IconBill() {
@@ -166,83 +169,80 @@ export default function ProfilePage() {
   }
 
   const visibleReceipts = showAllReceipts ? receipts : receipts.slice(0, 4);
+  const gstats = computeStats(receipts);
 
   return (
     <div className="space-y-4 pb-8">
 
-      {/* ── Hero card ── */}
-      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="h-24 bg-gradient-to-br from-primary to-primary-dark relative">
-          <div className="absolute inset-0 opacity-10"
-            style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+      {/* ── Character card: level, XP and Gus ── */}
+      <div className="relative rounded-[32px] border-2 border-b-[6px] border-primary-shade bg-primary text-white overflow-hidden">
+        <div className="absolute inset-0 opacity-[.12] pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1.5px, transparent 1.5px), radial-gradient(circle at 80% 20%, white 1.5px, transparent 1.5px)", backgroundSize: "34px 34px" }} />
+        <div className="absolute right-3 top-3 pointer-events-none">
+          <Gus mood="laugh" size={92} playful={false} />
         </div>
 
-        <div className="px-5 pb-5">
-          <div className="flex items-end justify-between -mt-10 mb-4">
-            {/* Avatar */}
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full border-4 border-surface bg-primary-light overflow-hidden flex items-center justify-center shadow-sm">
+        <div className="relative px-5 pt-5 pb-5">
+          <div className="flex items-start gap-4">
+            <div className="relative shrink-0">
+              <div className="w-24 h-24 rounded-full border-4 border-white bg-primary-light overflow-hidden flex items-center justify-center">
                 {user.avatar
                   ? <img src={user.avatar} className="w-full h-full object-cover" alt={user.name} />
-                  : <span className="text-3xl font-bold text-primary">{user.name.charAt(0).toUpperCase()}</span>
+                  : <span className="text-4xl font-black text-primary">{user.name.charAt(0).toUpperCase()}</span>
                 }
               </div>
               <button
                 onClick={() => photoInputRef.current?.click()}
-                className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-2 border-surface shadow"
+                aria-label="Profil fotoğrafını değiştir"
+                className="absolute -bottom-1 -right-1 w-9 h-9 bg-white rounded-xl border-2 border-b-4 border-border flex items-center justify-center text-primary active:translate-y-0.5 active:border-b-2 transition-all"
               >
-                <Camera className="w-3.5 h-3.5 text-white" />
+                <Camera className="w-4 h-4" strokeWidth={2.75} />
               </button>
               <input ref={photoInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 pb-1">
-              <Link href="/upload"
-                className="flex items-center gap-1.5 bg-primary text-white text-xs font-bold px-3.5 py-2 rounded-full active:bg-primary-dark">
-                <Receipt className="w-3.5 h-3.5" /> Adisyon Ekle
-              </Link>
-              <button onClick={handleLogout}
-                className="p-2 rounded-full border border-border text-muted active:text-red-500 active:border-red-200">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Name & meta */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-charcoal">
+            <div className="flex-1 min-w-0 pt-1 pr-20">
+              <span className="inline-flex items-center gap-1 bg-white/20 rounded-full pl-1.5 pr-2.5 py-0.5 text-xs font-black">
+                <StarIcon size={16} /> Seviye {gstats.level}
+              </span>
+              <h1 className="mt-1.5 !text-[1.6rem] !leading-tight text-white truncate">
                 {showName ? user.name : (user.username ?? deriveUsername(user.name, user.id))}
               </h1>
-              {!showName && (
-                <span className="text-[10px] bg-border/50 text-muted font-semibold px-2 py-0.5 rounded-full">Anonim</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              <p className="text-xs text-muted font-medium">{user.username ?? deriveUsername(user.name, user.id)}</p>
-              {memberSince && (
-                <span className="flex items-center gap-1 text-[11px] text-muted">
-                  <Calendar className="w-3 h-3" /> {memberSince} üye
-                </span>
-              )}
+              <p className="text-sm font-bold text-white/80 truncate">
+                {user.username ?? deriveUsername(user.name, user.id)}{!showName && " · Anonim"}
+              </p>
+              {memberSince && <p className="text-xs font-bold text-white/70 mt-0.5 flex items-center gap-1"><Calendar className="w-3 h-3" /> {memberSince} üye</p>}
             </div>
           </div>
 
-          {/* Social stats */}
-          <div className="grid grid-cols-3 border border-border rounded-xl overflow-hidden">
-            {[
-              { label: "Arkadaş", value: String(friends.length) },
-              { label: "Restoran", value: String(visitedRestaurants.length) },
-              { label: "Adisyon", value: String(receipts.length) },
-            ].map(({ label, value }, i) => (
-              <div key={label} className={`py-3 text-center ${i > 0 ? "border-l border-border" : ""}`}>
-                <p className="text-xl font-bold text-charcoal">{value}</p>
-                <p className="text-[11px] text-muted mt-0.5">{label}</p>
-              </div>
-            ))}
+          <div className="mt-5">
+            <div className="flex justify-between text-xs font-extrabold text-white/85 mb-1.5">
+              <span>{gstats.xp} XP</span>
+              <span>{XP_PER_LEVEL - gstats.xpIntoLevel} XP sonra seviye {gstats.level + 1}</span>
+            </div>
+            <div className="bg-black/20 rounded-full h-4 overflow-hidden">
+              <div className="xp-fill" style={{ width: `${Math.max(gstats.levelProgress * 100, 4)}%` }} />
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Arkadaş", value: String(friends.length) },
+          { label: "Restoran", value: String(visitedRestaurants.length) },
+          { label: "Adisyon", value: String(receipts.length) },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-2xl border-2 border-b-4 border-border bg-surface py-3.5 text-center">
+            <p className="text-2xl font-black text-charcoal leading-none">{value}</p>
+            <p className="text-xs font-extrabold text-muted mt-1.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Link href="/upload" className="btn btn-primary flex-1"><Receipt className="w-5 h-5" /> Adisyon ekle</Link>
+        <button onClick={handleLogout} aria-label="Çıkış yap" className="btn btn-ghost !px-4 !text-muted"><LogOut className="w-5 h-5" /></button>
       </div>
 
       {/* ── Aktif Check-in ── */}

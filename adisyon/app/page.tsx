@@ -8,7 +8,8 @@ import { store, StoredReceipt, StoredComment, CommentReaction } from "@/lib/stor
 import { useAuth } from "@/lib/auth";
 import { WishlistButton } from "@/components/WishlistButton";
 import { ShareSheet } from "@/components/ShareSheet";
-import { HomeHero, FeedEmpty } from "@/components/HomeHero";
+import { HomeHero, FeedEmpty, Greeting } from "@/components/HomeHero";
+import { Stories } from "@/components/Stories";
 import { FeedSkeleton } from "@/components/Skeleton";
 
 function PinIcon({ className }: { className?: string }) {
@@ -351,24 +352,19 @@ export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClo
   const [shareOpen, setShareOpen] = useState(false);
   const [focusComment, setFocusComment] = useState(false);
   const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; dy: number } | null>(null);
 
+  // Full-screen page that slides up from the bottom
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    const card = cardRef.current;
-    const backdrop = backdropRef.current;
-    if (card && backdrop) {
-      backdrop.style.opacity = "0";
-      card.style.transform = "scale(0.93) translateY(20px)";
-      card.style.opacity = "0";
+    const el = pageRef.current;
+    if (el) {
+      el.style.transform = "translateY(100%)";
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        backdrop.style.transition = "opacity 0.22s ease";
-        backdrop.style.opacity = "1";
-        card.style.transition = "transform 0.35s cubic-bezier(0.34,1.15,0.64,1), opacity 0.22s ease";
-        card.style.transform = "scale(1) translateY(0)";
-        card.style.opacity = "1";
+        el.style.transition = "transform 0.42s cubic-bezier(0.2,0.9,0.25,1.02)";
+        el.style.transform = "translateY(0)";
       }));
     }
     return () => { document.body.style.overflow = ""; };
@@ -389,18 +385,30 @@ export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClo
   }, [user, r.userId]);
 
   function handleClose() {
-    const card = cardRef.current;
-    const backdrop = backdropRef.current;
-    if (card && backdrop) {
-      card.style.transition = "transform 0.2s ease, opacity 0.2s ease";
-      card.style.transform = "scale(0.95) translateY(10px)";
-      card.style.opacity = "0";
-      backdrop.style.transition = "opacity 0.2s ease";
-      backdrop.style.opacity = "0";
-      setTimeout(onClose, 200);
+    const el = pageRef.current;
+    if (el) {
+      el.style.transition = "transform 0.28s cubic-bezier(0.4,0,0.6,1)";
+      el.style.transform = "translateY(100%)";
+      setTimeout(onClose, 260);
     } else {
       onClose();
     }
+  }
+
+  // Drag the header down to dismiss
+  function dragStart(e: React.TouchEvent) { drag.current = { y: e.touches[0].clientY, dy: 0 }; if (pageRef.current) pageRef.current.style.transition = "none"; }
+  function dragMove(e: React.TouchEvent) {
+    if (!drag.current) return;
+    const dy = Math.max(0, e.touches[0].clientY - drag.current.y);
+    drag.current.dy = dy;
+    if (pageRef.current) pageRef.current.style.transform = `translateY(${dy}px)`;
+  }
+  function dragEnd() {
+    if (!drag.current) return;
+    const { dy } = drag.current;
+    drag.current = null;
+    if (dy > 130) handleClose();
+    else if (pageRef.current) { pageRef.current.style.transition = "transform .25s cubic-bezier(.2,.8,.3,1)"; pageRef.current.style.transform = "translateY(0)"; }
   }
 
   async function handleDelete() {
@@ -422,176 +430,126 @@ export function ReceiptPopup({ r, onClose, onDelete }: { r: StoredReceipt; onClo
     }, 60);
   }
 
+  const place = [r.district, r.city].filter(Boolean).join(", ");
+
   return (
     <>
-      {/* Blurred backdrop */}
-      <div
-        ref={backdropRef}
-        className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm"
-        onClick={handleClose}
-      />
-
-      {/* Centered card (pointer-events-none on wrapper so padding area hits backdrop) */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div
-          ref={cardRef}
-          className="w-full max-w-sm bg-surface rounded-3xl shadow-2xl overflow-hidden pointer-events-auto flex flex-col"
-          style={{ maxHeight: "88vh" }}
-        >
-          {/* ── Photo header ── */}
+      <div ref={pageRef} className="fixed inset-0 z-[160] bg-page flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        {/* Header: photo (or tint) + close + price badge. Dragging it down closes the page. */}
+        <div className="relative shrink-0" onTouchStart={dragStart} onTouchMove={dragMove} onTouchEnd={dragEnd}>
           {r.photo ? (
-            <div className="relative flex-shrink-0">
-              <button onClick={() => setPhotoOpen(true)} className="block w-full">
-                <img
-                  src={r.photo}
-                  alt={r.restaurantName}
-                  className="w-full object-cover"
-                  style={{ maxHeight: 280 }}
-                />
-              </button>
-              {/* gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
-              {/* close button */}
-              <button
-                onClick={handleClose}
-                className="absolute top-3 right-3 w-8 h-8 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:bg-black/50 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              {/* restaurant name on photo */}
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pointer-events-none">
-                <h2 className="text-white font-bold text-xl leading-tight drop-shadow-lg">{r.restaurantName}</h2>
-                {(r.district || r.city) && (
-                  <p className="text-white/75 text-xs mt-0.5 flex items-center gap-1">
-                    <PinIcon className="w-2 h-2.5 shrink-0" />
-                    {[r.district, r.city].filter(Boolean).join(", ")}
-                  </p>
-                )}
-              </div>
-            </div>
+            <button onClick={() => setPhotoOpen(true)} className="block w-full" aria-label="Fotoğrafı büyüt">
+              <img src={r.photo} alt={r.restaurantName} className="w-full object-cover" style={{ height: "36vh", minHeight: 220 }} />
+            </button>
           ) : (
-            /* ── No-photo header ── */
-            <div className="flex items-start gap-2 px-4 pt-4 pb-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-xl text-charcoal leading-tight">{r.restaurantName}</h2>
-                {(r.district || r.city) && (
-                  <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-                    <PinIcon className="w-2 h-2.5 shrink-0" />
-                    {[r.district, r.city].filter(Boolean).join(", ")}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={handleClose}
-                className="w-8 h-8 bg-background rounded-full flex items-center justify-center text-muted shrink-0 active:bg-border transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            <div className="w-full flex items-center justify-center bg-primary-light" style={{ height: "24vh", minHeight: 150 }}>
+              <Receipt className="w-16 h-16 text-primary/30" strokeWidth={1.5} />
             </div>
           )}
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/35 to-transparent pointer-events-none" />
+          <button
+            onClick={handleClose}
+            aria-label="Kapat"
+            className="absolute top-3 left-3 w-10 h-10 rounded-2xl bg-white border-2 border-b-4 border-border flex items-center justify-center text-charcoal active:translate-y-0.5 active:border-b-2 transition-all"
+          >
+            <X className="w-5 h-5" strokeWidth={3} />
+          </button>
+          <div className="absolute right-3 bottom-[-22px] rounded-2xl bg-white border-2 border-b-4 border-border px-4 py-2 text-right shadow-sm">
+            <p className="text-2xl font-black text-primary leading-none">{formatCurrency(r.perPerson)}</p>
+            <p className="text-[11px] font-extrabold text-muted mt-0.5">kişi başı</p>
+          </div>
+        </div>
 
-          {/* ── Scrollable body ── */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto">
-
-            {/* User row */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40">
-              <Link
-                href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`}
-                onClick={handleClose}
-                className="flex items-center gap-2.5 flex-1 min-w-0"
-              >
-                {ownerAvatar
-                  ? <img src={ownerAvatar} className="w-9 h-9 rounded-full object-cover shrink-0" alt={r.userName} />
-                  : <div className="w-9 h-9 bg-primary-light rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">{r.userName.charAt(0).toUpperCase()}</div>
-                }
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-ink">{r.userName}</p>
-                  <p className="text-xs text-muted">{timeAgo(r.createdAt)} · {r.people} kişi</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted shrink-0" />
-              </Link>
-              {user && user.id !== r.userId && (
-                <button
-                  onClick={addFriend}
-                  disabled={friendStatus !== "none"}
-                  className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
-                    friendStatus === "friend" ? "bg-primary-light text-primary" :
-                    friendStatus === "pending" ? "bg-background border border-border text-muted" :
-                    "bg-primary text-white active:scale-95"
-                  }`}
-                >
-                  {friendStatus === "friend" ? "Arkadaş ✓" : friendStatus === "pending" ? "Bekliyor" : "+ Arkadaş"}
-                </button>
-              )}
-            </div>
-
-            {/* Price card */}
-            <div className="mx-4 my-4">
-              <div className="rounded-2xl px-5 py-4 flex items-center justify-between text-white shadow-lg" style={{ background: "linear-gradient(135deg, var(--color-primary) 0%, #059669 100%)" }}>
-                <div>
-                  <p className="text-[10px] font-semibold text-white/60 uppercase tracking-widest">Kişi başı</p>
-                  <p className="text-[34px] font-black leading-none mt-1 tracking-tight">{formatCurrency(r.perPerson)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-white/60 uppercase tracking-widest">Toplam</p>
-                  <p className="text-xl font-bold mt-1">{formatCurrency(r.total)}</p>
-                  <p className="text-[10px] text-white/50 mt-0.5">{r.people} kişi</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Rating + review */}
-            {(r.rating > 0 || r.comment) && (
-              <div className="px-4 pb-3 space-y-1.5">
-                {r.rating > 0 && (
-                  <div className="flex gap-0.5">
-                    {[1,2,3,4,5].map((s) => (
-                      <Star key={s} className={`w-4 h-4 ${s <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
-                    ))}
-                  </div>
-                )}
-                {r.comment && <p className="text-sm text-ink leading-relaxed">{r.comment}</p>}
+        {/* Body */}
+        <div ref={contentRef} className="flex-1 overflow-y-auto">
+          <div className="px-4 pt-5 pb-4">
+            <h2 className="text-[26px] font-black text-charcoal leading-tight pr-28">{r.restaurantName}</h2>
+            {place && (
+              <p className="mt-1 text-sm font-bold text-muted flex items-center gap-1">
+                <PinIcon className="w-2.5 h-3 shrink-0" /> {place}
+              </p>
+            )}
+            {r.rating > 0 && (
+              <div className="mt-2 flex items-center gap-1">
+                {[1,2,3,4,5].map((st) => (
+                  <Star key={st} className={`w-5 h-5 ${st <= r.rating ? "fill-yellow-400 stroke-yellow-400" : "stroke-border"}`} />
+                ))}
+                <span className="ml-1 text-sm font-black text-charcoal">{r.rating}.0</span>
               </div>
             )}
+          </div>
 
-            {/* Comment section */}
-            <div className="border-t border-border/40">
-              <CommentSection receiptId={r.id} inline autoFocus={focusComment} />
+          {/* Numbers */}
+          <div className="px-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border-2 border-b-4 border-border px-4 py-3">
+              <p className="text-[11px] font-extrabold text-muted uppercase tracking-wide">Toplam</p>
+              <p className="text-xl font-black text-charcoal mt-0.5">{formatCurrency(r.total)}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-b-4 border-border px-4 py-3">
+              <p className="text-[11px] font-extrabold text-muted uppercase tracking-wide">Kişi sayısı</p>
+              <p className="text-xl font-black text-charcoal mt-0.5">{r.people} kişi</p>
             </div>
           </div>
 
-          {/* ── Action bubbles footer ── */}
-          <div className="flex items-center gap-2 px-4 py-3 border-t border-border/40 bg-surface shrink-0">
-            <HelpfulButton receiptId={r.id} />
-            <button
-              onClick={handleCommentClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 active:bg-primary-light active:text-primary active:border-primary transition-all"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Yorum
+          {r.comment && <p className="px-4 mt-4 text-base font-semibold text-ink leading-relaxed">{r.comment}</p>}
+
+          {/* Who shared it */}
+          <div className="mx-4 mt-5 flex items-center gap-3 rounded-2xl border-2 border-b-4 border-border px-3.5 py-3">
+            <Link href={`/users?id=${r.userId}&n=${encodeURIComponent(r.userName)}`} onClick={handleClose} className="flex items-center gap-3 flex-1 min-w-0">
+              {ownerAvatar
+                ? <img src={ownerAvatar} className="w-10 h-10 rounded-full object-cover shrink-0" alt={r.userName} />
+                : <div className="w-10 h-10 bg-primary-light rounded-full flex items-center justify-center text-base font-black text-primary shrink-0">{r.userName.charAt(0).toUpperCase()}</div>
+              }
+              <div className="flex-1 min-w-0 leading-tight">
+                <p className="text-sm font-extrabold text-charcoal truncate">{r.userName}</p>
+                <p className="text-xs font-semibold text-muted">{timeAgo(r.createdAt)} paylaştı</p>
+              </div>
+            </Link>
+            {user && user.id !== r.userId && (
+              <button
+                onClick={addFriend}
+                disabled={friendStatus !== "none"}
+                className={`shrink-0 text-xs font-extrabold px-3.5 py-2 rounded-xl transition-all ${
+                  friendStatus === "friend" ? "bg-primary-light text-primary" :
+                  friendStatus === "pending" ? "bg-background text-muted" :
+                  "btn btn-primary btn-sm !px-3.5 !py-2"
+                }`}
+              >
+                {friendStatus === "friend" ? "Arkadaş" : friendStatus === "pending" ? "Bekliyor" : "Arkadaş ekle"}
+              </button>
+            )}
+          </div>
+
+          <div className="mt-5 border-t-2 border-border">
+            <CommentSection receiptId={r.id} inline autoFocus={focusComment} />
+          </div>
+        </div>
+
+        {/* Sticky actions */}
+        <div className="shrink-0 flex items-center gap-2 px-4 pt-3 border-t-2 border-border bg-page" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
+          <HelpfulButton receiptId={r.id} />
+          <button onClick={handleCommentClick} className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-extrabold border border-border text-muted bg-surface active:scale-95 transition-transform">
+            <MessageCircle className="w-4 h-4" /> Yorum
+          </button>
+          {user && (
+            <button onClick={() => setShareOpen(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-extrabold border border-border text-muted bg-surface active:scale-95 transition-transform">
+              <Send className="w-4 h-4" /> Gönder
             </button>
-            <button
-              onClick={() => setShareOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-border text-muted bg-surface active:scale-95 active:bg-primary-light active:text-primary active:border-primary transition-all"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Gönder
-            </button>
-            <div className="ml-auto flex items-center gap-1.5">
-              <WishlistButton restaurantName={r.restaurantName} size="sm" />
-              {user?.id === r.userId && (
-                confirmDelete ? (
-                  <>
-                    <button onClick={handleDelete} className="text-xs font-semibold text-red-500 px-2 py-1 active:opacity-70">Sil</button>
-                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted px-2 py-1 active:opacity-70">İptal</button>
-                  </>
-                ) : (
-                  <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 flex items-center justify-center rounded-full text-muted active:bg-red-50 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )
-              )}
-            </div>
+          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            <WishlistButton restaurantName={r.restaurantName} size="sm" />
+            {user?.id === r.userId && (
+              confirmDelete ? (
+                <>
+                  <button onClick={handleDelete} className="text-xs font-extrabold text-red-500 px-2 py-1 active:opacity-70">Sil</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs font-bold text-muted px-2 py-1 active:opacity-70">İptal</button>
+                </>
+              ) : (
+                <button onClick={() => setConfirmDelete(true)} aria-label="Sil" className="w-9 h-9 flex items-center justify-center rounded-full text-muted active:bg-red-50 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -935,6 +893,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-0">
+      <Greeting />
+      <Stories onOpen={(rc) => setPopupReceipt(rc)} />
       <HomeHero />
 
       {!loaded && <FeedSkeleton />}
