@@ -11,6 +11,7 @@ import { CommentSection, ReceiptPopup } from "@/app/page";
 import { WishlistButton } from "@/components/WishlistButton";
 import { useAuth } from "@/lib/auth";
 import { Gus } from "@/components/Gus";
+import { Skel } from "@/components/Skeleton";
 
 const DISCOVERY_LIST = "Keşfetten Gelenler";
 
@@ -288,17 +289,10 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
   if (done) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-8 space-y-3">
-        <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mb-2">
-          <Layers className="w-8 h-8 text-primary/40" />
-        </div>
-        <p className="font-bold text-charcoal text-lg">Hepsi bu kadar!</p>
-        <p className="text-sm text-muted">Yeni adisyonlar eklendikçe burada görünecek.</p>
-        <button
-          onClick={() => setIndex(0)}
-          className="mt-2 text-sm font-semibold text-primary bg-primary-light px-5 py-2 rounded-full"
-        >
-          Başa dön
-        </button>
+        <Gus mood="laugh" size={150} extra={["confetti"]} />
+        <p className="font-black text-charcoal text-2xl">Hepsini gezdin!</p>
+        <p className="text-sm font-semibold text-muted">Yeni adisyonlar geldikçe burada olacak. Bu arada mide bulandıran bir şey yok.</p>
+        <button onClick={() => setIndex(0)} className="btn btn-primary btn-sm mt-2">Başa dön</button>
       </div>
     );
   }
@@ -325,30 +319,24 @@ function SwipeMode({ receipts }: { receipts: StoredReceipt[] }) {
       </div>
 
       {/* Action buttons — small, icon only, no labels */}
-      <div className="flex items-center justify-center gap-8 mt-4">
-        <button
-          onClick={handleSwipeRight}
-          className="w-11 h-11 rounded-full bg-surface border border-border shadow flex items-center justify-center active:scale-90 transition-transform"
-        >
-          <X className="w-5 h-5 text-muted" />
+      <div className="flex items-center justify-center gap-5 mt-5 px-4">
+        <button onClick={handleSwipeRight} aria-label="Geç" className="btn btn-ghost !px-0 w-16 h-14 !rounded-2xl">
+          <X className="w-7 h-7 text-muted" strokeWidth={3} />
         </button>
-        <span className="text-[10px] text-muted tabular-nums">{index + 1} / {receipts.length}</span>
-        <button
-          onClick={handleSwipeLeft}
-          className="w-11 h-11 rounded-full bg-primary shadow-md shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform"
-        >
-          <Bookmark className="w-5 h-5 text-white" />
+        <div className="flex-1 max-w-[120px]">
+          <div className="xp-bar !h-3"><div className="xp-fill" style={{ width: `${((index + 1) / receipts.length) * 100}%` }} /></div>
+          <p className="text-center text-[11px] font-extrabold text-muted mt-1 tabular-nums">{index + 1} / {receipts.length}</p>
+        </div>
+        <button onClick={handleSwipeLeft} aria-label="Kaydet" className="btn btn-primary !px-0 w-16 h-14 !rounded-2xl">
+          <Bookmark className="w-7 h-7" strokeWidth={3} />
         </button>
       </div>
 
       {/* Feedback toast */}
       {lastAction && (
-        <div
-          className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-2xl text-sm font-bold shadow-lg z-50 ${
-            lastAction === "save" ? "bg-primary text-white" : "bg-charcoal text-white"
-          }`}
-        >
-          {lastAction === "save" ? "Keşfetten Gelenler'e eklendi" : "Geçildi"}
+        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 pop-in pointer-events-none flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-2xl bg-surface border-2 border-b-4 border-border">
+          <Gus mood={lastAction === "save" ? "love" : "wink"} size={44} playful={false} />
+          <span className="text-sm font-extrabold text-charcoal">{lastAction === "save" ? "Listene eklendi!" : "Tamam, geçtik."}</span>
         </div>
       )}
 
@@ -604,7 +592,7 @@ function DiscoverPageInner() {
       {/* ── Swipe tab ── */}
       {tab === "swipe" && (
         allReceipts.length === 0
-          ? <div className="flex items-center justify-center py-24 text-muted text-sm">Yükleniyor...</div>
+          ? <div className="px-1"><Skel className="w-full rounded-[28px]" /></div>
           : <SwipeMode receipts={allReceipts} />
       )}
 

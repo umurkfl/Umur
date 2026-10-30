@@ -257,7 +257,7 @@ export default function UploadPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 gap-3">
         <Gus mood="laugh" size={170} body="bust" prop="trophy" extra={["confetti"]} />
-        <h2 className="text-2xl font-black text-charcoal">Harika! Fiş paylaşıldı</h2>
+        <h2 className="text-2xl font-black text-charcoal">Eline sağlık, fiş yayında!</h2>
         <p className="text-sm font-semibold text-muted">
           {name} · {formatCurrency(parseFloat(total))} · {people} kişi
           {perPerson ? ` · kişi başı ${perPerson}` : ""}
@@ -497,7 +497,7 @@ export default function UploadPage() {
       <h1 className="text-xl font-bold text-charcoal">Adisyon Ekle</h1>
       {!photoUrl && (
         <GusSays mood="wink" size={96}>
-          Fişin fotoğrafını çek, ben de 50 XP vereyim!
+          Fişi buraya göster, ben de 50 XP vereyim. Anlaştık mı?
         </GusSays>
       )}
 

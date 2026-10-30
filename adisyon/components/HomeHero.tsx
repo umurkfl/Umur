@@ -28,7 +28,7 @@ export function HomeHero() {
     return (
       <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-5">
         <GusSays mood="happy" size={128}>
-          Selam, ben Gus! Gerçek fiyatları birlikte toplayalım.
+          Selam, ben Gus! Hesaplar acımasız, gerçek fiyatları birlikte toplayalım.
         </GusSays>
         <p className="mt-3 text-sm font-semibold text-muted leading-relaxed">
           Adisyonunu paylaş, başkalarının nerede ne kadar ödediğini gör. Her fiş sana XP kazandırır.
@@ -45,8 +45,8 @@ export function HomeHero() {
     <section className="mx-4 mt-4 mb-5 rounded-3xl border-2 border-b-4 border-border bg-surface p-4">
       <GusSays mood={done ? "laugh" : "wink"} size={128}>
         {done
-          ? "Bu hafta fişini ekledin. Harikasın!"
-          : "Bu hafta henüz fiş yok. Bugün nerede yedin?"}
+          ? "Bu hafta fişini ekledin. Hem doydun hem seviye kazandın!"
+          : "Bu hafta fiş yok ama karnın doymuş görünüyor. Nerede yedin?"}
       </GusSays>
 
       {stats && (
@@ -86,8 +86,8 @@ export function FeedEmpty() {
   return (
     <div className="mx-4 mb-6 flex flex-col items-center text-center rounded-3xl border-2 border-dashed border-border px-6 py-8">
       <Gus mood="think" size={120} />
-      <p className="mt-3 font-black text-charcoal text-lg">Akış henüz boş</p>
-      <p className="mt-1 text-sm font-semibold text-muted">İlk adisyonu sen paylaş, akışı sen başlat.</p>
+      <p className="mt-3 font-black text-charcoal text-lg">Akış sessiz, çok sessiz</p>
+      <p className="mt-1 text-sm font-semibold text-muted">İlk adisyonu sen paylaş, akışı sen başlat. Ben izlerim.</p>
     </div>
   );
 }

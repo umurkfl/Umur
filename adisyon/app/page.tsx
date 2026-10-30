@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { WishlistButton } from "@/components/WishlistButton";
 import { ShareSheet } from "@/components/ShareSheet";
 import { HomeHero, FeedEmpty } from "@/components/HomeHero";
+import { FeedSkeleton } from "@/components/Skeleton";
 
 function PinIcon({ className }: { className?: string }) {
   return (
@@ -880,11 +881,20 @@ export default function HomePage() {
   const [userReceipts, setUserReceipts] = useState<StoredReceipt[]>([]);
   const [popupReceipt, setPopupReceipt] = useState<StoredReceipt | null>(null);
   const [avatarCache, setAvatarCache] = useState<Record<string, string | null>>({});
+  const [loaded, setLoaded] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  useEffect(() => {
+    const again = () => setRefreshTick((n) => n + 1);
+    window.addEventListener("grazer:refresh", again);
+    return () => window.removeEventListener("grazer:refresh", again);
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
     store.getPrivacyFilteredReceipts(user?.id).then((receipts) => {
       setUserReceipts(receipts);
+      setLoaded(true);
       // Fetch avatars for unique users in the feed
       const uniqueIds = [...new Set(receipts.map((r) => r.userId))];
       uniqueIds.forEach((id) => {
@@ -893,7 +903,7 @@ export default function HomePage() {
         });
       });
     });
-  }, [ready, user?.id]);
+  }, [ready, user?.id, refreshTick]);
 
   // Open a specific receipt when navigating from a notification (cross-page case)
   useEffect(() => {
@@ -927,7 +937,8 @@ export default function HomePage() {
     <div className="space-y-0">
       <HomeHero />
 
-      {ready && userReceipts.length === 0 && <FeedEmpty />}
+      {!loaded && <FeedSkeleton />}
+      {loaded && userReceipts.length === 0 && <FeedEmpty />}
 
       {/* Feed */}
       {userReceipts.length > 0 && (

@@ -70,7 +70,7 @@ strong, b { font-weight: 800; }
 
 /* Page enter */
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-main > * { animation: page-in .32s ease-out both; }
+
 
 /* Chunky 3D buttons: .btn + a colour variant */
 .btn {
@@ -196,3 +196,20 @@ main h1 { font-size: 1.9rem; line-height: 1.12; font-weight: 900; letter-spacing
 .app-header[data-scrolled="1"] { border-bottom-color: var(--color-border); }
 .photo-card .photo { aspect-ratio: 4 / 3; width: 100%; background: var(--color-background); }
 .photo-card img.photo { object-fit: cover; display: block; }
+
+/* ═══ Motion ═════════════════════════════════════════════════════════════ */
+@keyframes route-in { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+/* "backwards" (not "both"): a lingering transform effect would trap position:fixed children */
+.route-enter { animation: route-in .3s cubic-bezier(.2,.8,.3,1) backwards; }
+
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.rounded-t-3xl { animation: sheet-up .38s cubic-bezier(.2,.9,.25,1.05) both; }
+.bg-black\/50, .bg-black\/60 { animation: fade-in .22s ease both; }
+
+@keyframes shimmer { 0% { background-position: -240px 0; } 100% { background-position: 240px 0; } }
+.skeleton {
+  background: linear-gradient(90deg, var(--color-background) 0%, color-mix(in srgb, var(--color-background) 55%, var(--color-surface)) 50%, var(--color-background) 100%);
+  background-size: 480px 100%; animation: shimmer 1.3s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .route-enter, .rounded-t-3xl, .skeleton { animation: none !important; } }

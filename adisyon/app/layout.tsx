@@ -4,6 +4,9 @@ import "./globals.css";
 import { Navigation } from "@/components/Navigation";
 import { Providers } from "@/components/Providers";
 import { Onboarding } from "@/components/Onboarding";
+import { RouteTransition } from "@/components/RouteTransition";
+import { SheetEnhancer } from "@/components/SheetEnhancer";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const nunito = Nunito({ subsets: ["latin", "latin-ext"], weight: ["400", "600", "700", "800", "900"], variable: "--font-nunito" });
 
@@ -22,8 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-page font-body text-ink">
         <Providers>
           <Onboarding />
+          <SheetEnhancer />
+          <PullToRefresh />
           <Navigation />
-          <main className="max-w-2xl mx-auto px-4 pb-24 pt-4">{children}</main>
+          <main className="max-w-2xl mx-auto px-4 pb-24 pt-4"><RouteTransition>{children}</RouteTransition></main>
         </Providers>
       </body>
     </html>

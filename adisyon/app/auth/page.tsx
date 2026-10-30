@@ -153,10 +153,10 @@ export default function AuthPage() {
 
       <GusSays mood={error ? "sad" : tab === "login" ? "happy" : "laugh"} size={116} body="bust">
         {error
-          ? "Hımm, bir şeyler ters gitti. Bir daha dener misin?"
+          ? "Hımm, bir şeyler ters gitti. Bir daha deneyelim mi?"
           : tab === "login"
-            ? "Tekrar hoş geldin! Giriş yap, serini sürdür."
-            : "Aramıza katıl! İlk fişinle 50 XP kazanırsın."}
+            ? "Hoş geldin! Seni bekliyordum, hadi içeri."
+            : "Aramıza katıl! İlk fişinle 50 XP benden."}
       </GusSays>
 
       <button

@@ -9,6 +9,7 @@ import { ReceiptPopup } from "@/app/page";
 import { TR_CITIES, TR_DISTRICTS, reverseGeocodeCity } from "@/lib/turkey-locations";
 import { formatCurrency, timeAgo } from "@/lib/mock";
 import { Gus, GusFace } from "@/components/Gus";
+import { ListSkeleton } from "@/components/Skeleton";
 import type { GusMood } from "@/lib/gus";
 
 type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
@@ -768,8 +769,9 @@ export default function FriendsPage() {
     loadData();
     const onFocus = () => loadData();
     window.addEventListener("focus", onFocus);
+    window.addEventListener("grazer:refresh", onFocus);
     const interval = setInterval(loadData, 30_000);
-    return () => { window.removeEventListener("focus", onFocus); clearInterval(interval); };
+    return () => { window.removeEventListener("focus", onFocus); window.removeEventListener("grazer:refresh", onFocus); clearInterval(interval); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -915,7 +917,7 @@ export default function FriendsPage() {
       {tab === "akis" && (
         <div className="px-4 space-y-3">
           {loading ? (
-            <div className="text-center text-muted py-12">Yükleniyor...</div>
+            <ListSkeleton rows={4} />
           ) : activity.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-3 text-center">
               <Gus mood="think" size={130} />
