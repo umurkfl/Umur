@@ -1,4 +1,4 @@
-:HL["/Umur/_next/static/chunks/07kqk.e4.zird.css","style"]
+:HL["/Umur/_next/static/chunks/0w7k8rpoglnsr.css","style"]
 :HL["/Umur/_next/static/media/07454f8ad8aaac57-s.p.0tqkxa-w3pk~c.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/Umur/_next/static/media/d8cb5ab3660140cd-s.p.0ri_id_kcagyz.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"restaurants","param":null,"prefetchHints":0,"slots":{"children":{"name":"slug","param":{"type":"d","key":"durumcu-ahmet","siblings":null},"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"5bgnBABZx3don4WJkm-fT"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"restaurants","param":null,"prefetchHints":0,"slots":{"children":{"name":"slug","param":{"type":"d","key":"durumcu-ahmet","siblings":null},"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"ZLE5BRbI3irnKzA5Uu0t-"}
