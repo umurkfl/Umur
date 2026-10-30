@@ -11,6 +11,7 @@ import { formatCurrency, timeAgo } from "@/lib/mock";
 import { Gus, GusFace } from "@/components/Gus";
 import { ListSkeleton } from "@/components/Skeleton";
 import { haptic } from "@/lib/haptics";
+import { Leaderboard, TogetherCards, Suggestions, FriendRich, Person, Suggestion } from "@/components/FriendsParts";
 import type { GusMood } from "@/lib/gus";
 
 type Tab = "akis" | "arkadaslar" | "kesfet" | "mesajlar";
@@ -740,6 +741,8 @@ export default function FriendsPage() {
   const [allMessages, setAllMessages] = useState<StoredDirectMessage[]>([]);
   const [openConversation, setOpenConversation] = useState<{ otherId: string; otherName: string } | null>(null);
   const [dmTableReady, setDmTableReady] = useState<boolean | null>(null);
+  const [feedReceipts, setFeedReceipts] = useState<StoredReceipt[]>([]);
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
   async function loadData() {
     if (!user) { setLoading(false); return; }
@@ -750,6 +753,7 @@ export default function FriendsPage() {
       store.getAllMessages(user.id),
     ]);
     setAllMessages(msgs);
+    store.getPrivacyFilteredReceipts(user.id).then(setFeedReceipts);
     setFriendships(fs);
     setMyReceipts(myR);
     setMyCheckIns(myCI);
@@ -835,6 +839,29 @@ export default function FriendsPage() {
   const accepted = friendships.filter((f) => f.status === "accepted");
   const friendIdSet = new Set(accepted.map((f) => f.userId === user?.id ? f.friendId : f.userId));
 
+  // People model for the league, friend cards and "birlikte yedik"
+  const friendPeople: Person[] = user ? accepted.map((f) => {
+    const id = f.userId === user.id ? f.friendId : f.userId;
+    const stored = f.userId === user.id ? f.friendName : f.userName;
+    const rs = friendReceipts.filter((r) => r.userId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return { id, name: rs[0]?.userName || stored, receipts: rs };
+  }) : [];
+  const mePerson: Person | null = user ? { id: user.id, name: user.name, receipts: myReceipts.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)), isMe: true } : null;
+
+  // Suggestions: people (not friends) who went to the same places as me
+  const mySpots = new Set(myReceipts.map((r) => r.restaurantName.toLowerCase()));
+  const suggestions: Suggestion[] = (() => {
+    if (!user || !mySpots.size) return [];
+    const byUser = new Map<string, { name: string; shared: Set<string> }>();
+    for (const r of feedReceipts) {
+      if (r.userId === user.id || friendIdSet.has(r.userId) || !mySpots.has(r.restaurantName.toLowerCase())) continue;
+      const e = byUser.get(r.userId) ?? { name: r.userName, shared: new Set<string>() };
+      e.shared.add(r.restaurantName);
+      byUser.set(r.userId, e);
+    }
+    return [...byUser.entries()].map(([id, v]) => ({ id, name: v.name, shared: [...v.shared] })).sort((a, b) => b.shared.length - a.shared.length).slice(0, 8);
+  })();
+
   const HOURS_24 = 24 * 60 * 60 * 1000;
   function within24h(createdAt: string) { return Date.now() - new Date(createdAt).getTime() < HOURS_24; }
 
@@ -888,22 +915,22 @@ export default function FriendsPage() {
   return (
     <div className="pb-24">
       <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-        <h1 className="font-bold text-charcoal text-xl">Arkadaşlar</h1>
-        <button onClick={() => setCheckInOpen(true)} className="flex items-center gap-1.5 bg-primary-light text-primary font-semibold text-xs px-3 py-2 rounded-full">
-          <MapPin className="w-3.5 h-3.5" /> Neredeyim?
+        <h1>Arkadaşlar</h1>
+        <button onClick={() => setCheckInOpen(true)} className="btn btn-ghost btn-sm !text-primary shrink-0">
+          <MapPin className="w-4 h-4" strokeWidth={3} /> Neredeyim?
         </button>
       </div>
 
       {pendingIncoming.length > 0 && (
-        <div className="mx-4 mb-3 bg-primary-light/50 border border-primary/20 rounded-2xl p-3.5">
-          <p className="text-xs font-semibold text-primary mb-2.5">{pendingIncoming.length} arkadaşlık isteği</p>
-          <div className="space-y-2">
+        <div className="mx-4 mb-4 rounded-3xl border-2 border-b-4 border-primary/30 bg-primary-light p-4">
+          <p className="text-sm font-black text-primary mb-3">{pendingIncoming.length} arkadaşlık isteği</p>
+          <div className="space-y-3">
             {pendingIncoming.map((f) => (
-              <div key={f.id} className="flex items-center gap-2">
-                <UserAvatar userId={f.userId} name={f.userName} size="sm" />
-                <span className="flex-1 text-sm font-medium text-ink">{f.userName}</span>
-                <button onClick={() => acceptRequest(f)} className="w-8 h-8 bg-primary rounded-full flex items-center justify-center"><Check className="w-4 h-4 text-white" /></button>
-                <button onClick={() => rejectRequest(f.id)} className="w-8 h-8 bg-background border border-border rounded-full flex items-center justify-center"><X className="w-4 h-4 text-muted" /></button>
+              <div key={f.id} className="flex items-center gap-3">
+                <UserAvatar userId={f.userId} name={f.userName} />
+                <span className="flex-1 min-w-0 text-base font-black text-charcoal truncate">{f.userName}</span>
+                <button onClick={() => acceptRequest(f)} className="btn btn-primary btn-sm">Kabul</button>
+                <button onClick={() => rejectRequest(f.id)} className="btn btn-ghost btn-sm !text-muted">Reddet</button>
               </div>
             ))}
           </div>
@@ -928,6 +955,7 @@ export default function FriendsPage() {
 
       {tab === "akis" && (
         <div className="px-4 space-y-3">
+          {!loading && <TogetherCards my={myReceipts} friends={friendPeople} meId={user.id} meName={user.name} />}
           {loading ? (
             <ListSkeleton rows={4} />
           ) : activity.length === 0 ? (
@@ -958,58 +986,37 @@ export default function FriendsPage() {
       )}
 
       {tab === "arkadaslar" && (
-        <div className="px-4 space-y-3">
+        <div className="px-4 space-y-4">
+          {accepted.length > 0 && mePerson && <Leaderboard people={[mePerson, ...friendPeople]} />}
           {accepted.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-3 text-center">
               <Gus mood="sad" size={130} />
               <p className="font-black text-charcoal text-lg">Henüz arkadaşın yok</p>
+              <p className="text-sm font-semibold text-muted">Arkadaş ekle, birlikte tırmanın.</p>
               <button onClick={() => setTab("kesfet")} className="btn btn-primary btn-sm">Arkadaş ara</button>
             </div>
           ) : (
-            accepted.map((f) => {
-              const friendId = f.userId === user.id ? f.friendId : f.userId;
-              const storedName = f.userId === user.id ? f.friendName : f.userName;
-              const latestCheckIn = friendCheckIns.find((c) => c.userId === friendId && within24h(c.createdAt));
-              const latestReceipt = friendReceipts.find((r) => r.userId === friendId);
-              const friendName = latestReceipt?.userName || latestCheckIn?.userName || storedName;
-              const isConfirming = confirmRemove === f.id;
-              return (
-                <div key={f.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
-                  <Link href={`/users?id=${friendId}&n=${encodeURIComponent(friendName)}`} className="flex items-center gap-3 flex-1 min-w-0">
-                    <UserAvatar userId={friendId} name={friendName} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-ink">{friendName}</p>
-                      {latestCheckIn && <p className="text-xs text-muted truncate"><MapPin className="w-3 h-3 inline -mt-0.5 mr-0.5" />{latestCheckIn.restaurantName}{latestCheckIn.district ? `, ${latestCheckIn.district}` : latestCheckIn.city ? `, ${latestCheckIn.city}` : ""} · {timeAgo(latestCheckIn.createdAt)}</p>}
-                      {!latestCheckIn && latestReceipt && <p className="text-xs text-muted truncate"><Receipt className="w-3 h-3 inline -mt-0.5 mr-0.5" />{latestReceipt.restaurantName} · {timeAgo(latestReceipt.createdAt)}</p>}
-                    </div>
-                  </Link>
-                  {isConfirming ? (
-                    <div className="flex gap-1.5 shrink-0">
-                      <button
-                        onClick={() => rejectRequest(f.id)}
-                        className="text-xs font-semibold text-red-500 border border-red-200 bg-red-50 px-2.5 py-1.5 rounded-full active:scale-95 transition-transform"
-                      >
-                        Evet, çıkar
-                      </button>
-                      <button
-                        onClick={() => setConfirmRemove(null)}
-                        className="text-xs font-semibold text-muted border border-border bg-background px-2.5 py-1.5 rounded-full active:scale-95 transition-transform"
-                      >
-                        İptal
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmRemove(f.id)}
-                      className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted active:bg-background transition-colors"
-                      title="Arkadaşlıktan çıkar"
-                    >
-                      <UserMinus className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              );
-            })
+            <div className="space-y-3">
+              <h2 className="text-xl font-black text-charcoal">Arkadaşların</h2>
+              {accepted.map((f) => {
+                const friendId = f.userId === user.id ? f.friendId : f.userId;
+                const person = friendPeople.find((p) => p.id === friendId)!;
+                const ci = friendCheckIns.find((c) => c.userId === friendId && within24h(c.createdAt));
+                return (
+                  <FriendRich
+                    key={f.id}
+                    person={person}
+                    place={ci ? `${ci.restaurantName}${ci.district ? `, ${ci.district}` : ""}` : undefined}
+                    placeAt={ci?.createdAt}
+                    confirming={confirmRemove === f.id}
+                    onMessage={() => { haptic("tap"); setOpenConversation({ otherId: friendId, otherName: person.name }); }}
+                    onAskRemove={() => setConfirmRemove(f.id)}
+                    onConfirmRemove={() => rejectRequest(f.id)}
+                    onCancelRemove={() => setConfirmRemove(null)}
+                  />
+                );
+              })}
+            </div>
           )}
           {pendingOutgoing.length > 0 && (
             <div className="mt-4">
@@ -1033,20 +1040,21 @@ export default function FriendsPage() {
 
       {tab === "kesfet" && (
         <div className="px-4">
+          {!searchQuery && <Suggestions items={suggestions} sent={sentIds} onAdd={(id, name) => { setSentIds((p) => new Set(p).add(id)); sendRequest(id, name); }} />}
           <div className="relative mb-4">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" strokeWidth={2.75} />
             <input type="text" value={searchQuery} onChange={(e) => search(e.target.value)} placeholder="İsme göre ara..."
-              className="w-full pl-10 pr-4 py-3 rounded-2xl border border-border bg-background text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-border bg-page text-base font-bold text-ink focus:outline-none focus:border-primary" />
           </div>
           {searchLoading && <div className="text-center text-muted py-8">Aranıyor...</div>}
           {!searchLoading && searchQuery && searchResults.length === 0 && <div className="text-center text-muted py-8">Kullanıcı bulunamadı.</div>}
-          {!searchQuery && <div className="text-center text-muted py-12 text-sm">Adisyon paylaşan üyeleri isimle arayabilirsin.</div>}
+          {!searchQuery && suggestions.length === 0 && <div className="text-center text-muted font-semibold py-12 text-sm">Adisyon paylaşan üyeleri isimle arayabilirsin.</div>}
           <div className="space-y-3">
             {searchResults.map((u) => {
               const isFriend = friendIdSet.has(u.id);
               const isPending = friendships.some((f) => f.userId === user.id && f.friendId === u.id && f.status === "pending");
               return (
-                <div key={u.id} className="flex items-center gap-3 bg-surface rounded-2xl border border-border p-3.5">
+                <div key={u.id} className="flex items-center gap-3 bg-surface rounded-3xl border-2 border-b-4 border-border p-3.5">
                   <Link href={`/users?id=${u.id}&n=${encodeURIComponent(u.name)}`}>
                     <UserAvatar userId={u.id} name={u.name} />
                   </Link>
@@ -1055,7 +1063,7 @@ export default function FriendsPage() {
                     <p className="text-xs text-muted">{deriveUsername(u.name, u.id)} · {u.receiptCount} adisyon</p>
                   </div>
                   {isFriend ? (
-                    <span className="text-xs text-primary font-semibold bg-primary-light px-3 py-1.5 rounded-full">Arkadaş ✓</span>
+                    <span className="text-xs text-primary font-extrabold bg-primary-light px-3 py-2 rounded-xl">Arkadaş</span>
                   ) : isPending ? (
                     <button
                       onClick={() => {
