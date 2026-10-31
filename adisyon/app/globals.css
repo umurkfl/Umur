@@ -217,3 +217,32 @@ main h1 { font-size: 1.9rem; line-height: 1.12; font-weight: 900; letter-spacing
 /* number inputs: no browser spinners */
 input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* ═══ Mountain scenes ════════════════════════════════════════════════════ */
+.ms-gus .gus { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+.ms-cloud { animation: ms-drift 50s linear infinite; }
+.ms-flake { animation: ms-fall 6s linear infinite; }
+.ms-twinkle { animation: ms-twinkle 3s ease-in-out infinite; }
+.ms-flag { transform-box: fill-box; transform-origin: 0% 50%; animation: ms-wave 1.4s ease-in-out infinite; }
+.ms-bird { animation: ms-soar 18s linear infinite; }
+.ms-fly { animation: ms-wander 8s ease-in-out infinite; }
+.ms-wing { transform-box: fill-box; transform-origin: 50% 50%; animation: ms-flap .35s ease-in-out infinite; }
+.ms-tram { animation: ms-ride 16s ease-in-out infinite alternate; }
+.ms-smoke { animation: ms-puff 4s ease-out infinite; }
+.ms-aurora { animation: ms-sway 10s ease-in-out infinite alternate; }
+.ms-ray { animation: ms-spin 40s linear infinite; }
+.ms-shoot { animation: ms-shoot 7s ease-in infinite; opacity: 0; }
+.ms-glint { animation: ms-twinkle 3.4s ease-in-out infinite; }
+@keyframes ms-drift { from { transform: translateX(-90px); } to { transform: translateX(450px); } }
+@keyframes ms-fall { from { transform: translate(0, -10px); opacity: 0; } 10% { opacity: .95; } to { transform: translate(16px, 250px); opacity: .6; } }
+@keyframes ms-twinkle { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes ms-wave { 0%, 100% { transform: scaleX(1) skewY(0deg); } 50% { transform: scaleX(.82) skewY(7deg); } }
+@keyframes ms-soar { 0% { transform: translate(-60px, 0); } 25% { transform: translate(90px, -14px); } 50% { transform: translate(210px, 8px); } 75% { transform: translate(310px, -10px); } 100% { transform: translate(440px, 0); } }
+@keyframes ms-wander { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(18px, -14px); } 50% { transform: translate(34px, 4px); } 75% { transform: translate(14px, 14px); } }
+@keyframes ms-flap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.25); } }
+@keyframes ms-ride { from { transform: translate(0, 0); } to { transform: translate(166px, -114px); } }
+@keyframes ms-puff { 0% { transform: translate(0, 0) scale(.5); opacity: .8; } 100% { transform: translate(10px, -22px) scale(1.6); opacity: 0; } }
+@keyframes ms-sway { from { transform: translateX(-14px); opacity: .6; } to { transform: translateX(14px); opacity: 1; } }
+@keyframes ms-spin { to { transform: rotate(360deg); } }
+@keyframes ms-shoot { 0%, 78% { opacity: 0; transform: translate(0, 0); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(190px, 95px); } }
+@media (prefers-reduced-motion: reduce) { [class^="ms-"], [class*=" ms-"] { animation: none !important; } }

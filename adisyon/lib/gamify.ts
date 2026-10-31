@@ -17,13 +17,15 @@ export const POINT_RULES: PointRule[] = [
   { key: "badge", label: "Yeni rozet kazanmak", hint: "Rozetler Gus'a madalya olur", pts: 10 },
 ];
 
-// The climb never ends: three mountain ranges, then the GOAT crown.
+// The climb never ends: five mountain ranges, then the golden GOAT peak.
 export interface Range { name: string; blurb: string; tint: string }
 export const RANGES: Range[] = [
-  { name: "Uludağ", blurb: "İlk dağın. Çimenden zirveye.", tint: "#E1F5EE" },
-  { name: "Toroslar", blurb: "Daha dik, daha soğuk, daha uzun.", tint: "#E4E8FB" },
-  { name: "Kafkaslar", blurb: "Sadece gerçek tırmanıcılar buraya gelir.", tint: "#FBE6DC" },
-  { name: "Efsane", blurb: "Dağların ötesi.", tint: "#FDF1C9" },
+  { name: "Uludağ", blurb: "İlk dağın. Çam, çayır ve kelebekler.", tint: "#E1F5EE" },
+  { name: "Toroslar", blurb: "Kayalık, rüzgârlı, kartallı.", tint: "#FBE6DC" },
+  { name: "Kafkaslar", blurb: "Buz, kar ve sessizlik.", tint: "#E4E8FB" },
+  { name: "Alpler", blurb: "Teleferik, çalet ve gün doğumu.", tint: "#FDE4EC" },
+  { name: "Himalayalar", blurb: "Dua bayrakları, yıldızlar ve aurora.", tint: "#E2DEF7" },
+  { name: "Efsane Zirve", blurb: "Bulutların üstü. Altın zirve.", tint: "#FDF1C9" },
 ];
 
 /** icon = index of the LevelIcon drawing (0 sprout, 1 meadow, 2 hill, 3 slope, 4 rocks, 5 flag peak, 6 golden peak) */
@@ -38,14 +40,24 @@ export const LEVELS: Level[] = [
   { name: "Etek", min: 800, blurb: "Yeni bir dağ, yeni bir yol.", range: 1, icon: 0 },
   { name: "Patika", min: 1200, blurb: "Taş taş, yonca yonca.", range: 1, icon: 3 },
   { name: "Kayalık", min: 1800, blurb: "Burada ayağını iyi bas.", range: 1, icon: 4 },
-  { name: "Kar Hattı", min: 2500, blurb: "Hava soğuyor, Gus ısınıyor.", range: 1, icon: 2 },
+  { name: "Kartal Yuvası", min: 2500, blurb: "Tepende bir kartal dönüyor.", range: 1, icon: 2 },
   { name: "Toros Zirvesi", min: 3300, blurb: "İkinci bayrak da yerinde.", range: 1, icon: 5 },
   { name: "Vadi", min: 4300, blurb: "Kafkaslar'ın eteğindesin.", range: 2, icon: 1 },
   { name: "Geçit", min: 5500, blurb: "Dar, rüzgârlı, güzel.", range: 2, icon: 3 },
   { name: "Kaya Duvarı", min: 7000, blurb: "Sadece keçiler çıkabilir.", range: 2, icon: 4 },
   { name: "Buzul", min: 9000, blurb: "Her adımda yonca parlıyor.", range: 2, icon: 2 },
-  { name: "Kafkas Zirvesi", min: 11500, blurb: "Son bayrak.", range: 2, icon: 5 },
-  { name: "GOAT", min: 15000, blurb: "Greatest Of All Time. Dağların efendisi sensin.", range: 3, icon: 6 },
+  { name: "Kafkas Zirvesi", min: 11500, blurb: "Üçüncü bayrak.", range: 2, icon: 5 },
+  { name: "Çalet Köyü", min: 14500, blurb: "Bacalardan duman, kapıda süt.", range: 3, icon: 1 },
+  { name: "Teleferik", min: 18000, blurb: "Biraz yoruldun, biraz da uçtun.", range: 3, icon: 3 },
+  { name: "Yayla", min: 22000, blurb: "Yeşilin en güzel hali.", range: 3, icon: 2 },
+  { name: "Buz Çayırı", min: 27000, blurb: "Çiçekler ve kar yan yana.", range: 3, icon: 4 },
+  { name: "Alp Zirvesi", min: 33000, blurb: "Gün doğumunu tepeden izledin.", range: 3, icon: 5 },
+  { name: "Kamp", min: 40000, blurb: "Himalayalar'ın ilk kampı.", range: 4, icon: 0 },
+  { name: "Şerpa Yolu", min: 48000, blurb: "Rehberin sen, yolu Gus biliyor.", range: 4, icon: 3 },
+  { name: "Buz Şelalesi", min: 57000, blurb: "Donmuş bir şelale, parlayan yoncalar.", range: 4, icon: 4 },
+  { name: "Bulut Denizi", min: 68000, blurb: "Artık bulutların üstündesin.", range: 4, icon: 2 },
+  { name: "Himalaya Zirvesi", min: 80000, blurb: "Dua bayrakları seni selamlıyor.", range: 4, icon: 5 },
+  { name: "GOAT", min: 100000, blurb: "Greatest Of All Time. Dağların efendisi sensin.", range: 5, icon: 6 },
 ];
 
 export interface Quest { id: string; label: string; done: boolean; progress: number; target: number; reward: number }

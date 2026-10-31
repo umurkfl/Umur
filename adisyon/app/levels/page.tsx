@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { store } from "@/lib/store";
 import { computeStats, GameStats, LEVELS, RANGES, POINT_RULES } from "@/lib/gamify";
 import { usePro } from "@/lib/pro";
+import { MountainScene } from "@/components/MountainScene";
 import { CloverIcon, LevelIcon, FlameIcon, GoalIcon, CrownIcon } from "@/components/Icons";
 
 export default function LevelsPage() {
@@ -20,6 +21,9 @@ export default function LevelsPage() {
   }, [user, pro]);
 
   const current = stats ? stats.level - 1 : -1;
+  const idx = Math.max(current, 0);
+  const curRange = LEVELS[idx].range;
+  const stop = Math.min(4, idx - LEVELS.findIndex((l) => l.range === curRange));
 
   return (
     <div className="pb-10">
@@ -30,33 +34,31 @@ export default function LevelsPage() {
       </div>
       <h1 className="px-4">Gus'ın tırmanışı</h1>
 
-      {/* Story */}
-      <section className="mx-4 mt-3 rounded-3xl border-2 border-b-4 border-border bg-surface p-5">
-        <p className="text-base font-semibold text-ink leading-relaxed">
-          Gus, gerçek fiyatların zirvesine tırmanmak isteyen bir dağ keçisi. Yol uzun, o ise her zaman aç.
-        </p>
-        <p className="mt-3 text-base font-semibold text-ink leading-relaxed">
-          Paylaştığın her fiş bir <span className="inline-flex items-center gap-1 font-black text-primary"><CloverIcon size={18} /> yonca</span>. Gus yoncayı yer, güçlenir ve bir adım yukarı çıkar. Sen paylaştıkça o tırmanır.
-        </p>
-      </section>
-
-      {/* Where you are */}
-      {stats && (
-        <section className="mx-4 mt-4 rounded-3xl border-2 border-b-4 border-primary-shade bg-primary text-white p-5">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/95 flex items-center justify-center shrink-0"><LevelIcon index={stats.levelIcon} size={46} /></div>
-            <div className="min-w-0">
-              <p className="text-xs font-extrabold text-white/75 uppercase tracking-wide">Şu an buradasın</p>
-              <p className="text-2xl font-black leading-tight">{stats.levelName}</p>
-              <p className="text-sm font-bold text-white/90 flex items-center gap-1.5"><span className="w-5 h-5 rounded-full bg-white flex items-center justify-center"><CloverIcon size={14} /></span>{stats.points} yonca</p>
-            </div>
+      {/* Hero: the mountain Gus is climbing right now */}
+      <section className="mx-4 mt-3 rounded-3xl border-2 border-b-4 border-border bg-surface overflow-hidden">
+        <MountainScene range={curRange} state="current" stop={stop} progress={stats?.levelProgress ?? 0} mood={stats ? "happy" : "think"} className="rounded-none">
+          <div className="absolute left-3 top-3 rounded-2xl bg-white/85 backdrop-blur px-3 py-1.5">
+            <p className="text-[11px] font-extrabold text-muted uppercase tracking-wide">{stats ? "Şu an buradasın" : "Gus seni bekliyor"}</p>
+            <p className="text-lg font-black text-charcoal leading-tight">{RANGES[curRange].name}</p>
           </div>
-          <div className="mt-4 bg-black/20 rounded-full h-4 overflow-hidden"><div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} /></div>
-          <p className="mt-2 text-xs font-extrabold text-white/85">
-            {stats.nextMin ? `${stats.pointsToNext} yonca sonra ${LEVELS[stats.level].name}` : "Dağların ötesindesin. Gus seninle gurur duyuyor."}
-          </p>
-        </section>
-      )}
+        </MountainScene>
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary-light flex items-center justify-center shrink-0"><LevelIcon index={stats?.levelIcon ?? 0} size={34} /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xl font-black text-charcoal leading-tight">{stats?.levelName ?? LEVELS[0].name}</p>
+              <p className="text-xs font-bold text-muted">{LEVELS[Math.max(current, 0)].blurb}</p>
+            </div>
+            <p className="flex items-center gap-1 text-lg font-black text-primary shrink-0"><CloverIcon size={20} />{stats?.points ?? 0}</p>
+          </div>
+          {stats && (
+            <>
+              <div className="mt-3 xp-bar"><div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} /></div>
+              <p className="mt-1.5 text-xs font-extrabold text-muted">{stats.nextMin ? `${stats.pointsToNext} yonca sonra ${LEVELS[stats.level].name}` : "Dağların ötesindesin. Gus seninle gurur duyuyor."}</p>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* This week's quests */}
       {stats && (
@@ -80,41 +82,37 @@ export default function LevelsPage() {
         </section>
       )}
 
-      {/* The climb: three ranges and a crown */}
-      <h2 className="px-4 mt-7 mb-1 text-xl">Yol haritası</h2>
+      {/* All mountains, summit first */}
+      <h2 className="px-4 mt-7 mb-1 text-xl">Dağlar</h2>
       <p className="px-4 mb-3 text-sm font-semibold text-muted">Zirveye varınca yol bitmez, Gus yeni bir dağa geçer.</p>
-      <div className="px-4 space-y-6">
-        {RANGES.map((rg, ri) => {
+      <div className="px-4 space-y-5">
+        {RANGES.map((rg, ri) => ri).reverse().map((ri) => {
+          const rg = RANGES[ri];
           const items = LEVELS.map((l, i) => ({ l, i })).filter((x) => x.l.range === ri);
-          const rangeReached = current >= (items[0]?.i ?? 99);
+          const state = ri < curRange ? "done" : ri === curRange ? "current" : "locked";
           return (
-            <section key={rg.name}>
-              <div className="rounded-2xl px-4 py-2.5 mb-3 flex items-center justify-between" style={{ background: rg.tint }}>
-                <div><p className="text-lg font-black text-charcoal leading-tight">{rg.name}</p><p className="text-xs font-bold text-muted">{rg.blurb}</p></div>
-                {!rangeReached && <span className="text-xs font-black text-muted">Kilitli</span>}
+            <section key={rg.name} className="rounded-3xl border-2 border-b-4 border-border bg-surface overflow-hidden">
+              <MountainScene range={ri} state={state} stop={stop} progress={stats?.levelProgress ?? 0} mood="happy" className="rounded-none" />
+              <div className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-lg font-black text-charcoal">{rg.name}</p>
+                  {state === "done" && <span className="px-2.5 py-0.5 rounded-full bg-primary-light text-primary-dark text-[11px] font-black">Fethedildi</span>}
+                  {state === "current" && <span className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[11px] font-black">Buradasın</span>}
+                </div>
+                <p className="text-sm font-semibold text-muted">{rg.blurb}</p>
+                <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
+                  {items.map(({ l, i }) => {
+                    const reached = current >= i, here = current === i;
+                    return (
+                      <div key={l.name} className={`shrink-0 w-[84px] rounded-2xl border-2 px-1.5 py-2 text-center ${here ? "border-primary bg-primary-light" : "border-border bg-background"}`}>
+                        <div className="flex justify-center"><LevelIcon index={l.icon} size={34} locked={!reached} /></div>
+                        <p className={`mt-1 text-[11px] font-black leading-tight ${reached ? "text-charcoal" : "text-muted"}`}>{l.name}</p>
+                        <p className="text-[10px] font-extrabold text-muted">{l.min === 0 ? "Başlangıç" : l.min.toLocaleString("tr-TR")}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              {items.slice().reverse().map(({ l, i }, pos, arr) => {
-                const reached = current >= i;
-                const here = current === i;
-                return (
-                  <div key={l.name} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border-2 border-b-4 ${here ? "bg-primary-light border-primary" : reached ? "bg-surface border-border" : "bg-background border-border"}`}>
-                        <LevelIcon index={l.icon} size={40} locked={!reached} />
-                      </div>
-                      {pos < arr.length - 1 && <div className="w-1 flex-1 min-h-[18px] my-1 rounded-full" style={{ background: "repeating-linear-gradient(to bottom, var(--color-border) 0 6px, transparent 6px 12px)" }} />}
-                    </div>
-                    <div className="pb-4 min-w-0 flex-1 pt-0.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className={`text-base font-black leading-tight ${reached ? "text-charcoal" : "text-muted"}`}>{l.name}</p>
-                        {here && <span className="px-2.5 py-0.5 rounded-full bg-primary text-white text-[11px] font-black">Buradasın</span>}
-                      </div>
-                      <p className="text-xs font-extrabold text-muted flex items-center gap-1 mt-0.5"><CloverIcon size={13} /> {l.min === 0 ? "Başlangıç" : `${l.min.toLocaleString("tr-TR")} yonca`}</p>
-                      <p className="mt-0.5 text-sm font-semibold text-muted">{l.blurb}</p>
-                    </div>
-                  </div>
-                );
-              })}
             </section>
           );
         })}
