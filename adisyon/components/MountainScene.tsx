@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Gus } from "@/components/Gus";
 import type { GusMood } from "@/lib/gus";
+import { CloverIcon } from "@/components/Icons";
 
 // One illustrated, animated scene per mountain. All scenes share the same main peak so the
 // climbing trail and Gus's stops line up: the five stops zig-zag up the left face to the summit.
@@ -182,10 +183,14 @@ interface Props {
   progress?: number;
   mood?: GusMood;
   className?: string;
+  /** yonca needed to reach this mountain; shown on the lock ribbon */
+  unlockAt?: number;
+  /** yonca still missing; shown under the ribbon */
+  missing?: number;
   children?: ReactNode;
 }
 
-export function MountainScene({ range, state, stop = 0, progress = 0, mood = "happy", className = "", children }: Props) {
+export function MountainScene({ range, state, stop = 0, progress = 0, mood = "happy", className = "", unlockAt, missing, children }: Props) {
   const id = useId().replace(/:/g, "");
   const nStops = range === 5 ? 1 : STOPS.length;
   const reached = state === "done" ? nStops : state === "current" ? stop + 1 : 0;
@@ -202,14 +207,14 @@ export function MountainScene({ range, state, stop = 0, progress = 0, mood = "ha
 
   return (
     <div className={`relative overflow-hidden rounded-3xl border-2 border-b-4 border-border bg-surface ${className}`} style={{ aspectRatio: `${W} / ${H}` }}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" style={state === "locked" ? { filter: "grayscale(.85) brightness(1.05)" } : undefined} role="img" aria-hidden>
+      <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" style={state === "locked" ? { filter: "saturate(.55) brightness(.82)" } : undefined} role="img" aria-hidden>
         <Scene range={range} id={id} />
         {range !== 5 && (
           <>
             <polyline points={STOPS.map((p) => p.join(",")).join(" ")} fill="none" stroke="#fff" strokeOpacity=".85" strokeWidth="2.4" strokeDasharray="1 6" strokeLinecap="round" />
             {STOPS.map((p, i) => (
               <g key={i}>
-                <circle cx={p[0]} cy={p[1]} r={i < reached ? 6 : 4.5} fill={i < reached ? "#1D9E75" : "rgba(255,255,255,.55)"} stroke="#fff" strokeWidth="2" />
+                <circle cx={p[0]} cy={p[1]} r={i < reached ? 6 : 4.5} fill={i < reached ? "#1D9E75" : state === "locked" ? "rgba(40,36,60,.55)" : "rgba(255,255,255,.55)"} stroke="#fff" strokeWidth="2" />
                 {i < reached && <path d={`M${p[0] - 2.2} ${p[1]} l2 2 l3 -4`} fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
               </g>
             ))}
@@ -230,8 +235,24 @@ export function MountainScene({ range, state, stop = 0, progress = 0, mood = "ha
       )}
 
       {state === "locked" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/35 backdrop-blur-[1.5px]">
-          <span className="rounded-2xl bg-white/90 border-2 border-b-4 border-border px-4 py-2 text-sm font-black text-muted">Kilitli dağ</span>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(to bottom, rgba(30,27,56,.05) 30%, rgba(30,27,56,.55) 100%)" }}>
+          <div className="absolute left-1/2 top-[34%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+            <svg width="62" height="70" viewBox="0 0 62 70" className="ms-lock drop-shadow-[0_4px_0_rgba(0,0,0,.25)]" aria-hidden>
+              <path d="M16 32V22a15 15 0 0 1 30 0v10" fill="none" stroke="#B9BFCC" strokeWidth="8" strokeLinecap="round" />
+              <path d="M16 32V22a15 15 0 0 1 30 0v10" fill="none" stroke="#EEF1F6" strokeWidth="3" strokeLinecap="round" />
+              <rect x="6" y="30" width="50" height="36" rx="10" fill="#F5B82E" stroke="#B8860B" strokeWidth="3" />
+              <rect x="10" y="33" width="42" height="8" rx="4" fill="#FFE08A" opacity=".7" />
+              <circle cx="31" cy="46" r="5" fill="#8A5A00" /><rect x="29" y="47" width="4" height="10" rx="2" fill="#8A5A00" />
+            </svg>
+          </div>
+          <div className="absolute inset-x-0 bottom-3 flex flex-col items-center gap-1">
+            {unlockAt != null && (
+              <span className="flex items-center gap-1.5 rounded-full bg-white border-2 border-b-4 border-gold-shade px-3.5 py-1 text-sm font-black text-charcoal shadow">
+                <CloverIcon size={18} />{unlockAt.toLocaleString("tr-TR")} yonca
+              </span>
+            )}
+            {missing != null && missing > 0 && <span className="text-[11px] font-extrabold text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,.5)]">{missing.toLocaleString("tr-TR")} yonca kaldı</span>}
+          </div>
         </div>
       )}
       {children}

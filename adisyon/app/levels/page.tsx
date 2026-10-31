@@ -92,7 +92,7 @@ export default function LevelsPage() {
           const state = ri < curRange ? "done" : ri === curRange ? "current" : "locked";
           return (
             <section key={rg.name} className="rounded-3xl border-2 border-b-4 border-border bg-surface overflow-hidden">
-              <MountainScene range={ri} state={state} stop={stop} progress={stats?.levelProgress ?? 0} mood="happy" className="rounded-none" />
+              <MountainScene range={ri} state={state} stop={stop} progress={stats?.levelProgress ?? 0} mood="happy" className="rounded-none" unlockAt={items[0].l.min} missing={Math.max(0, items[0].l.min - (stats?.points ?? 0))} />
               <div className="p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-lg font-black text-charcoal">{rg.name}</p>
