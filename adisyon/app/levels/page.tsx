@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -20,6 +20,17 @@ export default function LevelsPage() {
     store.getUserReceipts(user.id).then((r) => setStats(computeStats(r, { pro })));
   }, [user, pro]);
 
+  const hereRef = useRef<HTMLElement | null>(null);
+  const scrolled = useRef(false);
+  const goHere = () => hereRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  // the climb starts at the bottom: bring the user's own mountain into view once
+  useEffect(() => {
+    if (!stats || scrolled.current) return;
+    scrolled.current = true;
+    const tm = setTimeout(() => hereRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 500);
+    return () => clearTimeout(tm);
+  }, [stats]);
+
   const current = stats ? stats.level - 1 : -1;
   const idx = Math.max(current, 0);
   const curRange = LEVELS[idx].range;
@@ -34,30 +45,23 @@ export default function LevelsPage() {
       </div>
       <h1 className="px-4">Gus'ın tırmanışı</h1>
 
-      {/* Hero: the mountain Gus is climbing right now */}
-      <section className="mx-4 mt-3 rounded-3xl border-2 border-b-4 border-border bg-surface overflow-hidden">
-        <MountainScene range={curRange} state="current" stop={stop} progress={stats?.levelProgress ?? 0} mood={stats ? "happy" : "think"} className="rounded-none">
-          <div className="absolute left-3 top-3 rounded-2xl bg-white/85 backdrop-blur px-3 py-1.5">
-            <p className="text-[11px] font-extrabold text-muted uppercase tracking-wide">{stats ? "Şu an buradasın" : "Gus seni bekliyor"}</p>
-            <p className="text-lg font-black text-charcoal leading-tight">{RANGES[curRange].name}</p>
+      {/* Where you are: compact; the map below shows Gus on his mountain */}
+      <section className="mx-4 mt-3 rounded-3xl border-2 border-b-4 border-primary-shade bg-primary text-white p-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-14 h-14 rounded-2xl bg-white/95 flex items-center justify-center shrink-0"><LevelIcon index={stats?.levelIcon ?? 0} size={40} /></div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="text-[11px] font-extrabold text-white/75 uppercase tracking-wide">{stats ? `${RANGES[curRange].name} · şu an buradasın` : "Tırmanış seni bekliyor"}</p>
+            <p className="text-2xl font-black">{stats?.levelName ?? LEVELS[0].name}</p>
           </div>
-        </MountainScene>
-        <div className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary-light flex items-center justify-center shrink-0"><LevelIcon index={stats?.levelIcon ?? 0} size={34} /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xl font-black text-charcoal leading-tight">{stats?.levelName ?? LEVELS[0].name}</p>
-              <p className="text-xs font-bold text-muted">{LEVELS[Math.max(current, 0)].blurb}</p>
-            </div>
-            <p className="flex items-center gap-1 text-lg font-black text-primary shrink-0"><CloverIcon size={20} />{stats?.points ?? 0}</p>
-          </div>
-          {stats && (
-            <>
-              <div className="mt-3 xp-bar"><div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} /></div>
-              <p className="mt-1.5 text-xs font-extrabold text-muted">{stats.nextMin ? `${stats.pointsToNext} yonca sonra ${LEVELS[stats.level].name}` : "Dağların ötesindesin. Gus seninle gurur duyuyor."}</p>
-            </>
-          )}
+          <p className="flex items-center gap-1 text-lg font-black shrink-0"><span className="w-6 h-6 rounded-full bg-white flex items-center justify-center"><CloverIcon size={16} /></span>{stats?.points ?? 0}</p>
         </div>
+        {stats && (
+          <>
+            <div className="mt-3.5 bg-black/20 rounded-full h-4 overflow-hidden"><div className="xp-fill" style={{ width: `${Math.max(stats.levelProgress * 100, 4)}%` }} /></div>
+            <p className="mt-2 text-xs font-extrabold text-white/90">{stats.nextMin ? `${stats.pointsToNext} yonca sonra ${LEVELS[stats.level].name}` : "Dağların ötesindesin. Gus seninle gurur duyuyor."}</p>
+          </>
+        )}
+        <button onClick={goHere} className="mt-3 w-full rounded-2xl bg-white/95 text-primary-dark font-black text-sm py-2.5 border-b-4 border-white/50 active:translate-y-0.5 active:border-b-2 transition-all">Gus'u haritada göster</button>
       </section>
 
       {/* This week's quests */}
@@ -83,15 +87,22 @@ export default function LevelsPage() {
       )}
 
       {/* All mountains, summit first */}
-      <h2 className="px-4 mt-7 mb-1 text-xl">Dağlar</h2>
-      <p className="px-4 mb-3 text-sm font-semibold text-muted">Zirveye varınca yol bitmez, Gus yeni bir dağa geçer.</p>
-      <div className="px-4 space-y-5">
+      <h2 className="px-4 mt-7 mb-1 text-xl">Tırmanış haritası</h2>
+      <p className="px-4 mb-3 text-sm font-semibold text-muted">Aşağıdan başlarsın, yukarı tırmanırsın. Geçtiğin dağlar altta kalır, görmediklerin yukarıda seni bekler.</p>
+      <div className="px-4">
         {RANGES.map((rg, ri) => ri).reverse().map((ri) => {
           const rg = RANGES[ri];
           const items = LEVELS.map((l, i) => ({ l, i })).filter((x) => x.l.range === ri);
           const state = ri < curRange ? "done" : ri === curRange ? "current" : "locked";
           return (
-            <section key={rg.name} className="rounded-3xl border-2 border-b-4 border-border bg-surface overflow-hidden">
+            <div key={rg.name}>
+            {ri < RANGES.length - 1 && (
+              <div className="flex flex-col items-center py-1.5" aria-hidden>
+                <svg width="22" height="12" viewBox="0 0 22 12"><path d="M3 10l8-8 8 8" fill="none" stroke={ri < curRange ? "var(--color-primary)" : "var(--color-border)"} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <div className="w-1 h-5 rounded-full" style={{ background: ri < curRange ? "var(--color-primary)" : "repeating-linear-gradient(to bottom, var(--color-border) 0 5px, transparent 5px 10px)" }} />
+              </div>
+            )}
+            <section ref={state === "current" ? hereRef : undefined} className="scroll-mt-24 rounded-3xl border-2 border-b-4 border-border bg-surface overflow-hidden">
               <MountainScene range={ri} state={state} stop={stop} progress={stats?.levelProgress ?? 0} mood="happy" className="rounded-none" unlockAt={items[0].l.min} missing={Math.max(0, items[0].l.min - (stats?.points ?? 0))} />
               <div className="p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -114,6 +125,7 @@ export default function LevelsPage() {
                 </div>
               </div>
             </section>
+            </div>
           );
         })}
       </div>
