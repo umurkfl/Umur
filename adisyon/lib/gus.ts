@@ -49,13 +49,13 @@ export const GUS_MOODS: Record<GusMood, GusOpts> = {
   dizzy: { eyes: "dizzy", mouth: "wavy", extra: ["sweat"], blush: false },
 };
 
-const INK = "#2B2A27", C = "#FFF8EC", S = "#E9DCC4", GR = "#1D9E75", GRS = "#0F6E56";
-const PINK = "#F5A9A4", BRW = "#4A3F33", HOOF = "#33312D", TONGUE = "#FF6B81", BELLY = "#F4E7D3", EYE_RIM = "#E3D6BC";
+const INK = "#2B2A27", C = "#FCE9C6", S = "#E6C58E", GR = "#1D9E75", GRS = "#0F6E56";
+const PINK = "#FF9D95", BRW = "#5A3F2A", HOOF = "#3A3330", TONGUE = "#FF6B81", BELLY = "#FFF6E3", EYE_RIM = "#D8BE92";
 
 function eye(type: GusEyes, x: number, y: number, dx = 0, dy = 0): string {
   switch (type) {
     case "open":
-      return `<g class="gus-blink"><circle cx="${x}" cy="${y}" r="20" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><path d="M${x - 16} ${y + 8} Q${x} ${y + 22} ${x + 16} ${y + 8} Q${x} ${y + 15} ${x - 16} ${y + 8} Z" fill="#E9EEF2"/><g class="gus-look"><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="11" fill="${INK}"/><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="6.5" fill="#17160F"/><circle cx="${x + 5.8 + dx}" cy="${y - 2.4 + dy}" r="4" fill="#fff"/><circle cx="${x - 2 + dx}" cy="${y + 6.5 + dy}" r="1.8" fill="#fff"/></g></g>`;
+      return `<g class="gus-blink"><circle cx="${x}" cy="${y + 1.5}" r="22.5" fill="${EYE_RIM}"/><circle cx="${x}" cy="${y}" r="22" fill="#fff"/><g class="gus-look"><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="13.5" fill="${INK}"/><circle cx="${x + 2 + dx}" cy="${y + 3 + dy}" r="8.5" fill="#15130E"/><circle cx="${x + 7 + dx}" cy="${y - 3.5 + dy}" r="5" fill="#fff"/><circle cx="${x - 3.5 + dx}" cy="${y + 8 + dy}" r="2.4" fill="#fff"/></g></g>`;
     case "happy":
       return `<path d="M${x - 13} ${y + 5} Q${x} ${y - 14} ${x + 13} ${y + 5}" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/>`;
     case "sleep":
@@ -150,49 +150,70 @@ function prop(type: GusProp): string {
 function costumes(look: NonNullable<GusOpts["look"]>): string {
   let g = "";
   switch (look.neck) {
-    case "scarf": g += `<path d="M50 158 Q100 184 150 158 L154 172 Q100 198 46 172 Z" fill="#D85A30"/><path d="M118 180 L128 202 L112 204 L106 184 Z" fill="#B8461F"/>`; break;
-    case "bow": g += `<path d="M100 164 L80 152 V176 Z M100 164 L120 152 V176 Z" fill="#FF4D6D"/><circle cx="100" cy="164" r="6" fill="#D63030"/>`; break;
+    case "scarf":
+      g += `<path d="M34 146 Q100 182 166 146 L170 168 Q100 204 30 168 Z" fill="#E4572E"/><path d="M34 146 Q100 182 166 146 L167 153 Q100 189 33 153 Z" fill="#fff" opacity=".28"/><path d="M33 160 Q100 196 167 160 L169 168 Q100 204 31 168 Z" fill="#B8461F" opacity=".45"/>`
+        + `<g transform="translate(138 168) rotate(-8)"><path d="M0 0 L26 4 L30 40 L6 44 Z" fill="#E4572E"/><path d="M2 12 L28 16 M3 24 L29 28" stroke="#fff" stroke-opacity=".45" stroke-width="4"/><path d="M6 44 L30 40 L31 48 L8 52 Z" fill="#B8461F"/></g><circle cx="140" cy="166" r="9" fill="#C94A24"/>`;
+      break;
+    case "bow":
+      g += `<path d="M100 170 L66 152 Q58 170 66 188 Z" fill="#FF4D6D"/><path d="M100 170 L134 152 Q142 170 134 188 Z" fill="#FF4D6D"/><path d="M100 170 L66 152 L70 162 Z M100 170 L134 152 L130 162 Z" fill="#fff" opacity=".28"/><path d="M100 170 L66 188 L72 176 Z M100 170 L134 188 L128 176 Z" fill="#C92B4B" opacity=".6"/><rect x="90" y="159" width="20" height="22" rx="7" fill="#D63352"/><rect x="93" y="162" width="6" height="12" rx="3" fill="#fff" opacity=".35"/>`;
+      break;
   }
   switch (look.head) {
-    case "cap": g += `<path d="M70 64 C70 36 130 36 130 64 Z" fill="#1D9E75"/><path d="M64 64 Q100 76 136 64 Q100 56 64 64 Z" fill="#0F6E56"/><circle cx="100" cy="40" r="3.4" fill="#0F6E56"/>`; break;
-    case "chef": g += `<path d="M74 64 V52 C58 52 58 30 78 30 C80 18 122 18 124 30 C142 30 142 52 126 52 V64 Z" fill="#fff" stroke="#E3D6BC" stroke-width="2.4" stroke-linejoin="round"/>`; break;
-    case "party": g += `<path d="M100 14 L126 64 H74 Z" fill="#FF6B81"/><path d="M89 38 L112 38 M82 52 L119 52" stroke="#FFD166" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="14" r="6" fill="#FFC800"/>`; break;
-    case "phones": g += `<path d="M42 110 C42 40 158 40 158 110" fill="none" stroke="#33312D" stroke-width="8" stroke-linecap="round"/><rect x="30" y="94" width="20" height="34" rx="9" fill="#4DA3FF"/><rect x="150" y="94" width="20" height="34" rx="9" fill="#4DA3FF"/>`; break;
-    case "flower": g += `<g transform="translate(72 54)"><g fill="#fff"><circle cx="0" cy="-8" r="6.4"/><circle cx="7.6" cy="-2.5" r="6.4"/><circle cx="4.7" cy="6.5" r="6.4"/><circle cx="-4.7" cy="6.5" r="6.4"/><circle cx="-7.6" cy="-2.5" r="6.4"/></g><circle r="5" fill="#FFC800"/></g>`; break;
-    case "crown": g += `<path d="M72 64 L72 36 L87 50 L100 28 L113 50 L128 36 L128 64 Z" fill="#C99A00" transform="translate(0 3)"/><path d="M72 64 L72 36 L87 50 L100 28 L113 50 L128 36 L128 64 Z" fill="#FFC800" stroke="#FFC800" stroke-width="4" stroke-linejoin="round"/><circle cx="100" cy="46" r="4.4" fill="#E4572E"/><circle cx="84" cy="54" r="3" fill="#1D9E75"/><circle cx="116" cy="54" r="3" fill="#4DA3FF"/>`; break;
+    case "cap":
+      g += `<path d="M62 70 C58 22 142 22 138 70 Z" fill="#1D9E75"/><path d="M100 30 V68 M82 36 Q78 52 76 68 M118 36 Q122 52 124 68" stroke="#0F6E56" stroke-width="2.4" fill="none" opacity=".55"/><path d="M70 40 Q86 28 104 29" stroke="#fff" stroke-opacity=".4" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M54 72 Q100 92 146 72 Q100 60 54 72 Z" fill="#0F6E56"/><path d="M60 72 Q100 86 140 72" stroke="#fff" stroke-opacity=".25" stroke-width="3" fill="none"/><circle cx="100" cy="25" r="5" fill="#0F6E56"/><circle cx="99" cy="23.5" r="1.8" fill="#fff" opacity=".6"/>`;
+      break;
+    case "chef":
+      g += `<g stroke="#E3D3B6" stroke-width="2.6" stroke-linejoin="round"><circle cx="70" cy="36" r="19" fill="#fff"/><circle cx="130" cy="36" r="19" fill="#fff"/><circle cx="100" cy="26" r="23" fill="#fff"/><path d="M68 44 H132 L128 72 H72 Z" fill="#fff"/></g><path d="M72 58 H128" stroke="#E3D3B6" stroke-width="2.6"/><path d="M82 46 V68 M100 46 V68 M118 46 V68" stroke="#EFE3CC" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="88" cy="22" rx="8" ry="4.4" fill="#fff" stroke="none" opacity=".9" transform="rotate(-25 88 22)"/>`;
+      break;
+    case "party":
+      g += `<g transform="translate(0 10) rotate(-9 100 64)"><path d="M100 0 L136 68 Q100 80 64 68 Z" fill="#FF6B81"/><path d="M100 0 L136 68 Q120 74 108 76 Z" fill="#E0445E" opacity=".5"/><path d="M84 30 L117 36 M76 46 L124 52 M70 60 L131 64" stroke="#FFD166" stroke-width="5" stroke-linecap="round"/><circle cx="92" cy="22" r="2.6" fill="#fff"/><circle cx="108" cy="50" r="2.6" fill="#fff"/><circle cx="82" cy="58" r="2.6" fill="#fff"/><circle cx="100" cy="2" r="9" fill="#FFC800"/><circle cx="97" cy="-1" r="3" fill="#fff" opacity=".6"/></g>`;
+      break;
+    case "phones":
+      g += `<path d="M28 112 C20 14 180 14 172 112" fill="none" stroke="#2F2B28" stroke-width="11" stroke-linecap="round"/><path d="M34 100 C32 34 168 34 166 100" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3" stroke-linecap="round"/><g><rect x="12" y="86" width="30" height="52" rx="14" fill="#2F2B28"/><rect x="17" y="90" width="26" height="44" rx="12" fill="#4DA3FF"/><rect x="21" y="95" width="7" height="22" rx="3.5" fill="#fff" opacity=".4"/></g><g><rect x="158" y="86" width="30" height="52" rx="14" fill="#2F2B28"/><rect x="157" y="90" width="26" height="44" rx="12" fill="#4DA3FF"/><rect x="161" y="95" width="7" height="22" rx="3.5" fill="#fff" opacity=".4"/></g>`;
+      break;
+    case "flower":
+      g += `<g transform="translate(66 60) rotate(-10)"><path d="M0 0 Q-22 -4 -26 10 Q-10 16 0 0 Z M0 0 Q22 -4 26 10 Q10 16 0 0 Z" fill="#3DB66B" transform="translate(0 12)"/><g fill="#FF8FB8"><circle cx="0" cy="-15" r="10.5"/><circle cx="14.3" cy="-4.6" r="10.5"/><circle cx="8.8" cy="12.1" r="10.5"/><circle cx="-8.8" cy="12.1" r="10.5"/><circle cx="-14.3" cy="-4.6" r="10.5"/></g><g fill="#fff" opacity=".4"><ellipse cx="-3" cy="-19" rx="4" ry="2.4"/><ellipse cx="11" cy="-8" rx="4" ry="2.4"/></g><circle r="8" fill="#FFC800"/><circle cx="-2" cy="-2" r="2.6" fill="#fff" opacity=".6"/></g>`;
+      break;
+    case "crown":
+      g += `<path d="M64 70 L60 24 L82 46 L100 14 L118 46 L140 24 L136 70 Z" fill="#C99A00" transform="translate(0 4)"/><path d="M64 70 L60 24 L82 46 L100 14 L118 46 L140 24 L136 70 Z" fill="#FFC800" stroke="#FFC800" stroke-width="5" stroke-linejoin="round"/><path d="M68 62 H132" stroke="#E0A800" stroke-width="6" stroke-linecap="round"/><path d="M70 36 L64 30 M96 22 L100 18" stroke="#fff" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="46" r="6" fill="#E4572E"/><circle cx="80" cy="56" r="4" fill="#1D9E75"/><circle cx="120" cy="56" r="4" fill="#4DA3FF"/><circle cx="60" cy="24" r="4.5" fill="#fff"/><circle cx="140" cy="24" r="4.5" fill="#fff"/><circle cx="100" cy="14" r="4.5" fill="#fff"/>`;
+      break;
   }
   return g;
 }
 
-const HORN = "M72 62 C60 24 28 10 4 30 C36 30 56 48 62 80 Z";
+const HORN = "M76 68 C62 18 26 4 4 32 C38 28 58 50 62 90 Z";
 
 function horn(hC: string, hS: string): string {
-  return `<path d="${HORN}" fill="${hS}" transform="translate(0 3)"/><path d="${HORN}" fill="${hC}"/>`
-    + `<path d="M57 36 Q50 45 53 55 M43 25 Q37 34 43 43 M26 22 Q22 28 28 33" fill="none" stroke="${hS}" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>`
-    + `<path d="M67 58 C59 34 38 20 16 25" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".32"/>`;
+  return `<path d="${HORN}" fill="${hS}" transform="translate(0 4)"/><path d="${HORN}" fill="${hC}"/>`
+    + `<path d="M62 36 Q54 47 57 58 M47 25 Q40 35 46 45 M29 22 Q25 29 31 35" fill="none" stroke="${hS}" stroke-width="3" stroke-linecap="round" opacity=".6"/>`
+    + `<path d="M70 62 C62 34 40 18 17 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".3"/>`;
 }
 
 export function gusInner(o: GusOpts): string {
   const hC = o.hornC ?? (o.look?.horn === "gold" ? "#FFC800" : GR), hS = o.hornS ?? (o.look?.horn === "gold" ? "#D9A400" : GRS);
   let g = "";
   // tail peeking out behind the body
-  g += `<g class="gus-tail"><path d="M142 174 C160 175 175 164 178 146 C170 155 158 159 142 160 Z" fill="${S}"/><path d="M142 170 C158 171 172 161 176 148 C168 155 157 158 142 158 Z" fill="${C}"/></g>`;
+  g += `<g class="gus-tail"><path d="M150 170 C170 172 184 160 186 140 C176 150 164 154 148 154 Z" fill="${S}"/><path d="M150 166 C168 167 181 157 183 142 C174 150 162 152 148 152 Z" fill="${C}"/></g>`;
   // horns (swept back, brand green) with ridges and a shine
   g += `<g class="gus-horns">${horn(hC, hS)}<g transform="translate(200 0) scale(-1 1)">${horn(hC, hS)}</g></g>`;
-  // ears
-  g += `<g class="gus-earL"><ellipse cx="28" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(-22 28 110)"/><ellipse cx="28" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(-22 28 107)"/><ellipse cx="31" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(-22 31 108)"/><ellipse cx="34" cy="109" rx="6" ry="2.6" fill="#E98C87" transform="rotate(-22 34 109)"/></g>`;
-  g += `<g class="gus-earR"><ellipse cx="172" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(22 172 110)"/><ellipse cx="172" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(22 172 107)"/><ellipse cx="169" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(22 169 108)"/><ellipse cx="166" cy="109" rx="6" ry="2.6" fill="#E98C87" transform="rotate(22 166 109)"/></g>`;
-  // hooves (cloven, with a shine) + goatee
-  g += `<g class="gus-hoofL"><rect x="62" y="168" width="28" height="22" rx="11" fill="${HOOF}"/><path d="M76 181 V189" stroke="#1C1B19" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="70" cy="174" rx="4.5" ry="2.6" fill="#fff" opacity=".22"/></g>`;
-  g += `<g class="gus-hoofR"><rect x="110" y="168" width="28" height="22" rx="11" fill="${HOOF}"/><path d="M124 181 V189" stroke="#1C1B19" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="118" cy="174" rx="4.5" ry="2.6" fill="#fff" opacity=".22"/></g>`;
-  g += `<g class="gus-beard"><path d="M91 166 Q100 202 109 166 Z" fill="${S}" stroke="${S}" stroke-width="7" stroke-linejoin="round"/><path d="M96 170 Q100 190 103 170" fill="none" stroke="${C}" stroke-width="3" stroke-linecap="round" opacity=".8"/></g>`;
-  // body = head: base shadow, a warm rim on the lower right, a soft shine on the upper left
-  g += `<ellipse cx="100" cy="116" rx="66" ry="68" fill="${S}" transform="translate(0 5)"/><ellipse cx="100" cy="116" rx="66" ry="68" fill="#F4E6CD"/><ellipse cx="97" cy="112" rx="62.5" ry="64" fill="${C}"/>`;
-  g += `<path d="M86 52 Q88 36 98 45 Q103 32 110 46 Q119 40 116 54 Q100 46 86 52 Z" fill="${C}"/><path d="M98 45 Q99 49 97 52 M110 46 Q110 50 108 52" fill="none" stroke="${S}" stroke-width="2" stroke-linecap="round"/>`;
-  g += `<ellipse cx="64" cy="70" rx="14" ry="7.5" fill="#fff" opacity=".7" transform="rotate(-34 64 70)"/><circle cx="80" cy="58" r="3.2" fill="#fff" opacity=".7"/>`;
-  g += `<ellipse cx="100" cy="158" rx="38" ry="26" fill="${BELLY}"/>`;
-  g += `<ellipse cx="100" cy="138" rx="27" ry="18" fill="#EAD9BF"/><ellipse cx="100" cy="135" rx="27" ry="18" fill="${BELLY}"/><ellipse cx="100" cy="126" rx="7.5" ry="5.2" fill="#C98B74"/><ellipse cx="98" cy="124.4" rx="2.6" ry="1.5" fill="#fff" opacity=".55"/>`;
-  if (o.blush !== false) g += `<ellipse cx="56" cy="124" rx="10.5" ry="6.5" fill="${PINK}" opacity=".8"/><ellipse cx="144" cy="124" rx="10.5" ry="6.5" fill="${PINK}" opacity=".8"/><circle cx="52" cy="121.5" r="2" fill="#fff" opacity=".75"/><circle cx="140" cy="121.5" r="2" fill="#fff" opacity=".75"/>`;
+  // ears: big floppy ones with a pink inside
+  const ear = (sx: number) => `<g transform="translate(${sx < 0 ? 200 : 0} 0) scale(${sx} 1)"><ellipse cx="27" cy="106" rx="25" ry="12.5" fill="${S}" transform="rotate(-20 27 106)"/><ellipse cx="27" cy="102.5" rx="25" ry="12.5" fill="${C}" transform="rotate(-20 27 102.5)"/><ellipse cx="30" cy="103.5" rx="14" ry="6.4" fill="${PINK}" transform="rotate(-20 30 103.5)"/><ellipse cx="33" cy="104.5" rx="7" ry="3" fill="#F0746F" transform="rotate(-20 33 104.5)"/></g>`;
+  g += `<g class="gus-earL">${ear(1)}</g><g class="gus-earR">${ear(-1)}</g>`;
+  // hooves: chunky dark feet with a split and a shine, little fur socks
+  const foot = (x: number, cls: string) => `<g class="${cls}"><rect x="${x}" y="168" width="40" height="30" rx="15" fill="${HOOF}"/><path d="M${x + 20} 184 V196" stroke="#1C1917" stroke-width="3" stroke-linecap="round"/><ellipse cx="${x + 11}" cy="177" rx="6" ry="3" fill="#fff" opacity=".26"/></g>`;
+  g += foot(50, "gus-hoofL") + foot(110, "gus-hoofR");
+  g += `<g class="gus-beard"><path d="M88 164 Q100 206 112 164 Z" fill="${S}" stroke="${S}" stroke-width="8" stroke-linejoin="round"/><path d="M94 170 Q100 194 106 170" fill="none" stroke="${C}" stroke-width="3.4" stroke-linecap="round" opacity=".9"/></g>`;
+  // body = head: pear-shaped, shadow underneath, warm rim on the lower right, soft shine on the upper left
+  const BODY = "M100 46 C152 46 175 90 173 128 C171 162 142 182 100 182 C58 182 29 162 27 128 C25 90 48 46 100 46 Z";
+  g += `<path d="${BODY}" fill="${S}" transform="translate(0 5)"/><path d="${BODY}" fill="#F1D6A2"/><path d="${BODY}" fill="${C}" transform="translate(-3 -3) scale(.985) translate(1.6 2.4)"/>`;
+  g += `<path d="M84 50 Q86 32 98 42 Q104 27 112 43 Q123 36 118 53 Q100 44 84 50 Z" fill="${C}"/><path d="M98 42 Q99 47 97 51 M112 43 Q112 48 110 51" fill="none" stroke="${S}" stroke-width="2.2" stroke-linecap="round"/>`;
+  g += `<ellipse cx="62" cy="72" rx="15" ry="8" fill="#fff" opacity=".75" transform="rotate(-34 62 72)"/><circle cx="80" cy="58" r="3.4" fill="#fff" opacity=".75"/>`;
+  // belly and muzzle patches, lighter than the body so the face reads
+  g += `<ellipse cx="100" cy="156" rx="44" ry="27" fill="${BELLY}"/><ellipse cx="100" cy="143" rx="31" ry="21" fill="#F0DDB8"/><ellipse cx="100" cy="140" rx="31" ry="21" fill="${BELLY}"/><ellipse cx="100" cy="127" rx="8" ry="5.6" fill="#B9735F"/><ellipse cx="98" cy="125.2" rx="2.8" ry="1.6" fill="#fff" opacity=".6"/>`;
+  if (o.blush !== false) g += `<ellipse cx="54" cy="125" rx="11.5" ry="7.2" fill="${PINK}" opacity=".85"/><ellipse cx="146" cy="125" rx="11.5" ry="7.2" fill="${PINK}" opacity=".85"/><circle cx="50" cy="122" r="2.2" fill="#fff" opacity=".8"/><circle cx="142" cy="122" r="2.2" fill="#fff" opacity=".8"/>`;
+  // arms: stubby little hooves at his sides
+  const arm = (sx: number) => `<g transform="translate(${sx < 0 ? 200 : 0} 0) scale(${sx} 1)"><g class="gus-arm${sx < 0 ? "R" : "L"}"><ellipse cx="24" cy="146" rx="12.5" ry="22" fill="#F1D6A2" transform="rotate(16 24 146)"/><ellipse cx="24" cy="143" rx="12.5" ry="22" fill="${C}" transform="rotate(16 24 143)"/><path d="M14 158 Q22 150 32 158 Q32 168 23 169 Q14 168 14 158 Z" fill="#6B5240"/><ellipse cx="21" cy="158" rx="3" ry="1.8" fill="#fff" opacity=".25"/></g></g>`;
+  g += arm(1) + arm(-1);
   // eyes
   if (o.shades || o.look?.face === "shades") {
     g += `<g><rect x="46" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><rect x="104" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><path d="M96 84 H104" stroke="#1B1B1B" stroke-width="5"/><g class="gus-glint"><path d="M54 84 l12 -3 M112 84 l12 -3" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".45"/><path d="M56 92 l5 -1.2 M114 92 l5 -1.2" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".3"/></g></g>`;
@@ -209,7 +230,7 @@ export function gusInner(o: GusOpts): string {
 
 export function gusSvg(o: GusOpts = {}): string {
   let s = `<svg viewBox="${o.viewBox ?? "0 0 200 200"}" role="img" aria-label="${o.label ?? "Gus"}" xmlns="http://www.w3.org/2000/svg">`;
-  if (!o.noShadow) s += `<ellipse class="gus-shadow" cx="100" cy="194" rx="52" ry="5"/>`;
+  if (!o.noShadow) s += `<ellipse class="gus-shadow" cx="100" cy="197" rx="56" ry="4.5"/>`;
   // nested wrappers so mood motion, idle sway, breathing and the tap jump compose
   s += `<g class="gus-bob"><g${o.tilt ? ` transform="rotate(${o.tilt} 100 130)"` : ""}><g class="gus-char"><g class="gus-sway"><g class="gus-breathe">${gusInner(o)}</g></g></g></g></g></svg>`;
   return s;

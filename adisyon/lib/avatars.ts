@@ -24,7 +24,7 @@ export function gusAvatarUrl(id: string): string {
   if (hit) return hit;
   const a = GUS_AVATARS.find((x) => x.id === id) ?? GUS_AVATARS[0];
   const inner = gusInner({ ...GUS_MOODS[a.mood], look: a.look, extra: a.extra });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="${a.bg}"/><g transform="translate(100 104) scale(1.18) translate(-100 -118)">${inner}</g></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="${a.bg}"/><g transform="translate(100 100) scale(1.08) translate(-100 -98)">${inner}</g></svg>`;
   const url = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   cache.set(id, url);
   return url;
