@@ -21,7 +21,29 @@ const TONES: Record<string, Tone> = {
   tatli: { bg: "#FFC800", shade: "#C99A00" },
 };
 
+import { gusInner, GUS_MOODS, GusMood, GusOpts } from "@/lib/gus";
+
 const W = "#fff";
+
+// Every badge is Gus: his mood and outfit say what it is, and a small glyph sticker says it again.
+const GUS: Record<string, { mood: GusMood; look?: GusOpts["look"]; extra?: GusOpts["extra"] }> = {
+  newbie: { mood: "happy" },
+  first: { mood: "laugh" },
+  katkilci: { mood: "wink", look: { head: "cap" } },
+  aktif: { mood: "laugh", extra: ["sparks"] },
+  sampiyion: { mood: "happy", look: { head: "crown" } },
+  gezgin: { mood: "think", look: { head: "cap" } },
+  gurme: { mood: "chew", look: { head: "chef" } },
+  muhtar: { mood: "cool" },
+  grup: { mood: "laugh", look: { head: "party" } },
+  luks: { mood: "cool", look: { neck: "bow" } },
+  ekonomik: { mood: "wink" },
+  zirve: { mood: "shock", look: { head: "party" } },
+  fotograf: { mood: "wink", look: { head: "phones" } },
+  hafta_sonu: { mood: "laugh", look: { head: "flower" } },
+  sadik: { mood: "love", extra: ["hearts"] },
+  tatli: { mood: "chew", look: { neck: "bow" } },
+};
 
 function Glyph({ id, d }: { id: string; d: string }) {
   switch (id) {
@@ -64,13 +86,18 @@ function Glyph({ id, d }: { id: string; d: string }) {
 
 export function BadgeArt({ id, size = 72, locked = false, className = "" }: { id: string; size?: number; locked?: boolean; className?: string }) {
   const t = locked ? { bg: "#D9D6CC", shade: "#BDBAAE" } : TONES[id] ?? TONES.aktif;
+  const g = GUS[id] ?? GUS.newbie;
+  const gus = gusInner({ ...GUS_MOODS[g.mood], look: g.look, extra: locked ? undefined : g.extra, noShadow: true });
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" className={className} role="img" aria-hidden>
       <circle cx="32" cy="36" r="28" fill={t.shade} />
       <circle cx="32" cy="32" r="28" fill={t.bg} />
       <circle cx="32" cy="32" r="22.5" fill="none" stroke="#fff" strokeOpacity=".22" strokeWidth="2" />
       <path d="M12.5 24.5A22 22 0 0 1 30 10" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="3.4" strokeLinecap="round" />
-      <g transform="translate(8.6 8) scale(.97)" opacity={locked ? 0.9 : 1}><Glyph id={id} d={t.shade} /></g>
+      <g transform="translate(32 31) scale(.235) translate(-100 -108)" style={locked ? { filter: "grayscale(1) opacity(.55)" } : undefined} dangerouslySetInnerHTML={{ __html: gus }} />
+      <circle cx="50" cy="50" r="11.5" fill="#fff" />
+      <circle cx="50" cy="50" r="9.5" fill={t.shade} />
+      <g transform="translate(38.6 38.6) scale(.475)" opacity={locked ? 0.8 : 1}><Glyph id={id} d={t.shade} /></g>
     </svg>
   );
 }

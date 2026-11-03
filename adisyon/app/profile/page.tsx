@@ -16,6 +16,7 @@ import { usePro } from "@/lib/pro";
 import { ProChip } from "@/components/Pro";
 import { BadgeArt } from "@/components/BadgeArt";
 import { computeStats, LEVELS } from "@/lib/gamify";
+import { GUS_AVATARS, gusAvatarUrl } from "@/lib/avatars";
 
 // Sofra Pusulası — özel ikonlar
 function IconBill() {
@@ -80,6 +81,7 @@ export default function ProfilePage() {
   const [friends, setFriends] = useState<StoredFriendship[]>([]);
   const [showName, setShowNameState] = useState(true);
   const [activeCheckIn, setActiveCheckIn] = useState<StoredCheckIn | null>(null);
+  const [pickAvatar, setPickAvatar] = useState(false);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -160,6 +162,14 @@ export default function ProfilePage() {
     login({ ...user, avatar: dataUrl });
   }
 
+  function chooseGus(id: string) {
+    if (!user) return;
+    const url = gusAvatarUrl(id);
+    store.updateUserAvatar(user.id, url);
+    login({ ...user, avatar: url });
+    setPickAvatar(false);
+  }
+
   function handleCropCancel() {
     if (cropSrc) URL.revokeObjectURL(cropSrc);
     setCropSrc(null);
@@ -191,7 +201,7 @@ export default function ProfilePage() {
                 }
               </div>
               <button
-                onClick={() => photoInputRef.current?.click()}
+                onClick={() => setPickAvatar(true)}
                 aria-label="Profil fotoğrafını değiştir"
                 className="absolute -bottom-1 -right-1 w-9 h-9 bg-white rounded-xl border-2 border-b-4 border-border flex items-center justify-center text-primary active:translate-y-0.5 active:border-b-2 transition-all"
               >
@@ -226,6 +236,29 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {pickAvatar && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-[300]" onClick={() => setPickAvatar(false)} />
+          <div className="fixed bottom-0 inset-x-0 z-[301] bg-surface rounded-t-3xl px-5 pt-3 max-h-[88vh] overflow-y-auto" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}>
+            <div className="w-10 h-1.5 rounded-full bg-border mx-auto mb-3" />
+            <h2 className="text-xl font-black text-charcoal text-center">Gus'unu seç</h2>
+            <p className="text-sm font-semibold text-muted text-center mt-0.5">Profil fotoğrafın bunlardan biri olabilir.</p>
+            <div className="mt-4 grid grid-cols-5 gap-x-2 gap-y-3">
+              {GUS_AVATARS.map((a) => {
+                const on = user.avatar === gusAvatarUrl(a.id);
+                return (
+                  <button key={a.id} onClick={() => chooseGus(a.id)} className="flex flex-col items-center gap-1 active:scale-90 transition-transform">
+                    <img src={gusAvatarUrl(a.id)} alt={a.name} className={`w-full aspect-square rounded-full object-cover border-[3px] ${on ? "border-primary" : "border-transparent"}`} />
+                    <span className={`text-[11px] font-extrabold ${on ? "text-primary" : "text-muted"}`}>{a.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button onClick={() => { setPickAvatar(false); photoInputRef.current?.click(); }} className="btn btn-block mt-5 flex items-center justify-center gap-2"><Camera className="w-5 h-5" /> Kendi fotoğrafımı yükle</button>
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         {[

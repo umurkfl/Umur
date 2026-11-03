@@ -4,6 +4,9 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { StoredUser, store, deriveUsername } from "./store";
+import { defaultAvatarFor } from "./avatars";
+
+const withAvatar = (u: StoredUser | null): StoredUser | null => (u && !u.avatar ? { ...u, avatar: defaultAvatarFor(u.id) } : u);
 
 interface AuthCtx {
   user: StoredUser | null;
@@ -54,9 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (u && !u.username) {
         const generated = deriveUsername(u.name, u.id);
         store.setUsername(u.id, generated);
-        setUser({ ...u, username: generated });
+        setUser(withAvatar({ ...u, username: generated }));
       } else {
-        setUser(u);
+        setUser(withAvatar(u));
       }
       setReady(true);
       return;
@@ -67,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (su?.avatar && !readAvatar(su.id)) {
         store.updateUserAvatar(su.id, su.avatar);
       }
-      setUser(su);
+      setUser(withAvatar(su));
       setReady(true);
     });
 
@@ -76,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (su?.avatar && !readAvatar(su.id)) {
         store.updateUserAvatar(su.id, su.avatar);
       }
-      setUser(su);
+      setUser(withAvatar(su));
     });
 
     return () => subscription.unsubscribe();

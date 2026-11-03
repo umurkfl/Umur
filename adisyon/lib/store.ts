@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { defaultAvatarFor } from "./avatars";
 
 export interface StoredUser {
   id: string;
@@ -241,7 +242,7 @@ export const store = {
       const { data: c } = await supabase.from("comments").select("user_avatar").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (c?.user_avatar) return c.user_avatar as string;
     }
-    return null;
+    return defaultAvatarFor(userId);
   },
   setUsername: (userId: string, username: string): void => {
     if (typeof window === "undefined") return;
