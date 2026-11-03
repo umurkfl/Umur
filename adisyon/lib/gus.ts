@@ -55,17 +55,17 @@ const PINK = "#F5A9A4", BRW = "#4A3F33", HOOF = "#33312D", TONGUE = "#FF6B81", B
 function eye(type: GusEyes, x: number, y: number, dx = 0, dy = 0): string {
   switch (type) {
     case "open":
-      return `<g class="gus-blink"><circle cx="${x}" cy="${y}" r="20" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="10.5" fill="${INK}"/><circle cx="${x + 5.5 + dx}" cy="${y - 2 + dy}" r="3.6" fill="#fff"/><circle cx="${x - 2 + dx}" cy="${y + 6 + dy}" r="1.6" fill="#fff"/></g>`;
+      return `<g class="gus-blink"><circle cx="${x}" cy="${y}" r="20" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><path d="M${x - 16} ${y + 8} Q${x} ${y + 22} ${x + 16} ${y + 8} Q${x} ${y + 15} ${x - 16} ${y + 8} Z" fill="#E9EEF2"/><g class="gus-look"><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="11" fill="${INK}"/><circle cx="${x + 2 + dx}" cy="${y + 2 + dy}" r="6.5" fill="#17160F"/><circle cx="${x + 5.8 + dx}" cy="${y - 2.4 + dy}" r="4" fill="#fff"/><circle cx="${x - 2 + dx}" cy="${y + 6.5 + dy}" r="1.8" fill="#fff"/></g></g>`;
     case "happy":
       return `<path d="M${x - 13} ${y + 5} Q${x} ${y - 14} ${x + 13} ${y + 5}" fill="none" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/>`;
     case "sleep":
       return `<path d="M${x - 13} ${y - 2} Q${x} ${y + 12} ${x + 13} ${y - 2}" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`;
     case "heart":
-      return `<path d="M${x} ${y + 12} C${x - 20} ${y - 2} ${x - 10} ${y - 18} ${x} ${y - 7} C${x + 10} ${y - 18} ${x + 20} ${y - 2} ${x} ${y + 12} Z" fill="#FF4D6D"/>`;
+      return `<g class="gus-beat"><path d="M${x} ${y + 12} C${x - 20} ${y - 2} ${x - 10} ${y - 18} ${x} ${y - 7} C${x + 10} ${y - 18} ${x + 20} ${y - 2} ${x} ${y + 12} Z" fill="#FF4D6D"/><ellipse cx="${x - 7}" cy="${y - 5}" rx="3.4" ry="2.4" fill="#fff" opacity=".7" transform="rotate(-30 ${x - 7} ${y - 5})"/></g>`;
     case "wide":
-      return `<circle cx="${x}" cy="${y}" r="21" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><circle cx="${x}" cy="${y}" r="5.5" fill="${INK}"/>`;
+      return `<circle cx="${x}" cy="${y}" r="21" fill="#fff" stroke="${EYE_RIM}" stroke-width="2.5"/><g class="gus-shiver"><circle cx="${x}" cy="${y}" r="6" fill="${INK}"/><circle cx="${x + 2}" cy="${y - 2}" r="1.8" fill="#fff"/></g>`;
     case "dizzy":
-      return `<path d="M${x - 10} ${y - 10} L${x + 10} ${y + 10} M${x + 10} ${y - 10} L${x - 10} ${y + 10}" stroke="${INK}" stroke-width="5.5" stroke-linecap="round"/>`;
+      return `<g class="gus-spin"><path d="M${x} ${y} m-2 0 a2 2 0 1 1 4 0 a5 5 0 1 1 -9 -1 a8.5 8.5 0 1 1 15 4" fill="none" stroke="${INK}" stroke-width="4.2" stroke-linecap="round"/></g>`;
     case "star":
       return `<path d="M${x} ${y - 14} Q${x + 3} ${y - 3} ${x + 14} ${y} Q${x + 3} ${y + 3} ${x} ${y + 14} Q${x - 3} ${y + 3} ${x - 14} ${y} Q${x - 3} ${y - 3} ${x} ${y - 14} Z" fill="#FFC800" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`;
   }
@@ -121,11 +121,11 @@ function extras(list: GusExtra[] = []): string {
   let s = "";
   for (const e of list) {
     if (e === "tears") s += `<path class="gus-tear" d="M62 112 q-6 13 0 19 q6 -6 0 -19z" fill="#7CC4F5"/><path class="gus-tear" style="animation-delay:.6s" d="M138 112 q-6 13 0 19 q6 -6 0 -19z" fill="#7CC4F5"/>`;
-    if (e === "sweat") s += `<path d="M150 70 q-8 14 0 20 q8 -6 0 -20z" fill="#7CC4F5"/>`;
-    if (e === "zzz") s += `<g font-family="Nunito, sans-serif" font-weight="900" fill="#7A8CE0"><text x="158" y="96" font-size="18">z</text><text x="170" y="80" font-size="24">z</text><text x="182" y="62" font-size="28">Z</text></g>`;
-    if (e === "hearts") s += heartSm(162, 94, 1.2) + heartSm(180, 72, 0.9, "#FF8FA3") + heartSm(34, 94, 1) + heartSm(20, 72, 0.7, "#FF8FA3");
-    if (e === "sparks") s += spark(166, 92, 1) + spark(34, 92, 0.8) + spark(180, 120, 0.6);
-    if (e === "anger") s += `<g transform="translate(162 90)" stroke="#E4572E" stroke-width="3.6" fill="none" stroke-linecap="round"><path d="M-8 -8 q8 0 8 8"/><path d="M8 -8 q-8 0 -8 8"/><path d="M-8 8 q8 0 8 -8"/><path d="M8 8 q-8 0 -8 -8"/></g>`;
+    if (e === "sweat") s += `<g class="gus-sweat"><path d="M150 70 q-8 14 0 20 q8 -6 0 -20z" fill="#7CC4F5"/><ellipse cx="148" cy="84" rx="1.6" ry="2.6" fill="#fff" opacity=".7"/></g>`;
+    if (e === "zzz") s += `<g font-family="Nunito, sans-serif" font-weight="900" fill="#7A8CE0"><text class="gus-z" x="158" y="96" font-size="18">z</text><text class="gus-z" style="animation-delay:.8s" x="170" y="80" font-size="24">z</text><text class="gus-z" style="animation-delay:1.6s" x="182" y="62" font-size="28">Z</text></g>`;
+    if (e === "hearts") s += `<g class="gus-float">${heartSm(162, 94, 1.2)}</g><g class="gus-float" style="animation-delay:.7s">${heartSm(180, 72, 0.9, "#FF8FA3")}</g><g class="gus-float" style="animation-delay:1.2s">${heartSm(34, 94, 1)}</g><g class="gus-float" style="animation-delay:.3s">${heartSm(20, 72, 0.7, "#FF8FA3")}</g>`;
+    if (e === "sparks") s += `<g class="gus-twinkle">${spark(166, 92, 1)}</g><g class="gus-twinkle" style="animation-delay:.5s">${spark(34, 92, 0.8)}</g><g class="gus-twinkle" style="animation-delay:1s">${spark(180, 120, 0.6)}</g>`;
+    if (e === "anger") s += `<g class="gus-throb"><g transform="translate(162 90)" stroke="#E4572E" stroke-width="3.6" fill="none" stroke-linecap="round"><path d="M-8 -8 q8 0 8 8"/><path d="M8 -8 q-8 0 -8 8"/><path d="M-8 8 q8 0 8 -8"/><path d="M8 8 q-8 0 -8 -8"/></g></g>`;
     if (e === "confetti") s += confetti();
   }
   return s;
@@ -164,32 +164,43 @@ function costumes(look: NonNullable<GusOpts["look"]>): string {
   return g;
 }
 
+const HORN = "M72 62 C60 24 28 10 4 30 C36 30 56 48 62 80 Z";
+
+function horn(hC: string, hS: string): string {
+  return `<path d="${HORN}" fill="${hS}" transform="translate(0 3)"/><path d="${HORN}" fill="${hC}"/>`
+    + `<path d="M57 36 Q50 45 53 55 M43 25 Q37 34 43 43 M26 22 Q22 28 28 33" fill="none" stroke="${hS}" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>`
+    + `<path d="M67 58 C59 34 38 20 16 25" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".32"/>`;
+}
+
 export function gusInner(o: GusOpts): string {
   const hC = o.hornC ?? (o.look?.horn === "gold" ? "#FFC800" : GR), hS = o.hornS ?? (o.look?.horn === "gold" ? "#D9A400" : GRS);
   let g = "";
-  // horns (swept back, brand green)
-  for (const d of ["M72 62 C60 24 28 10 4 30 C36 30 56 48 62 80 Z", "M128 62 C140 24 172 10 196 30 C164 30 144 48 138 80 Z"]) {
-    g += `<path d="${d}" fill="${hS}" transform="translate(0 3)"/><path d="${d}" fill="${hC}"/>`;
-  }
+  // tail peeking out behind the body
+  g += `<g class="gus-tail"><path d="M142 174 C160 175 175 164 178 146 C170 155 158 159 142 160 Z" fill="${S}"/><path d="M142 170 C158 171 172 161 176 148 C168 155 157 158 142 158 Z" fill="${C}"/></g>`;
+  // horns (swept back, brand green) with ridges and a shine
+  g += `<g class="gus-horns">${horn(hC, hS)}<g transform="translate(200 0) scale(-1 1)">${horn(hC, hS)}</g></g>`;
   // ears
-  g += `<g class="gus-earL"><ellipse cx="28" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(-22 28 110)"/><ellipse cx="28" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(-22 28 107)"/><ellipse cx="31" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(-22 31 108)"/></g>`;
-  g += `<g class="gus-earR"><ellipse cx="172" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(22 172 110)"/><ellipse cx="172" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(22 172 107)"/><ellipse cx="169" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(22 169 108)"/></g>`;
-  // hooves + goatee
-  g += `<rect x="62" y="168" width="28" height="22" rx="11" fill="${HOOF}"/><rect x="110" y="168" width="28" height="22" rx="11" fill="${HOOF}"/>`;
-  g += `<path d="M91 166 Q100 202 109 166 Z" fill="${S}" stroke="${S}" stroke-width="7" stroke-linejoin="round"/>`;
-  // body = head
-  g += `<ellipse cx="100" cy="116" rx="66" ry="68" fill="${S}" transform="translate(0 5)"/><ellipse cx="100" cy="116" rx="66" ry="68" fill="${C}"/>`;
+  g += `<g class="gus-earL"><ellipse cx="28" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(-22 28 110)"/><ellipse cx="28" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(-22 28 107)"/><ellipse cx="31" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(-22 31 108)"/><ellipse cx="34" cy="109" rx="6" ry="2.6" fill="#E98C87" transform="rotate(-22 34 109)"/></g>`;
+  g += `<g class="gus-earR"><ellipse cx="172" cy="110" rx="22" ry="11" fill="${S}" transform="rotate(22 172 110)"/><ellipse cx="172" cy="107" rx="22" ry="11" fill="${C}" transform="rotate(22 172 107)"/><ellipse cx="169" cy="108" rx="12" ry="5.5" fill="${PINK}" transform="rotate(22 169 108)"/><ellipse cx="166" cy="109" rx="6" ry="2.6" fill="#E98C87" transform="rotate(22 166 109)"/></g>`;
+  // hooves (cloven, with a shine) + goatee
+  g += `<g class="gus-hoofL"><rect x="62" y="168" width="28" height="22" rx="11" fill="${HOOF}"/><path d="M76 181 V189" stroke="#1C1B19" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="70" cy="174" rx="4.5" ry="2.6" fill="#fff" opacity=".22"/></g>`;
+  g += `<g class="gus-hoofR"><rect x="110" y="168" width="28" height="22" rx="11" fill="${HOOF}"/><path d="M124 181 V189" stroke="#1C1B19" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="118" cy="174" rx="4.5" ry="2.6" fill="#fff" opacity=".22"/></g>`;
+  g += `<g class="gus-beard"><path d="M91 166 Q100 202 109 166 Z" fill="${S}" stroke="${S}" stroke-width="7" stroke-linejoin="round"/><path d="M96 170 Q100 190 103 170" fill="none" stroke="${C}" stroke-width="3" stroke-linecap="round" opacity=".8"/></g>`;
+  // body = head: base shadow, a warm rim on the lower right, a soft shine on the upper left
+  g += `<ellipse cx="100" cy="116" rx="66" ry="68" fill="${S}" transform="translate(0 5)"/><ellipse cx="100" cy="116" rx="66" ry="68" fill="#F4E6CD"/><ellipse cx="97" cy="112" rx="62.5" ry="64" fill="${C}"/>`;
+  g += `<path d="M86 52 Q88 36 98 45 Q103 32 110 46 Q119 40 116 54 Q100 46 86 52 Z" fill="${C}"/><path d="M98 45 Q99 49 97 52 M110 46 Q110 50 108 52" fill="none" stroke="${S}" stroke-width="2" stroke-linecap="round"/>`;
+  g += `<ellipse cx="64" cy="70" rx="14" ry="7.5" fill="#fff" opacity=".7" transform="rotate(-34 64 70)"/><circle cx="80" cy="58" r="3.2" fill="#fff" opacity=".7"/>`;
   g += `<ellipse cx="100" cy="158" rx="38" ry="26" fill="${BELLY}"/>`;
-  g += `<ellipse cx="100" cy="136" rx="27" ry="19" fill="${BELLY}"/><ellipse cx="100" cy="126" rx="7" ry="5" fill="#C98B74"/>`;
-  if (o.blush !== false) g += `<ellipse cx="56" cy="124" rx="10" ry="6.5" fill="${PINK}" opacity=".75"/><ellipse cx="144" cy="124" rx="10" ry="6.5" fill="${PINK}" opacity=".75"/>`;
+  g += `<ellipse cx="100" cy="138" rx="27" ry="18" fill="#EAD9BF"/><ellipse cx="100" cy="135" rx="27" ry="18" fill="${BELLY}"/><ellipse cx="100" cy="126" rx="7.5" ry="5.2" fill="#C98B74"/><ellipse cx="98" cy="124.4" rx="2.6" ry="1.5" fill="#fff" opacity=".55"/>`;
+  if (o.blush !== false) g += `<ellipse cx="56" cy="124" rx="10.5" ry="6.5" fill="${PINK}" opacity=".8"/><ellipse cx="144" cy="124" rx="10.5" ry="6.5" fill="${PINK}" opacity=".8"/><circle cx="52" cy="121.5" r="2" fill="#fff" opacity=".75"/><circle cx="140" cy="121.5" r="2" fill="#fff" opacity=".75"/>`;
   // eyes
   if (o.shades || o.look?.face === "shades") {
-    g += `<g><rect x="46" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><rect x="104" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><path d="M96 84 H104" stroke="#1B1B1B" stroke-width="5"/><path d="M54 84 l12 -3 M112 84 l12 -3" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".45"/></g>`;
+    g += `<g><rect x="46" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><rect x="104" y="74" width="50" height="34" rx="14" fill="#1B1B1B"/><path d="M96 84 H104" stroke="#1B1B1B" stroke-width="5"/><g class="gus-glint"><path d="M54 84 l12 -3 M112 84 l12 -3" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".45"/><path d="M56 92 l5 -1.2 M114 92 l5 -1.2" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".3"/></g></g>`;
   } else {
     g += eye(o.eyes ?? "open", 76, 92, o.dx, o.dy) + eye(o.eyeR ?? o.eyes ?? "open", 124, 92, o.dx, o.dy);
   }
-  g += brows(o.brows, 62);
-  g += `<g transform="translate(0 14)">${mouth(o.mouth ?? "smile")}</g>`;
+  g += `<g class="gus-brows">${brows(o.brows, 62)}</g>`;
+  g += `<g transform="translate(0 14)"><g class="gus-mouth">${mouth(o.mouth ?? "smile")}</g></g>`;
   if (o.look) g += costumes(o.look);
   g += extras(o.extra);
   if (o.prop) g += prop(o.prop);
@@ -199,7 +210,8 @@ export function gusInner(o: GusOpts): string {
 export function gusSvg(o: GusOpts = {}): string {
   let s = `<svg viewBox="${o.viewBox ?? "0 0 200 200"}" role="img" aria-label="${o.label ?? "Gus"}" xmlns="http://www.w3.org/2000/svg">`;
   if (!o.noShadow) s += `<ellipse class="gus-shadow" cx="100" cy="194" rx="52" ry="5"/>`;
-  s += `<g class="gus-bob"><g${o.tilt ? ` transform="rotate(${o.tilt} 100 130)"` : ""}><g class="gus-char">${gusInner(o)}</g></g></g></svg>`;
+  // nested wrappers so mood motion, idle sway, breathing and the tap jump compose
+  s += `<g class="gus-bob"><g${o.tilt ? ` transform="rotate(${o.tilt} 100 130)"` : ""}><g class="gus-char"><g class="gus-sway"><g class="gus-breathe">${gusInner(o)}</g></g></g></g></g></svg>`;
   return s;
 }
 

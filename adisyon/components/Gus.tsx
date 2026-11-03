@@ -38,9 +38,10 @@ export function Gus({ mood = "happy", size = 140, className = "", playful = true
   const key = JSON.stringify([mood, overrides, look]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const html = useMemo(() => gusSvg({ ...GUS_MOODS[mood], ...overrides, look }), [key]);
+  const party = overrides.extra?.includes("confetti") || overrides.prop === "trophy";
   return (
     <div
-      className={`gus ${jump ? "gus-jump" : ""} ${className}`}
+      className={`gus gus-m-${mood} ${party ? "gus-party" : ""} ${jump ? "gus-jump" : ""} ${className}`}
       style={{ width: size, height: size, touchAction: "manipulation" }}
       onClick={playful ? () => { setJump((n) => n + 1); haptic("tap"); } : undefined}
       onAnimationEnd={(e) => { if (e.animationName === "gus-squish") setJump(0); }}
