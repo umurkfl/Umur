@@ -94,7 +94,7 @@ export function BadgeArt({ id, size = 72, locked = false, className = "" }: { id
       <circle cx="32" cy="32" r="28" fill={t.bg} />
       <circle cx="32" cy="32" r="22.5" fill="none" stroke="#fff" strokeOpacity=".22" strokeWidth="2" />
       <path d="M12.5 24.5A22 22 0 0 1 30 10" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="3.4" strokeLinecap="round" />
-      <g transform="translate(32 31) scale(.235) translate(-100 -108)" style={locked ? { filter: "grayscale(1) opacity(.55)" } : undefined} dangerouslySetInnerHTML={{ __html: gus }} />
+      <g transform="translate(32 30.5) scale(.3) translate(-100 -108)" style={locked ? { filter: "grayscale(1) opacity(.55)" } : undefined} dangerouslySetInnerHTML={{ __html: gus }} />
       <circle cx="50" cy="50" r="11.5" fill="#fff" />
       <circle cx="50" cy="50" r="9.5" fill={t.shade} />
       <g transform="translate(38.6 38.6) scale(.475)" opacity={locked ? 0.8 : 1}><Glyph id={id} d={t.shade} /></g>
